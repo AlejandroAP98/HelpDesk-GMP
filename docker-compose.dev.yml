@@ -1,0 +1,63 @@
+# =============================================================================
+# Override de DESARROLLO (Windows + WSL2)
+# =============================================================================
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# Características:
+#   - Hot-reload: backend con --reload, frontend con next dev
+#   - Puertos publicados al host para acceder por localhost
+#   - Caddy desactivado (profiles: prod no se activa)
+#   - Volúmenes montan el código fuente para recarga en vivo
+# =============================================================================
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"   # Solo dev: para inspeccionar con DBeaver desde el host
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  minio:
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Consola web
+
+  backend:
+    command: ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_poetry_cache:/home/appuser/.cache/pypoetry
+    environment:
+      APP_ENV: dev
+      LOG_LEVEL: DEBUG
+
+  scheduler:
+    # En dev el scheduler arranca pero loguea verbose
+    command: ["python", "-m", "scheduler.main"]
+    volumes:
+      - ./scheduler:/app
+      - ./backend:/backend:ro   # Comparte código con el backend (modelos, config)
+    environment:
+      APP_ENV: dev
+      LOG_LEVEL: DEBUG
+
+  frontend:
+    command: ["sh", "-c", "npm install --legacy-peer-deps && npm run dev"]
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+
+volumes:
+  backend_poetry_cache:

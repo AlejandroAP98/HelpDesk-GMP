@@ -1,0 +1,46 @@
+﻿"use client";
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+export type Rol = "cliente" | "agente" | "administrador";
+
+export interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: Rol;
+  empresa_id: number | null;
+  fecha_creacion: string;
+}
+
+interface AuthState {
+  token: string | null;
+  refreshToken: string | null;
+  usuario: Usuario | null;
+  setSession: (s: { access_token: string; refresh_token: string; usuario: Usuario }) => void;
+  logout: () => void;
+  hasRole: (...roles: Rol[]) => boolean;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      token: null,
+      refreshToken: null,
+      usuario: null,
+      setSession: (s) =>
+        set({
+          token: s.access_token,
+          refreshToken: s.refresh_token,
+          usuario: s.usuario,
+        }),
+      logout: () => set({ token: null, refreshToken: null, usuario: null }),
+      hasRole: (...roles) => {
+        const u = get().usuario;
+        return !!u && roles.includes(u.rol);
+      },
+    }),
+    { name: "helpdesk-auth" }
+  )
+);

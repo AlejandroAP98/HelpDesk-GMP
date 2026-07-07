@@ -1,0 +1,36 @@
+{
+	auto_https disable_redirects
+}
+
+# Sitio principal (accesible por nombre mDNS o IP)
+helpdesk.local 192.168.1.8 {
+	encode gzip zstd
+
+	# Descargar certificado root CA (para dispositivos moviles y otros clientes)
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		file_server
+	}
+
+	# API REST + WebSockets del backend
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# WebSocket endpoint
+	handle /ws {
+		reverse_proxy backend:8000
+	}
+
+	# Consola de MinIO (solo admin)
+	handle /minio/* {
+		uri strip_prefix /minio
+		reverse_proxy minio:9001
+	}
+
+	# Frontend Next.js (todo el resto)
+	handle {
+		reverse_proxy frontend:3000
+	}
+}
