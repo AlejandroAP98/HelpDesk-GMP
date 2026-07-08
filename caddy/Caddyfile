@@ -5,6 +5,12 @@
 :80 {
 	encode gzip zstd
 
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		file_server
+	}
+
 	handle /api/* {
 		reverse_proxy backend:8000
 	}

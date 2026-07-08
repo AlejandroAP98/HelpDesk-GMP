@@ -76,22 +76,51 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 ```bash
 cp .env.example .env
-# Editar .env: APP_ENV=prod, JWT_SECRET=<valor aleatorio>, COOKIE_SECURE=true
-# Ajustar SERVER_HOSTNAME en .env (ej. servidor.local)
+# Editar .env: APP_ENV=prod, JWT_SECRET=<valor aleatorio>, COOKIE_SECURE=false
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build
+
+# Seed inicial
+docker compose exec backend python -m scripts.seed
+```
+
+#### Acceso multiplataforma
+
+| Dispositivo | URL | TLS |
+|---|---|---|
+| PC (Windows) | `https://helpdesk.local` | Si (con CA instalado) |
+| Movil (Android/iOS) | `http://192.168.1.8` | No (HTTP en LAN) |
+
+Para que el PC resuelva `helpdesk.local`, agregar al archivo `C:\Windows\System32\drivers\etc\hosts`:
+
+```
+192.168.1.8  helpdesk.local
 ```
 
 ### TLS / CA interna (produccion)
 
-Caddy genera su propia CA dentro del volumen `caddy_data`. Para extraer el root CA y
-distribuirlo a los clientes Windows:
+Caddy genera su propia CA dentro del volumen `caddy_data`. Para eliminar advertencias:
 
 ```bash
+# Extraer root CA
 docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt > servidor-root-ca.crt
 ```
 
-En cada cliente Windows: doble click > instalar en `Entidades de certificacion raiz de confianza`.
+#### Windows
+
+Doble click en `servidor-root-ca.crt` > **Instalar certificado** > **Equipo local** > **Automatico** > **Finalizar**.
+
+#### Android
+
+1. Abrir `http://192.168.1.8/ca.crt` en el navegador (descarga automatica)
+2. Ajustes > Seguridad > **Cifrado y credenciales** > **Instalar un certificado** > **CA de confianza**
+3. Seleccionar el archivo descargado
+
+#### iPhone
+
+1. Transferir `servidor-root-ca.crt` al iPhone (AirDrop, email)
+2. Abrir archivo > **Instalar perfil**
+3. Ajustes > General > **Acerca de** > **Configuracion de confianza de certificados** > Activar **Caddy Local Authority**
 
 ## Comandos utiles
 
@@ -99,7 +128,7 @@ En cada cliente Windows: doble click > instalar en `Entidades de certificacion r
 # Logs en vivo
 docker compose logs -f backend frontend
 
-# Aplicar migraciones (cuando existan)
+# Aplicar migraciones
 docker compose exec backend poetry run alembic upgrade head
 
 # Seed inicial: empresa demo (id=1) + admin (admin@helpdesk.com / Admin123456)
@@ -108,12 +137,15 @@ docker compose exec backend python -m scripts.seed
 # Tests del backend
 docker compose exec backend poetry run pytest
 
-# Lint / typecheck del frontend
+# Lint / typecheck
+docker compose exec backend poetry run ruff check app
 docker compose exec frontend npm run lint
-docker compose exec frontend npm run typecheck
 
 # Parar todo
-docker compose down
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod down
+
+# Actualizar produccion (despues de git pull)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build
 
 # Backup Postgres (en el host Linux)
 docker compose exec -T postgres pg_dump -U helpdesk helpdesk > backups/pg_$(date +%F).sql
@@ -130,4 +162,4 @@ docker compose exec -T postgres pg_dump -U helpdesk helpdesk > backups/pg_$(date
 - [x] Fase 7  - WebSockets + Redis Pub/Sub + alertas urgentes
 - [x] Fase 8  - Frontend: paneles por rol, bandeja admin, detalle ticket + alertas urgentes
 - [x] Fase 9  - Scheduler de cierre automatico + tests finales (30 tests)
-- [ ] Fase 10 - Deploy en Linux + distribucion de CA Caddy
+- [x] Fase 10 - Deploy en Linux + acceso multiplataforma (PC + movil)

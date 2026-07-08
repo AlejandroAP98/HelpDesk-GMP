@@ -125,3 +125,22 @@ DB de test aislada (`helpdesk_test`), fixtures de sesion limpia por test y
 override del engine de la app. Cobertura: auth (10), tickets (10), comentarios
 (4), scheduler (4), smoke (2) = 30 tests, todos verdes.
 Proxima fase: Fase 10 (deploy en Linux + distribucion de CA Caddy).
+Fase 10 completada: Deploy en Ubuntu Server + acceso movil.
+- `docker-compose.yml` base: Caddy en redes `internal` + `proxy` para resolucion DNS
+  correcta de servicios internos (evita `connection refused` entre Caddy y frontend).
+- `docker-compose.prod.yml`: `NEXT_PUBLIC_API_URL=""` en build args para rutas relativas
+  (evita CORS entre HTTPS/desktop y HTTP/movil). Build sin cache para frontend y backend.
+- `Caddyfile`: dos bloques — `:80 { ... }` para HTTP (movil por IP) y
+  `helpdesk.local { ... }` para HTTPS (desktop con TLS). Ruta `/ca.crt` para descargar
+  root CA desde el navegador. `handle /api/*` (sin strip de prefijo) para proxy a backend.
+- `frontend/Dockerfile`: `ARG`/`ENV` para `NEXT_PUBLIC_API_URL` y `NEXT_PUBLIC_WS_URL`
+  antes del `npm run build` (las variables Next.js se queman en el bundle).
+- `frontend/src/lib/api.ts`: `??` en lugar de `||` para que `baseURL=""` funcione
+  correctamente con axios (rutas relativas al mismo origen).
+- `frontend/src/app/providers.tsx`: WebSocket URL dinamico desde `window.location`
+  (funciona en desktop HTTPS y movil HTTP automaticamente).
+- `backend/app/core/config.py`: CORS origins incluye `https://helpdesk.local`,
+  `http://192.168.1.8` y `http://localhost:3000`.
+- `.env` produccion: `COOKIE_SECURE=false` para que las cookies de sesion funcionen
+  en HTTP movil. `APP_ENV=prod`.
+- Instalacion de root CA de Caddy en clientes (Windows, Android, iOS).
