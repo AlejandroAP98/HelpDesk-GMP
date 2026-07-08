@@ -13,9 +13,10 @@ function WebSocketListener() {
   const setSend = useWsTicketStore((s) => s.setSend);
   const dispatch = useWsTicketStore((s) => s.dispatch);
   const wsUrl =
-    typeof window !== "undefined"
+    process.env.NEXT_PUBLIC_WS_URL ||
+    (typeof window !== "undefined"
       ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`
-      : process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+      : "ws://localhost:8000/ws");
 
   const { send } = useWebSocket({
     url: wsUrl,

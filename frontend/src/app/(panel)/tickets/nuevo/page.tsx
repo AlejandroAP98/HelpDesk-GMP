@@ -36,11 +36,10 @@ export default function NuevoTicketPage() {
     setEnviando(true);
     setError(null);
     try {
-      const t = await ticketApi.crear({ titulo, descripcion, categoria_id: categoriaId, prioridad });
-      router.push(`/tickets/${t.id}`);
+      await ticketApi.crear({ titulo, descripcion, categoria_id: categoriaId, prioridad });
+      router.replace("/tickets");
     } catch {
       setError("Error al crear el ticket");
-    } finally {
       setEnviando(false);
     }
   };
