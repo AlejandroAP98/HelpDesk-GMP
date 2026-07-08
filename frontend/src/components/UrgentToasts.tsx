@@ -31,34 +31,49 @@ export default function UrgentToasts() {
   }, [alerts.length]);
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-80">
+    <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 w-80 lg:w-96">
       {alerts.map((a) => (
         <div
           key={a.id}
-          className="rounded-lg border-2 border-urgent bg-red-50 px-4 py-3 shadow-lg animate-pulse"
+          className="rounded-2xl bg-white border border-red-100 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden"
           role="alert"
         >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">!</span>
-              <p className="font-bold text-urgent uppercase tracking-wide text-sm">
+          <div className="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl" />
+          <div className="flex items-start justify-between gap-2 pl-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="font-bold text-red-600 uppercase tracking-wider text-[11px]">
                 Ticket Urgente
               </p>
             </div>
             <button
               onClick={() => dismiss(a.id)}
-              className="text-slate-400 hover:text-slate-700 text-sm"
+              className="text-gray-300 hover:text-gray-500 hover:bg-gray-100 w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all"
               aria-label="Cerrar"
             >
-              x
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
-          <p className="mt-1 text-sm font-semibold text-slate-800 truncate">
-            {a.titulo}
-          </p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Ticket #{a.ticket_id.slice(0, 8)} - estado: {a.estado}
-          </p>
+
+          <div className="mt-3 pl-3">
+            <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+              {a.titulo}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-red-50 text-red-600 font-bold uppercase tracking-wider border border-red-100">
+                #{a.ticket_id.slice(0, 8)}
+              </span>
+              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                {a.estado}
+              </span>
+            </div>
+          </div>
         </div>
       ))}
     </div>
