@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     minio_use_ssl: bool = False
 
     # --- CORS ---
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "https://helpdesk.local",
+        "http://192.168.1.8",
+    ]
 
     @property
     def is_dev(self) -> bool:
