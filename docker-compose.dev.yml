@@ -47,13 +47,15 @@ services:
       LOG_LEVEL: DEBUG
 
   frontend:
-    command: ["sh", "-c", "npm install --legacy-peer-deps && npm run dev"]
+    build:
+      context: ./frontend
+      target: base
+    command: ["npm", "run", "dev"]
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - frontend_node_modules:/app/node_modules
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:8000
@@ -61,3 +63,4 @@ services:
 
 volumes:
   backend_poetry_cache:
+  frontend_node_modules:
