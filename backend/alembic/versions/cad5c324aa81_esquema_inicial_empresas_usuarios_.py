@@ -105,4 +105,7 @@ def downgrade() -> None:
     op.drop_table('usuarios')
     op.drop_table('empresas')
     op.drop_table('categorias')
+    op.execute("DROP TYPE IF EXISTS prioridad_ticket")
+    op.execute("DROP TYPE IF EXISTS estado_ticket")
+    op.execute("DROP TYPE IF EXISTS rol_usuario")
     # ### end Alembic commands ###
