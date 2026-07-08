@@ -70,6 +70,9 @@ services:
     command: ["node", "server.js"]
     environment:
       NODE_ENV: production
+    networks:
+      - internal
+      - proxy
     logging:
       driver: json-file
       options:
