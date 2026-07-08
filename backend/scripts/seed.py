@@ -102,6 +102,7 @@ async def run(reset: bool = False) -> None:
         else:
             print(f"Admin ya existe: id={admin.id} email={admin.email!r}")
 
+        print(f"DEBUG: for loop AGENTES_DEMO+CLIENTES_DEMO con {len(AGENTES_DEMO) + len(CLIENTES_DEMO)} usuarios...")
         for demo_user in AGENTES_DEMO + CLIENTES_DEMO:
             user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
             if user_db is None:
@@ -140,7 +141,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Seed inicial HelpDesk-GMP")
     parser.add_argument("--reset", action="store_true", help="Borra empresa+admin demo antes de insertar")
     args = parser.parse_args()
-    asyncio.run(run(reset=args.reset))
+    try:
+        asyncio.run(run(reset=args.reset))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
     sys.exit(0)
 
 
