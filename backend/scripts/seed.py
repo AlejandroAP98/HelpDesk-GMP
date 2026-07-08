@@ -102,8 +102,10 @@ async def run(reset: bool = False) -> None:
         else:
             print(f"Admin ya existe: id={admin.id} email={admin.email!r}")
 
-        print(f"DEBUG: for loop AGENTES_DEMO+CLIENTES_DEMO con {len(AGENTES_DEMO) + len(CLIENTES_DEMO)} usuarios...")
+        import sys; sys.stderr.write("DEBUG-DESPUES-ADMIN\n"); sys.stderr.flush()
+
         for demo_user in AGENTES_DEMO + CLIENTES_DEMO:
+            sys.stderr.write(f"DEBUG: procesando {demo_user['email']}\n"); sys.stderr.flush()
             user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
             if user_db is None:
                 user_db = Usuario(
