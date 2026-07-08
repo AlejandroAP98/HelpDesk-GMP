@@ -4,6 +4,7 @@ Conexion:  ws://host:8000/ws?token=<JWT_access>
 Cualquier usuario autenticado puede conectarse; las salas/rooms se gestionan por rol
 en `ConnectionManager`. El cliente recibe eventos:
     - ticket:urgent_created   (solo agente/admin)
+    - ticket:created          (broadcast)
     - ticket:updated          (broadcast o ticket especifico)
     - ticket:commented        (broadcast o ticket especifico)
 """

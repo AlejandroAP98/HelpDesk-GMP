@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { adminApi, ticketApi, type Ticket } from "@/lib/endpoints";
+import { adminApi, ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
 import type { Usuario } from "@/store/authStore";
+import { useWsTicketStore } from "@/store/wsTicketStore";
 
 const prioridadStyles: Record<string, string> = {
   baja: "bg-gray-100 text-gray-500 border-gray-200",
@@ -48,6 +49,74 @@ export default function BandejaPage() {
       }
     })();
   }, []);
+
+  const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
+  const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
+
+  useEffect(() => {
+    setOnTicketCreated((ev) => {
+      if (ev.estado !== "abierto") return;
+      setTickets((prev) => {
+        if (prev.some((t) => t.id === ev.ticket_id)) return prev;
+        const nuevo: Ticket = {
+          id: ev.ticket_id,
+          empresa_id: ev.empresa_id,
+          titulo: ev.titulo,
+          descripcion: "",
+          categoria_id: 0,
+          prioridad: ev.prioridad as PrioridadTicket,
+          estado: ev.estado as EstadoTicket,
+          cliente_id: ev.cliente_id ?? "",
+          agente_id: ev.agente_id,
+          fecha_creacion: ev.fecha_actualizacion,
+          fecha_actualizacion: ev.fecha_actualizacion,
+        };
+        return [nuevo, ...prev];
+      });
+    });
+
+    setOnTicketUpdated((ev) => {
+      setTickets((prev) => {
+        const idx = prev.findIndex((t) => t.id === ev.ticket_id);
+        if (idx === -1) {
+          if (ev.estado === "abierto") {
+            const nuevo: Ticket = {
+              id: ev.ticket_id,
+              empresa_id: ev.empresa_id,
+              titulo: ev.titulo,
+              descripcion: "",
+              categoria_id: 0,
+              prioridad: ev.prioridad as PrioridadTicket,
+              estado: ev.estado as EstadoTicket,
+              cliente_id: ev.cliente_id ?? "",
+              agente_id: ev.agente_id,
+              fecha_creacion: "",
+              fecha_actualizacion: ev.fecha_actualizacion,
+            };
+            return [nuevo, ...prev];
+          }
+          return prev;
+        }
+        if (ev.estado !== "abierto") {
+          return prev.filter((t) => t.id !== ev.ticket_id);
+        }
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          estado: ev.estado as EstadoTicket,
+          prioridad: ev.prioridad as PrioridadTicket,
+          agente_id: ev.agente_id,
+          fecha_actualizacion: ev.fecha_actualizacion,
+        };
+        return updated;
+      });
+    });
+
+    return () => {
+      setOnTicketCreated(null);
+      setOnTicketUpdated(null);
+    };
+  }, [setOnTicketCreated, setOnTicketUpdated]);
 
   const asignar = async (ticketId: string) => {
     const agenteId = agenteSel[ticketId];

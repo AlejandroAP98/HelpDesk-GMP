@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { ticketApi, type Ticket } from "@/lib/endpoints";
+import { ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
+import { useWsTicketStore } from "@/store/wsTicketStore";
 
 const estadoStyles: Record<string, string> = {
   abierto: "bg-blue-50 text-blue-700 border-blue-100",
@@ -57,6 +58,54 @@ export default function PanelHomePage() {
       }
     })();
   }, []);
+
+  const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
+  const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
+  const empresaId = usuario?.empresa_id;
+
+  useEffect(() => {
+    setOnTicketCreated((ev) => {
+      if (usuario?.rol === "cliente" && empresaId != null && ev.empresa_id !== empresaId) return;
+      setRecientes((prev) => {
+        if (prev.some((t) => t.id === ev.ticket_id)) return prev;
+        const nuevo: Ticket = {
+          id: ev.ticket_id,
+          empresa_id: ev.empresa_id,
+          titulo: ev.titulo,
+          descripcion: "",
+          categoria_id: 0,
+          prioridad: ev.prioridad as PrioridadTicket,
+          estado: ev.estado as EstadoTicket,
+          cliente_id: ev.cliente_id ?? "",
+          agente_id: ev.agente_id,
+          fecha_creacion: ev.fecha_actualizacion,
+          fecha_actualizacion: ev.fecha_actualizacion,
+        };
+        return [nuevo, ...prev].slice(0, 5);
+      });
+    });
+
+    setOnTicketUpdated((ev) => {
+      setRecientes((prev) =>
+        prev.map((t) =>
+          t.id === ev.ticket_id
+            ? {
+                ...t,
+                estado: ev.estado as EstadoTicket,
+                prioridad: ev.prioridad as PrioridadTicket,
+                agente_id: ev.agente_id,
+                fecha_actualizacion: ev.fecha_actualizacion,
+              }
+            : t
+        )
+      );
+    });
+
+    return () => {
+      setOnTicketCreated(null);
+      setOnTicketUpdated(null);
+    };
+  }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
   const esCliente = usuario?.rol === "cliente";
   const esAdmin = usuario?.rol === "administrador";
