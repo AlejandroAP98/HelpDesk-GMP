@@ -2,6 +2,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 import logging
+import logging.config
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +17,35 @@ from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
 
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": settings.log_level,
+    },
+    "loggers": {
+        "uvicorn": {"level": "WARNING"},
+        "uvicorn.error": {"level": "INFO"},
+        "uvicorn.access": {"level": "WARNING"},
+        "sqlalchemy.engine": {"level": "WARNING"},
+        "app": {"level": settings.log_level, "propagate": True},
+    },
+}
+
+logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
 

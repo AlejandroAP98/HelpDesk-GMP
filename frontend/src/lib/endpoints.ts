@@ -9,6 +9,8 @@ export interface Ticket {
   empresa_id: number;
   cliente_id: string;
   agente_id: string | null;
+  modificado_por_id: string | null;
+  modificado_por_nombre: string | null;
   categoria_id: number;
   titulo: string;
   descripcion: string;
@@ -45,6 +47,16 @@ export interface Adjunto {
   tipo_mime: string | null;
   tamano_bytes: number | null;
   fecha_creacion: string;
+}
+
+export interface HistorialEstado {
+  id: string;
+  ticket_id: string;
+  usuario_id: string;
+  usuario_nombre: string | null;
+  estado_anterior: EstadoTicket;
+  estado_nuevo: EstadoTicket;
+  fecha: string;
 }
 
 export interface Categoria {
@@ -100,6 +112,10 @@ export const ticketApi = {
   reabrir: async (id: string) => {
     const r = await api.post(`/api/tickets/${id}/reabrir`);
     return r.data as Ticket;
+  },
+  historial: async (id: string) => {
+    const r = await api.get(`/api/tickets/${id}/historial`);
+    return r.data as HistorialEstado[];
   },
 };
 

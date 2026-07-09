@@ -31,7 +31,7 @@ export default function UrgentToasts() {
   }, [alerts.length]);
 
   return (
-    <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 w-80 lg:w-96">
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 w-72 sm:w-80 lg:w-96 sm:top-6 sm:right-6">
       {alerts.map((a) => (
         <div
           key={a.id}

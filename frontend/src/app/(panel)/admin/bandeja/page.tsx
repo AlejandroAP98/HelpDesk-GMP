@@ -5,24 +5,7 @@ import Link from "next/link";
 import { adminApi, ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
 import type { Usuario } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
-
-const prioridadStyles: Record<string, string> = {
-  baja: "bg-gray-100 text-gray-500 border-gray-200",
-  media: "bg-sky-50 text-sky-700 border-sky-100",
-  alta: "bg-orange-50 text-orange-700 border-orange-100",
-  urgente: "bg-red-50 text-red-600 border-red-100 font-bold",
-};
-
-function PrioridadBadge({ prioridad }: { prioridad: string }) {
-  return (
-    <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase border ${prioridadStyles[prioridad] ?? ""}`}>
-      {prioridad === "urgente" && (
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />
-      )}
-      {prioridad}
-    </span>
-  );
-}
+import { PrioridadBadge } from "@/components/Badges";
 
 export default function BandejaPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -68,6 +51,8 @@ export default function BandejaPage() {
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",
           agente_id: ev.agente_id,
+          modificado_por_id: null,
+          modificado_por_nombre: null,
           fecha_creacion: ev.fecha_actualizacion,
           fecha_actualizacion: ev.fecha_actualizacion,
         };
@@ -90,6 +75,8 @@ export default function BandejaPage() {
               estado: ev.estado as EstadoTicket,
               cliente_id: ev.cliente_id ?? "",
               agente_id: ev.agente_id,
+              modificado_por_id: null,
+              modificado_por_nombre: null,
               fecha_creacion: "",
               fecha_actualizacion: ev.fecha_actualizacion,
             };
@@ -156,8 +143,8 @@ export default function BandejaPage() {
           No hay tickets abiertos por asignar.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
-          <table className="w-full text-sm text-left">
+        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-card">
+          <table className="w-full text-sm text-left min-w-[700px]">
             <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
               <tr>
                 <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Titulo</th>
@@ -197,7 +184,7 @@ export default function BandejaPage() {
                     <button
                       onClick={() => asignar(t.id)}
                       disabled={!agenteSel[t.id] || asignandoId === t.id}
-                      className="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-40 shadow-brand active:scale-[0.98] transition-all"
+                      className="rounded-xl bg-brandCustom px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-40 shadow-brand active:scale-[0.98] transition-all"
                     >
                       {asignandoId === t.id ? "Asignando..." : "Asignar"}
                     </button>

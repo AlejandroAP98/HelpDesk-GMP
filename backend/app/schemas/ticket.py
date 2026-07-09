@@ -42,6 +42,7 @@ class TicketOut(BaseModel):
     empresa_id: int
     cliente_id: UUID
     agente_id: UUID | None
+    modificado_por_id: UUID | None = None
     categoria_id: int
     titulo: str
     descripcion: str
@@ -54,5 +55,18 @@ class TicketOut(BaseModel):
 class TicketDetalle(TicketOut):
     cliente_nombre: str | None = None
     agente_nombre: str | None = None
+    modificado_por_nombre: str | None = None
     categoria_nombre: str | None = None
     empresa_nombre: str | None = None
+
+
+class HistorialEstadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    ticket_id: UUID
+    usuario_id: UUID
+    usuario_nombre: str | None = None
+    estado_anterior: EstadoTicket
+    estado_nuevo: EstadoTicket
+    fecha: datetime

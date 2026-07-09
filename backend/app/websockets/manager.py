@@ -1,7 +1,7 @@
 """Gestor de conexiones WebSocket con rooms por rol de usuario.
 
 Permite enviar eventos en tiempo real filtrados por rol (clientes, agentes, admins),
-por ticket especifico, o broadcast general. Disehno compatible con multiples instancias
+por ticket especifico, o broadcast general. Disenno compatible con multiples instancias
 del backend gracias a Redis Pub/Sub (ver `websockets/pubsub.py`).
 """
 from __future__ import annotations
@@ -80,6 +80,8 @@ class ConnectionManager:
         for cid in dest:
             if await self.send_personal(cid, payload):
                 n += 1
+        if n == 0 and dest:
+            logger.debug("broadcast_to_roles: no se pudo enviar a %d destinos", len(dest))
         return n
 
     async def broadcast_to_ticket(
@@ -90,6 +92,8 @@ class ConnectionManager:
         for cid in conns:
             if await self.send_personal(cid, payload):
                 n += 1
+        if n == 0 and conns:
+            logger.debug("broadcast_to_ticket %s: no se pudo enviar a %d destinos", ticket_id, len(conns))
         return n
 
     async def broadcast_all(self, payload: dict[str, Any]) -> int:
@@ -97,6 +101,7 @@ class ConnectionManager:
         for cid in list(self.active.keys()):
             if await self.send_personal(cid, payload):
                 n += 1
+        logger.debug("broadcast_all: enviado a %d/%d conexiones", n, len(self.active))
         return n
 
     def subscribe_ticket(self, conn_id: UUID, ticket_id: UUID) -> None:

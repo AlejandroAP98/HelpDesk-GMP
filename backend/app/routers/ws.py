@@ -69,6 +69,13 @@ async def websocket_endpoint(
         usuario_id=usuario.id,
         empresa_id=usuario.empresa_id,
     )
+    logger.info(
+        "WS conexion aceptada: conn=%s usuario=%s rol=%s empresa=%s",
+        conn_id,
+        usuario.id,
+        rol,
+        usuario.empresa_id,
+    )
     try:
         while True:
             data = await ws.receive_json()

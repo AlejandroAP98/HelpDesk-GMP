@@ -29,6 +29,9 @@ class Ticket(Base):
     agente_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
     )
+    modificado_por_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
     categoria_id: Mapped[int] = mapped_column(
         ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False
     )

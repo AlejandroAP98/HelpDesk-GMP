@@ -55,10 +55,10 @@ async def publish_broadcast(event: dict[str, Any]) -> None:
 
 async def pubsub_listener() -> None:
     """Escucha el canal Redis y despacha a conexiones locales."""
-    pubsub = redis_client.pubsub()
-    await pubsub.subscribe(CHANNEL)
-    logger.info("WS Pub/Sub escuchando canal %s", CHANNEL)
     try:
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe(CHANNEL)
+        logger.info("WS Pub/Sub escuchando canal %s", CHANNEL)
         async for message in pubsub.listen():
             if message["type"] != "message":
                 continue
@@ -78,6 +78,11 @@ async def pubsub_listener() -> None:
                 await manager.broadcast_all(event)
     except asyncio.CancelledError:
         logger.info("WS Pub/Sub detenido")
+    except Exception:
+        logger.exception("WS Pub/Sub listener fallo inesperado")
     finally:
-        await pubsub.unsubscribe(CHANNEL)
-        await pubsub.close()
+        try:
+            await pubsub.unsubscribe(CHANNEL)
+            await pubsub.close()
+        except Exception:
+            pass

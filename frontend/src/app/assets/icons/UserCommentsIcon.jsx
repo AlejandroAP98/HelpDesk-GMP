@@ -1,0 +1,7 @@
+const UserCommentsIcon = () => {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="icon icon-tabler icons-tabler-filled icon-tabler-user" height={18} width={18} viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 2a5 5 0 1 1-5 5l.005-.217A5 5 0 0 1 12 2m2 12a5 5 0 0 1 5 5v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-1a5 5 0 0 1 5-5z"/></svg>
+  );
+};
+
+export default UserCommentsIcon;

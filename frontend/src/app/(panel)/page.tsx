@@ -5,40 +5,8 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
-
-const estadoStyles: Record<string, string> = {
-  abierto: "bg-blue-50 text-blue-700 border-blue-100",
-  asignado: "bg-purple-50 text-purple-700 border-purple-100",
-  en_progreso: "bg-amber-50 text-amber-700 border-amber-100",
-  resuelto: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  cerrado: "bg-gray-100 text-gray-500 border-gray-200",
-};
-
-const prioridadStyles: Record<string, string> = {
-  baja: "bg-gray-100 text-gray-500 border-gray-200",
-  media: "bg-sky-50 text-sky-700 border-sky-100",
-  alta: "bg-orange-50 text-orange-700 border-orange-100",
-  urgente: "bg-red-50 text-red-600 border-red-100 font-bold",
-};
-
-function EstadoBadge({ estado }: { estado: string }) {
-  return (
-    <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase border ${estadoStyles[estado] ?? ""}`}>
-      {estado.replace("_", " ")}
-    </span>
-  );
-}
-
-function PrioridadBadge({ prioridad }: { prioridad: string }) {
-  return (
-    <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase border ${prioridadStyles[prioridad] ?? ""}`}>
-      {prioridad === "urgente" && (
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />
-      )}
-      {prioridad}
-    </span>
-  );
-}
+import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
+import NewTicketIcon from "../assets/icons/NewTicketIcon";
 
 export default function PanelHomePage() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -78,6 +46,8 @@ export default function PanelHomePage() {
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",
           agente_id: ev.agente_id,
+          modificado_por_id: null,
+          modificado_por_nombre: null,
           fecha_creacion: ev.fecha_actualizacion,
           fecha_actualizacion: ev.fecha_actualizacion,
         };
@@ -127,11 +97,9 @@ export default function PanelHomePage() {
         {esCliente && (
           <Link
             href="/tickets/nuevo"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all"
+            className="inline-flex items-center gap-2 rounded-xl bg-brandCustom px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <NewTicketIcon />
             Crear nuevo ticket
           </Link>
         )}
@@ -150,8 +118,8 @@ export default function PanelHomePage() {
         ) : recientes.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-400">No hay tickets todavia.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-100">
-            <table className="w-full text-sm text-left">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-[500px]">
               <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
                 <tr>
                   <th className="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Titulo</th>

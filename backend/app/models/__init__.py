@@ -10,6 +10,7 @@ from app.models.categoria import Categoria
 from app.models.ticket import Ticket
 from app.models.comentario import Comentario
 from app.models.adjunto import Adjunto
+from app.models.historial_estado import HistorialEstado
 
 __all__ = [
     "EstadoTicket",
@@ -21,4 +22,5 @@ __all__ = [
     "Ticket",
     "Comentario",
     "Adjunto",
+    "HistorialEstado",
 ]

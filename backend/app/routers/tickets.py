@@ -14,8 +14,10 @@ from app.models.usuario import Usuario
 from app.schemas.ticket import (
     AsignacionRequest,
     EstadoUpdate,
+    HistorialEstadoOut,
     PrioridadUpdate,
     TicketCreate,
+    TicketDetalle,
     TicketOut,
     TicketUpdate,
 )
@@ -49,14 +51,22 @@ async def listar(
     )
 
 
-@router.get("/{ticket_id}", response_model=TicketOut)
+@router.get("/{ticket_id}", response_model=TicketDetalle)
 async def obtener(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
-) -> TicketOut:
-    ticket = await ticket_service.obtener(ticket_id, current, db)
-    return TicketOut.model_validate(ticket)
+) -> TicketDetalle:
+    return await ticket_service.obtener_detalle(ticket_id, current, db)
+
+
+@router.get("/{ticket_id}/historial", response_model=list[HistorialEstadoOut])
+async def historial(
+    ticket_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(get_current_user),
+) -> list[HistorialEstadoOut]:
+    return await ticket_service.listar_historial(ticket_id, current, db)
 
 
 @router.post("", response_model=TicketOut, status_code=status.HTTP_201_CREATED)

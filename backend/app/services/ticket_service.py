@@ -9,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import tenant_filter
 from app.models.categoria import Categoria
 from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario
+from app.models.historial_estado import HistorialEstado
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.ticket import (
     AsignacionRequest,
     EstadoUpdate,
+    HistorialEstadoOut,
     PrioridadUpdate,
     TicketCreate,
     TicketDetalle,
@@ -25,6 +27,48 @@ from app.utils.pagination import Pagina, paginacion
 
 
 _logger = __import__("logging").getLogger(__name__)
+
+
+async def _registrar_historial(
+    ticket_id: UUID,
+    usuario_id: UUID,
+    estado_anterior: EstadoTicket,
+    estado_nuevo: EstadoTicket,
+    db: AsyncSession,
+) -> None:
+    entry = HistorialEstado(
+        ticket_id=ticket_id,
+        usuario_id=usuario_id,
+        estado_anterior=estado_anterior,
+        estado_nuevo=estado_nuevo,
+    )
+    db.add(entry)
+
+
+async def listar_historial(
+    ticket_id: UUID, current: Usuario, db: AsyncSession
+) -> list[HistorialEstadoOut]:
+    ticket = await obtener(ticket_id, current, db)
+    rows = (
+        await db.execute(
+            select(HistorialEstado, Usuario.nombre)
+            .join(Usuario, HistorialEstado.usuario_id == Usuario.id, isouter=True)
+            .where(HistorialEstado.ticket_id == ticket.id)
+            .order_by(HistorialEstado.fecha.asc())
+        )
+    ).all()
+    return [
+        HistorialEstadoOut(
+            id=h.id,
+            ticket_id=h.ticket_id,
+            usuario_id=h.usuario_id,
+            usuario_nombre=nombre,
+            estado_anterior=h.estado_anterior,
+            estado_nuevo=h.estado_nuevo,
+            fecha=h.fecha,
+        )
+        for h, nombre in rows
+    ]
 
 
 def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
@@ -65,6 +109,12 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
     try:
         await publish_to_ticket(ticket.id, event=payload)
         await publish_broadcast(event=payload)
+        _logger.info(
+            "Evento %s publicado para ticket %s (empresa=%s)",
+            event_type,
+            ticket.id,
+            ticket.empresa_id,
+        )
     except Exception:
         _logger.warning("No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True)
 
@@ -115,6 +165,7 @@ async def crear(
         categoria_id=data.categoria_id,
         prioridad=data.prioridad,
         estado=EstadoTicket.abierto,
+        modificado_por_id=current.id,
     )
     db.add(ticket)
     await db.commit()
@@ -152,6 +203,7 @@ async def crear_admin(
         categoria_id=data.categoria_id,
         prioridad=data.prioridad,
         estado=EstadoTicket.abierto,
+        modificado_por_id=None,
     )
     db.add(ticket)
     await db.commit()
@@ -224,6 +276,44 @@ async def obtener(
     return ticket
 
 
+async def obtener_detalle(
+    ticket_id: UUID, current: Usuario, db: AsyncSession
+) -> TicketDetalle:
+    ticket = await obtener(ticket_id, current, db)
+    cliente_nombre: str | None = None
+    agente_nombre: str | None = None
+    modificado_por_nombre: str | None = None
+    usuario_ids = {ticket.cliente_id, ticket.agente_id, ticket.modificado_por_id}
+    usuario_ids.discard(None)
+    if usuario_ids:
+        rows = (
+            await db.execute(
+                select(Usuario.id, Usuario.nombre).where(Usuario.id.in_(usuario_ids))
+            )
+        ).all()
+        nombres = {uid: nombre for uid, nombre in rows}
+        cliente_nombre = nombres.get(ticket.cliente_id)
+        agente_nombre = nombres.get(ticket.agente_id)
+        modificado_por_nombre = nombres.get(ticket.modificado_por_id)
+    return TicketDetalle(
+        id=ticket.id,
+        empresa_id=ticket.empresa_id,
+        cliente_id=ticket.cliente_id,
+        agente_id=ticket.agente_id,
+        modificado_por_id=ticket.modificado_por_id,
+        categoria_id=ticket.categoria_id,
+        titulo=ticket.titulo,
+        descripcion=ticket.descripcion,
+        estado=ticket.estado,
+        prioridad=ticket.prioridad,
+        fecha_creacion=ticket.fecha_creacion,
+        fecha_actualizacion=ticket.fecha_actualizacion,
+        cliente_nombre=cliente_nombre,
+        agente_nombre=agente_nombre,
+        modificado_por_nombre=modificado_por_nombre,
+    )
+
+
 async def actualizar(
     ticket_id: UUID, data: TicketUpdate, current: Usuario, db: AsyncSession
 ) -> Ticket:
@@ -238,6 +328,7 @@ async def actualizar(
         val = getattr(data, field)
         if val is not None:
             setattr(ticket, field, val)
+    ticket.modificado_por_id = current.id
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
@@ -260,6 +351,8 @@ async def asignar(
 
     ticket.agente_id = agente.id
     ticket.estado = EstadoTicket.asignado
+    ticket.modificado_por_id = current.id
+    await _registrar_historial(ticket.id, current.id, EstadoTicket.abierto, EstadoTicket.asignado, db)
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
@@ -310,7 +403,10 @@ async def cambiar_estado(
         else:
             raise PermisoDenegado("No tienes permiso para cerrar este ticket")
 
+    estado_anterior = ticket.estado
     ticket.estado = nuevo
+    ticket.modificado_por_id = current.id
+    await _registrar_historial(ticket.id, current.id, estado_anterior, nuevo, db)
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
@@ -326,6 +422,7 @@ async def cambiar_prioridad(
     if current.rol == RolUsuario.cliente.value and ticket.cliente_id != current.id:
         raise PermisoDenegado("Solo el autor puede cambiar prioridad")
     ticket.prioridad = data.prioridad
+    ticket.modificado_por_id = current.id
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
@@ -341,6 +438,8 @@ async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
         raise Conflicto("Solo tickets cerrados pueden reabrirse")
     ticket.estado = EstadoTicket.abierto
     ticket.agente_id = None
+    ticket.modificado_por_id = current.id
+    await _registrar_historial(ticket.id, current.id, EstadoTicket.cerrado, EstadoTicket.abierto, db)
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
