@@ -10,6 +10,7 @@ import {
   ticketApi,
   type Adjunto,
   type Comentario,
+  type ElementoInfraestructura,
   type EstadoTicket,
   type HistorialEstado,
   type PrioridadTicket,
@@ -19,6 +20,16 @@ import { EstadoBadge, PrioridadBadge, PRIORIDADES, prioridadLabels, estadoStyles
 import UserCommentsIcon from "@/app/assets/icons/UserCommentsIcon";
 import ChangeStatusIcon from "@/app/assets/icons/ChangeStatusIcon";
 import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
+import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { Button } from "@/components/ui/Button";
+
+const elementoLabels: Record<ElementoInfraestructura, string> = {
+  torre: "Torre",
+  celda: "Celda",
+  mastil: "Mástil",
+  punto_venta: "Punto de venta",
+};
 
 export default function TicketDetallePage() {
   const params = useParams();
@@ -174,7 +185,9 @@ export default function TicketDetallePage() {
     }
   };
 
-  if (cargando) return <p className="text-center text-gray-400 py-12">Cargando...</p>;
+  if (cargando) return (
+    <LoadingState />
+  );
   if (error && !ticket) return (
     <div className="rounded-2xl bg-red-50 border border-red-100 px-6 py-4 flex items-center gap-3">
       <svg fill="none" stroke="currentColor" className="w-5 h-5 text-red-500 shrink-0" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"/></svg>
@@ -205,31 +218,31 @@ export default function TicketDetallePage() {
         Volver
       </button>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 ">
         {/* Columna izquierda: Info + Comentarios (en mobile: info primero, comentarios despues) */}
-        <div className="flex flex-col gap-6 flex-1 min-w-0">
+        <div className="flex flex-col gap-6 flex-1 min-w-0 ">
           {/* Informacion del ticket */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 sm:p-8">
+          <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-6 sm:p-8">
             <dl className="grid grid-cols-2 md:grid-cols-5 gap-2 w-full mb-4">
-              <div className="bg-borderCustom/10 border border-gray-100 rounded-xl p-2">
-                <dt className="text-xs text-gray-400 font-medium  tracking-wider mb-0.5">Empresa</dt>
+              <div>
+                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Empresa</dt>
                 <dd className="font-semibold text-gray-700 text-[11px]">#{ticket.empresa_id}</dd>
               </div>
-              <div className="bg-borderCustom/10 border border-gray-100 rounded-xl p-2">
-                <dt className="text-xs text-gray-400 font-medium  tracking-wider mb-0.5">Categoria</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">#{ticket.categoria_id}</dd>
+              <div>
+                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Subcategoría</dt>
+                <dd className="font-semibold text-gray-700 text-[11px]">{ticket.subcategoria_nombre ?? `#${ticket.subcategoria_id}`}</dd>
               </div>
-              <div className="bg-borderCustom/10 border border-gray-100 rounded-xl p-2">
-                <dt className="text-xs text-gray-400 font-medium  tracking-wider mb-0.5">Creado</dt>
+              <div>
+                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Elemento</dt>
+                <dd className="font-semibold text-gray-700 text-[11px]">{elementoLabels[ticket.elemento_afectado] ?? ticket.elemento_afectado}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Creado</dt>
                 <dd className="font-semibold text-gray-700 text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString()}</dd>
               </div>
-              <div className="bg-borderCustom/10 border border-gray-100 rounded-xl p-2">
-                <dt className="text-xs text-gray-400 font-medium  tracking-wider mb-0.5">Actualizado</dt>
+              <div>
+                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Actualizado</dt>
                 <dd className="font-semibold text-gray-700 text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString()}</dd>
-              </div>
-              <div className="bg-borderCustom/10 border border-gray-100 rounded-xl p-2">
-                <dt className="text-xs text-gray-400 font-medium tracking-wider mb-0.5">Modificado por</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">{ticket.modificado_por_nombre ?? "-"}</dd>
               </div>
             </dl>
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -242,6 +255,68 @@ export default function TicketDetallePage() {
                 <PrioridadBadge prioridad={ticket.prioridad} />
               </div>
             </div>
+            {(ticket.ip_pcs || ticket.ip_antena || ticket.mascara_red || ticket.puerta_enlace || ticket.nombre_punto) && (
+              <div className="sm:mt-8 mt-4 ">
+                <span className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block">Información adicional</span>
+                <dl className="grid grid-cols-2 sm:grid-cols-4 sm:gap-4 gap-1">
+                  {ticket.nombre_punto && (
+                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
+                      <div className="min-w-0 p-2">
+                        <dt className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">Punto</dt>
+                        <dd className="font-semibold text-gray-700 text-[11px] truncate">{ticket.nombre_punto}</dd>
+                      </div>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.nombre_punto!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
+                        <CopyInfoIcon/>
+                      </button>
+                    </div>
+                  )}
+                  {ticket.ip_pcs && (
+                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <dt className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">IP PC(s)</dt>
+                        <dd className="font-semibold font-mono text-gray-700 text-[11px] truncate">{ticket.ip_pcs}</dd>
+                      </div>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.ip_pcs!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
+                        <CopyInfoIcon />
+                      </button>
+                    </div>
+                  )}
+                  {ticket.ip_antena && (
+                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <dt className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">IP Antena</dt>
+                        <dd className="font-semibold font-mono text-gray-700 text-[11px] truncate">{ticket.ip_antena}</dd>
+                      </div>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.ip_antena!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
+                        <CopyInfoIcon />
+                      </button>
+                    </div>
+                  )}
+                  {ticket.mascara_red && (
+                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <dt className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">Máscara</dt>
+                        <dd className="font-semibold font-mono text-gray-700 text-[11px] truncate">{ticket.mascara_red}</dd>
+                      </div>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.mascara_red!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
+                        <CopyInfoIcon />
+                      </button>
+                    </div>
+                  )}
+                  {ticket.puerta_enlace && (
+                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <dt className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">Puerta de enlace</dt>
+                        <dd className="font-semibold font-mono text-gray-700 text-[11px] truncate">{ticket.puerta_enlace}</dd>
+                      </div>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.puerta_enlace!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
+                        <CopyInfoIcon />
+                      </button>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            )}
             {!estaCerrado && (
               <div className="mt-6 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
                 {puedeProgresar && ticket.estado === "asignado" && (
@@ -271,21 +346,24 @@ export default function TicketDetallePage() {
                 {puedeReabrir && !estaCerrado && (
                   <button
                     onClick={reabrir}
-                    className="rounded-xl bg-brandCustom hover:bg-brand-700 px-4 py-2 text-xs font-semibold text-white active:scale-[0.98] transition-all"
+                    className="rounded-xl bg-brandCustom hover:bg-brandCustom/80 px-4 py-2 text-xs font-medium text-white active:scale-[0.98] transition-all"
                   >
                     Reabrir
                   </button>
                 )}
                 {!esCliente && (
-                  <select
+                  <div className="flex flex-col ml-auto h-full justify-center">
+                    <label className="text-xs font-medium text-textCustom/60 mb-1 self-center">Cambiar prioridad</label>
+                    <select
                     value={ticket.prioridad}
                     onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                    className="rounded-xl border border-gray-200 bg-white text-gray-700 px-3 py-2 text-xs font-medium focus:border-brand-500 focus:ring-4 focus:ring-brand-50 outline-none transition-all cursor-pointer ml-auto"
+                    className="rounded-xl border border-gray-400 bg-white text-textCustom px-3 py-2 text-xs font-medium focus:border-brandCustom/50 focus:ring-2 focus:ring-brandCustom/10 outline-none transition-all cursor-pointer ml-auto"
                   >
                     {PRIORIDADES.map((p) => (
                       <option key={p} value={p}>{prioridadLabels[p]}</option>
                     ))}
                   </select>
+                </div>
                 )}
               </div>
             )}
@@ -310,7 +388,7 @@ export default function TicketDetallePage() {
           </div>
 
           {/* Comentarios: debajo de info en ambas vistas */}
-          <section className="w-full space-y-4">
+          <section className="w-full space-y-4 ">
             <h2 className="text-lg font-bold tracking-tight text-gray-900">Comentarios ({comentarios.length})</h2>
             <div className="space-y-2.5">
               {comentarios.map((c) => (
@@ -318,7 +396,7 @@ export default function TicketDetallePage() {
                   key={c.id}
                   className={`rounded-2xl border px-4 py-2.5 transition-all ${c.es_nota_interna
                     ? "border-accentCustom/40 bg-accentCustom/10"
-                    : "border-gray-100 bg-white shadow-card"
+                    : "border-gray-100 bg-cardCustom shadow-card"
                     }`}
                 >
                   <div className="flex items-center justify-between text-xs mb-2">
@@ -341,7 +419,7 @@ export default function TicketDetallePage() {
             </div>
 
             {!estaCerrado && (
-              <form onSubmit={enviarComentario} className="bg-white rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
+              <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
                 <textarea
                   rows={3}
                   value={nuevoComentario}
@@ -358,14 +436,14 @@ export default function TicketDetallePage() {
                         type="checkbox"
                         checked={esNotaInterna}
                         onChange={(e) => setEsNotaInterna(e.target.checked)}
-                        className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="rounded border-borderCustom text-brandCustom focus:ring-brandCustom focus:ring-offset-0"
                       />
                       Nota interna
                     </label>
                   )}
                   <button
                     type="submit"
-                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
+                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 text-sm font-regular text-white hover:bg-brandCustom/90 shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
                   >
                     Comentar
                     <SendCommentIcon className="w-5 h-5" />
@@ -380,7 +458,7 @@ export default function TicketDetallePage() {
         <div className="w-full lg:w-[380px] xl:w-[440px] shrink-0 space-y-6">
           <section className="space-y-4">
             <h2 className="text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-4">
+            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               {historial.length === 0 ? (
                 <p className="text-xs text-gray-400 py-3 text-center">Sin cambios de estado registrados.</p>
               ) : (
@@ -418,7 +496,7 @@ export default function TicketDetallePage() {
 
           <section className="space-y-4">
             <h2 className="text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-4 space-y-4">
+            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-4">
               {!estaCerrado && (
                 <label className="block w-full">
                   <input

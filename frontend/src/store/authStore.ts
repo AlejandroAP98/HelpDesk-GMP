@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Rol = "cliente" | "agente" | "administrador";
 
@@ -41,6 +41,12 @@ export const useAuthStore = create<AuthState>()(
         return !!u && roles.includes(u.rol);
       },
     }),
-    { name: "helpdesk-auth" }
+    {
+      name: "helpdesk-auth",
+      storage: createJSONStorage(() => {
+        if (typeof window !== "undefined") return localStorage;
+        return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+      }),
+    }
   )
 );

@@ -6,14 +6,20 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import EstadoTicket, PrioridadTicket
+from app.models.enums import EstadoTicket, ElementoInfraestructura, PrioridadTicket
 
 
 class TicketCreate(BaseModel):
     titulo: str = Field(..., min_length=1, max_length=150)
     descripcion: str = Field(..., min_length=1)
     categoria_id: int = Field(..., ge=1)
-    prioridad: PrioridadTicket = PrioridadTicket.media
+    subcategoria_id: int = Field(..., ge=1)
+    elemento_afectado: ElementoInfraestructura
+    ip_pcs: str | None = None
+    ip_antena: str | None = None
+    mascara_red: str | None = None
+    puerta_enlace: str | None = None
+    nombre_punto: str | None = None
 
 
 class TicketUpdate(BaseModel):
@@ -21,6 +27,11 @@ class TicketUpdate(BaseModel):
     descripcion: str | None = None
     categoria_id: int | None = Field(None, ge=1)
     prioridad: PrioridadTicket | None = None
+    ip_pcs: str | None = None
+    ip_antena: str | None = None
+    mascara_red: str | None = None
+    puerta_enlace: str | None = None
+    nombre_punto: str | None = None
 
 
 class EstadoUpdate(BaseModel):
@@ -44,8 +55,15 @@ class TicketOut(BaseModel):
     agente_id: UUID | None
     modificado_por_id: UUID | None = None
     categoria_id: int
+    subcategoria_id: int
+    elemento_afectado: ElementoInfraestructura
     titulo: str
     descripcion: str
+    ip_pcs: str | None = None
+    ip_antena: str | None = None
+    mascara_red: str | None = None
+    puerta_enlace: str | None = None
+    nombre_punto: str | None = None
     estado: EstadoTicket
     prioridad: PrioridadTicket
     fecha_creacion: datetime
@@ -57,6 +75,7 @@ class TicketDetalle(TicketOut):
     agente_nombre: str | None = None
     modificado_por_nombre: str | None = None
     categoria_nombre: str | None = None
+    subcategoria_nombre: str | None = None
     empresa_nombre: str | None = None
 
 

@@ -40,3 +40,11 @@ export function PrioridadBadge({ prioridad }: { prioridad: string }) {
     </span>
   );
 }
+
+export function TotalBadge({ total }: { total: number }) {
+  return (
+    <span className="text-sm font-medium text-gray-500 bg-gray-100 border border-gray-200 px-3.5 py-1.5 rounded-lg">
+      {total} ticket{total !== 1 ? "s" : ""}
+    </span>
+  );
+}

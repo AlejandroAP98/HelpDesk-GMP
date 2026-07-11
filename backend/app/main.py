@@ -13,6 +13,7 @@ from app.routers import auth as auth_router
 from app.routers import categorias as categorias_router
 from app.routers import comentarios as comentarios_router
 from app.routers import empresas as empresas_router
+from app.routers import subcategorias as subcategorias_router
 from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
@@ -84,6 +85,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(empresas_router.router)
 app.include_router(categorias_router.router)
+app.include_router(subcategorias_router.router)
 app.include_router(usuarios_router.router)
 app.include_router(tickets_router.router)
 app.include_router(comentarios_router.router)

@@ -3,6 +3,10 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/endpoints";
 import { useAuthStore } from "@/store/authStore";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,56 +46,43 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1.5">Inicie sesion para continuar</p>
         </div>
 
-        <form onSubmit={submit} className="bg-white rounded-2xl shadow-card border border-gray-100 p-8 space-y-5">
-          <div className="space-y-4">
-            <label className="block">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Email</span>
-              <input
+        <form onSubmit={submit} className="space-y-5">
+          <Card>
+            <div className="space-y-4">
+              <Input
+                label="Email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-50 focus:bg-white outline-none transition-all"
                 placeholder="admin@helpdesk.com"
                 autoComplete="email"
               />
-            </label>
 
-            <label className="block">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Contrasena</span>
-              <input
+              <Input
+                label="Contrasena"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-50 focus:bg-white outline-none transition-all"
                 placeholder="............"
                 autoComplete="current-password"
               />
-            </label>
-          </div>
-
-          {error && (
-            <div className="animate-fade-in rounded-xl bg-red-50 border border-red-100 px-4 py-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm font-medium text-red-600">{error}</p>
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 py-3 text-sm font-semibold text-white hover:from-brand-500 hover:to-brand-400 shadow-brand active:scale-[0.98] disabled:opacity-50 transition-all duration-200"
-          >
-            {loading ? "Verificando..." : "Ingresar al Panel"}
-          </button>
+            {error && <div className="mt-4"><ErrorMessage message={error} /></div>}
 
-          <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
-            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Demo Access</p>
-            <p className="text-xs text-gray-500 font-mono">admin@helpdesk.com / Admin123456</p>
-          </div>
+            <div className="mt-5">
+              <Button type="submit" loading={loading} className="w-full py-3">
+                Ingresar al Panel
+              </Button>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Demo Access</p>
+              <p className="text-xs text-gray-500 font-mono">admin@helpdesk.com / Admin123456</p>
+            </div>
+          </Card>
         </form>
       </div>
     </main>

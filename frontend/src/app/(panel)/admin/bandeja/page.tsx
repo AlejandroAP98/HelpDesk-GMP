@@ -6,6 +6,13 @@ import { adminApi, ticketApi, type Ticket, type PrioridadTicket, type EstadoTick
 import type { Usuario } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { PrioridadBadge } from "@/components/Badges";
+import { DataTable } from "@/components/ui/Table";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import AssingUserIcon from "@/app/assets/icons/AssignUserIcon";
 
 export default function BandejaPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -47,6 +54,13 @@ export default function BandejaPage() {
           titulo: ev.titulo,
           descripcion: "",
           categoria_id: 0,
+          subcategoria_id: 0,
+          elemento_afectado: "punto_venta",
+          ip_pcs: null,
+          ip_antena: null,
+          mascara_red: null,
+          puerta_enlace: null,
+          nombre_punto: null,
           prioridad: ev.prioridad as PrioridadTicket,
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",
@@ -71,6 +85,13 @@ export default function BandejaPage() {
               titulo: ev.titulo,
               descripcion: "",
               categoria_id: 0,
+              subcategoria_id: 0,
+              elemento_afectado: "punto_venta",
+              ip_pcs: null,
+              ip_antena: null,
+              mascara_red: null,
+              puerta_enlace: null,
+              nombre_punto: null,
               prioridad: ev.prioridad as PrioridadTicket,
               estado: ev.estado as EstadoTicket,
               cliente_id: ev.cliente_id ?? "",
@@ -127,73 +148,83 @@ export default function BandejaPage() {
         <p className="text-sm text-gray-500 mt-1">Asigne tickets a sus agentes disponibles</p>
       </div>
 
-      {error && (
-        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 flex items-center gap-2">
-          <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm font-medium text-red-600">{error}</p>
-        </div>
-      )}
+      {error && <ErrorMessage message={error} />}
 
       {cargando ? (
-        <p className="text-center text-gray-400 py-12">Cargando...</p>
+        <LoadingState />
       ) : tickets.length === 0 ? (
-        <p className="text-center text-gray-400 py-12 bg-white rounded-2xl border border-gray-100 shadow-card">
-          No hay tickets abiertos por asignar.
-        </p>
+        <EmptyState message="No hay tickets abiertos por asignar." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-card">
-          <table className="w-full text-sm text-left min-w-[700px]">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
-              <tr>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Titulo</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Empresa</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Prioridad</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Creado</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Asignar a</th>
-                <th className="px-5 py-3.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {tickets.map((t) => (
-                <tr key={t.id} className={t.prioridad === "urgente" ? "bg-red-50/30 hover:bg-red-50/50 transition-colors" : "hover:bg-gray-50/50 transition-colors"}>
-                  <td className="px-5 py-3.5">
-                    <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
-                      {t.titulo}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">#{t.empresa_id}</td>
-                  <td className="px-5 py-3.5"><PrioridadBadge prioridad={t.prioridad} /></td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString()}</td>
-                  <td className="px-5 py-3.5">
-                    <select
-                      value={agenteSel[t.id] ?? ""}
-                      onChange={(e) => setAgenteSel((p) => ({ ...p, [t.id]: e.target.value }))}
-                      className="rounded-xl border border-gray-200 bg-white text-gray-700 px-3 py-2 text-xs font-medium focus:border-brand-500 focus:ring-4 focus:ring-brand-50 outline-none transition-all cursor-pointer"
-                    >
-                      <option value="">Seleccione agente...</option>
-                      {agentes.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre} {a.empresa_id ? `(emp ${a.empresa_id})` : "(interno)"}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={() => asignar(t.id)}
-                      disabled={!agenteSel[t.id] || asignandoId === t.id}
-                      className="rounded-xl bg-brandCustom px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-40 shadow-brand active:scale-[0.98] transition-all"
-                    >
-                      {asignandoId === t.id ? "Asignando..." : "Asignar"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          rowClassName={(t: Ticket) => t.prioridad === "urgente" ? "bg-red-50/30" : ""}
+          columns={[
+            {
+              key: "titulo",
+              header: "Titulo",
+              cell: (t: Ticket) => (
+                <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
+                  {t.titulo}
+                </Link>
+              ),
+            },
+            {
+              key: "empresa",
+              header: "Empresa",
+              cell: (t: Ticket) => <span className="text-gray-400 text-xs">#{t.empresa_id}</span>,
+            },
+            {
+              key: "prioridad",
+              header: "Prioridad",
+              cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
+            },
+            {
+              key: "creado",
+              header: "Creado",
+              cell: (t: Ticket) => (
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString()}</span>
+              ),
+            },
+            {
+              key: "asignar_select",
+              header: "Asignar a",
+              cell: (t: Ticket) => (
+                <select
+                  value={agenteSel[t.id] ?? ""}
+                  onChange={(e) => setAgenteSel((p) => ({ ...p, [t.id]: e.target.value }))}
+                  className="rounded-xl border border-gray-200 bg-white text-gray-700 px-3 py-2 text-xs font-medium focus:border-brand-500 focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+                >
+                  <option value="">Seleccione agente...</option>
+                  {agentes.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre} {a.empresa_id ? `(emp ${a.empresa_id})` : "(interno)"}
+                    </option>
+                  ))}
+                </select>
+              ),
+            },
+            {
+              key: "asignar_btn",
+              header: "",
+              cell: (t: Ticket) => (
+                <div className="flex items-center justify-end">
+                  <Button
+                    variant="primary"
+                    onClick={() => asignar(t.id)}
+                    disabled={!agenteSel[t.id] || asignandoId === t.id}
+                    loading={asignandoId === t.id}
+                    className="py-2 text-xs w-fit"
+                    icon={<AssingUserIcon className="w-4 h-4" />}
+                  >
+                    Asignar
+                  </Button >
+                </div>
+              ),
+            },
+          ]}
+          data={tickets}
+          keyExtractor={(t: Ticket) => t.id}
+          minWidth="min-w-[700px]"
+        />
       )}
     </div>
   );

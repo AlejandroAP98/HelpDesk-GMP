@@ -8,7 +8,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bgCustom: "#f3f4f6",
+        bgCustom: "#eef0f2",
+        cardCustom: "#fbfcff",
         accentCustom: "#EB6534",
         textCustom: "#111827",
         textCustomMuted: "#6b7280",
@@ -24,6 +25,8 @@ const config: Config = {
         'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'slide-in-right': 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'wifi-pulse': 'wifiPulse 2s ease-in-out infinite',
+        'wifi-dot': 'wifiDot 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -41,6 +44,14 @@ const config: Config = {
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        wifiPulse: {
+          '0%, 100%': { opacity: '0.15' },
+          '50%': { opacity: '1' },
+        },
+        wifiDot: {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(0.85)' },
+          '50%': { opacity: '1', transform: 'scale(1.15)' },
         },
       },
       boxShadow: {

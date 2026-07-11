@@ -30,7 +30,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
             </div>
           </header>
           <main className="flex-1 overflow-x-hidden">
-            <div className="mx-auto px-4 py-6 sm:px-6 w-full animate-fade-in">
+            <div className="mx-auto px-4 py-6 sm:px-6 w-full animate-fade-in min-h-screen bg-[#eef0f2]">
               {children}
             </div>
           </main>

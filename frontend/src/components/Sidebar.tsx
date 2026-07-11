@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { Button } from "@/components/ui/Button";
 import TicketIcon from "@/app/assets/icons/TicketIcon";
 import HomeIcon from "@/app/assets/icons/HomeIcon";
 import InboxIcon from "@/app/assets/icons/InboxIcon";
+import logo from "../app/assets/logo.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
   cliente: [
@@ -56,16 +58,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="px-5 py-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brandCustom to-brandCustom flex items-center justify-center shadow-brandCustom">
-                <span className="text-white font-bold text-base">H</span>
-              </div>
-              <div>
-                <h1 className="text-base font-bold tracking-tight text-gray-900">HelpDesk</h1>
-                <p className="text-[10px] font-semibold text-brandCustom uppercase tracking-widest">GMP tickets</p>
-              </div>
+        <div className="px-5 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between ">
+            <div className="flex items-center justify-center w-full">
+              <img src={logo.src} alt="Logo GMP" className="w-28 h-auto " />
             </div>
             <button
               onClick={onClose}
@@ -111,12 +107,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 {rol}
               </span>
             </div>
-            <button
+            <Button
               onClick={handleLogout}
-              className="mt-3 w-full rounded-xl bg-gray-100 hover:bg-gray-200 py-2 text-gray-700 hover:text-gray-900 transition-all font-semibold text-sm border border-gray-200"
+              variant="secondary"
+              className="mt-3 w-full py-2"
             >
               Cerrar sesion
-            </button>
+            </Button>
           </div>
         </div>
       </aside>

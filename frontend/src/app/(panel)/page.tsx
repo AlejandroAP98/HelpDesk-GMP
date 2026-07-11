@@ -6,19 +6,50 @@ import { useAuthStore } from "@/store/authStore";
 import { ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
+import { StatsCard } from "@/components/ui/StatsCard";
+import { DataTable } from "@/components/ui/Table";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import NewTicketIcon from "../assets/icons/NewTicketIcon";
+import TicketIcon from "../assets/icons/TicketIcon";
+import TicketOpenedIcon from "../assets/icons/TicketOpenedIcon";
+import TicketAlertIcon from "../assets/icons/TicketAlertIcon";
+import TicketSolvedIcon from "../assets/icons/TicketSolvedIcon";
+
+
+
+interface Stats {
+  total: number;
+  abiertos: number;
+  urgentes: number;
+  resueltos: number;
+}
 
 export default function PanelHomePage() {
   const usuario = useAuthStore((s) => s.usuario);
   const [recientes, setRecientes] = useState<Ticket[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0 });
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       try {
-        const data = await ticketApi.listar({ size: 5 });
-        setRecientes(data.items);
+        const [ultimos, totalData, abiertosData, urgentesData, resueltosData] = await Promise.all([
+          ticketApi.listar({ size: 5 }),
+          ticketApi.listar({ size: 1 }),
+          ticketApi.listar({ estado: "abierto", size: 1 }),
+          ticketApi.listar({ prioridad: "urgente", size: 1 }),
+          ticketApi.listar({ estado: "resuelto", size: 1 }),
+        ]);
+        setRecientes(ultimos.items);
+        setStats({
+          total: totalData.total,
+          abiertos: abiertosData.total,
+          urgentes: urgentesData.total,
+          resueltos: resueltosData.total,
+        });
       } catch {
         setRecientes([]);
       } finally {
@@ -50,9 +81,19 @@ export default function PanelHomePage() {
           modificado_por_nombre: null,
           fecha_creacion: ev.fecha_actualizacion,
           fecha_actualizacion: ev.fecha_actualizacion,
+          subcategoria_id: 0,
+          elemento_afectado: "torre",
+          ip_pcs: null,
+          ip_antena: null,
+          mascara_red: null,
+          puerta_enlace: null,
+          nombre_punto: null,
         };
         return [nuevo, ...prev].slice(0, 5);
       });
+      setStats((s) => ({ ...s, total: s.total + 1 }));
+      if (ev.estado === "abierto") setStats((s) => ({ ...s, abiertos: s.abiertos + 1 }));
+      if (ev.prioridad === "urgente") setStats((s) => ({ ...s, urgentes: s.urgentes + 1 }));
     });
 
     setOnTicketUpdated((ev) => {
@@ -78,8 +119,6 @@ export default function PanelHomePage() {
   }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
   const esCliente = usuario?.rol === "cliente";
-  const esAdmin = usuario?.rol === "administrador";
-  const esAgente = usuario?.rol === "agente";
 
   return (
     <div className="space-y-6">
@@ -89,20 +128,26 @@ export default function PanelHomePage() {
             Hola, {usuario?.nombre?.split(" ")[0]}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {esCliente && "Gestiona tus tickets de soporte de manera eficiente"}
-            {esAgente && "Revisa y resuelve tus tickets asignados"}
-            {esAdmin && "Panel de administracion y control global"}
+            {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte de manera eficiente"}
+            {usuario?.rol === "agente" && "Revisa y resuelve tus tickets asignados"}
+            {usuario?.rol === "administrador" && "Panel de administracion y control global"}
           </p>
         </div>
         {esCliente && (
-          <Link
-            href="/tickets/nuevo"
-            className="inline-flex items-center gap-2 rounded-xl bg-brandCustom px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all"
-          >
-            <NewTicketIcon />
-            Crear nuevo ticket
+          <Link href="/tickets/nuevo">
+            <Button>
+              <NewTicketIcon />
+              Crear nuevo ticket
+            </Button>
           </Link>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />} color="brand" />
+        <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />} color="amber" />
+        <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />} color="red" />
+        <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />} color="emerald" />
       </div>
 
       <section className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
@@ -114,44 +159,46 @@ export default function PanelHomePage() {
         </div>
 
         {cargando ? (
-          <p className="py-8 text-center text-sm text-gray-400">Cargando...</p>
+          <LoadingState />
         ) : recientes.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">No hay tickets todavia.</p>
+          <EmptyState message="No hay tickets todavia." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[500px]">
-              <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
-                <tr>
-                  <th className="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Titulo</th>
-                  <th className="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Estado</th>
-                  <th className="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Prioridad</th>
-                  <th className="px-4 py-3 text-xs font-semibold tracking-wider uppercase">Actualizado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {recientes.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
-                        {t.titulo}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <EstadoBadge estado={t.estado} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <PrioridadBadge prioridad={t.prioridad} />
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-400 text-xs">
-                      {new Date(t.fecha_actualizacion).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              {
+                key: "titulo",
+                header: "Titulo",
+                cell: (t: Ticket) => (
+                  <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
+                    {t.titulo}
+                  </Link>
+                ),
+              },
+              {
+                key: "estado",
+                header: "Estado",
+                cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
+              },
+              {
+                key: "prioridad",
+                header: "Prioridad",
+                cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
+              },
+              {
+                key: "actualizado",
+                header: "Actualizado",
+                cell: (t: Ticket) => (
+                  <span className="text-gray-400 text-xs">{new Date(t.fecha_actualizacion).toLocaleDateString()}</span>
+                ),
+              },
+            ]}
+            data={recientes}
+            keyExtractor={(t: Ticket) => t.id}
+            minWidth="min-w-[500px]"
+          />
         )}
       </section>
     </div>
   );
 }
+

@@ -25,7 +25,7 @@ export default function GlobalError({
           </pre>
           <button
             onClick={reset}
-            className="mt-6 rounded-xl bg-brandCustom px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all"
+            className="mt-6 rounded-xl bg-brandCustom px-5 py-2.5 text-sm font-semibold text-white hover:bg-brandCustom/90 shadow-brand active:scale-[0.98] transition-all"
           >
             Reintentar
           </button>

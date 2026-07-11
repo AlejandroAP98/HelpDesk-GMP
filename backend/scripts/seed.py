@@ -7,13 +7,14 @@ import argparse
 import asyncio
 import sys
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.core.database import AsyncSessionLocal
 from app.models.empresa import Empresa
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
 from app.models.categoria import Categoria
+from app.models.subcategoria import Subcategoria
 from app.core.security import hash_password
 
 
@@ -58,11 +59,31 @@ CLIENTES_DEMO = [
     },
 ]
 CATEGORIAS_DEMO = [
-    {"nombre": "Soporte Técnico", "descripcion": "Problemas de hardware o software"},
-    {"nombre": "Facturación", "descripcion": "Dudas sobre pagos y facturas"},
-    {"nombre": "Ventas", "descripcion": "Consultas comerciales"},
-    {"nombre": "Infraestructura", "descripcion": "Redes, servidores y conectividad"},
-    {"nombre": "Seguridad", "descripcion": "Accesos, VPN y políticas"}
+    {
+        "nombre": "Soporte",
+        "descripcion": "Fallls operativas y degradación del servicio",
+        "subcategorias": [
+            ("Caída total del servicio", "Interrupción completa del servicio de conectividad"),
+            ("Lentitud o intermitencia", "Degradación o intermitencia en la conexión"),
+        ],
+    },
+    {
+        "nombre": "Instalación",
+        "descripcion": "Tareas planificadas, despliegues y altas de servicios",
+        "subcategorias": [
+            ("Instalación o Cambio de Hardware", "Montaje, reemplazo o migración de equipos de red"),
+            ("Cableado estructurado", "Despliegue de red LAN, canalización o peinado de rack"),
+            ("Configuración de equipos nuevos", "Comisionamiento y aprovisionamiento de routers/switches"),
+        ],
+    },
+    {
+        "nombre": "Mantenimiento",
+        "descripcion": "Tareas preventivas destinadas a mitigar riesgos futuros",
+        "subcategorias": [
+            ("Actualización de Software", "Parcheo de firmware o sistema operativo en equipos de red"),
+            ("Limpieza y Respaldo", "Mantenimiento preventivo físico y lógico de infraestructura"),
+        ],
+    },
 ]
 
 
@@ -72,9 +93,19 @@ async def run(reset: bool = False) -> None:
             from sqlalchemy import delete
             emails_to_delete = [ADMIN_DEMO["email"]] + [a["email"] for a in AGENTES_DEMO] + [c["email"] for c in CLIENTES_DEMO]
             await db.execute(delete(Usuario).where(Usuario.email.in_(emails_to_delete)))
+            await db.execute(delete(Subcategoria))
             await db.execute(delete(Categoria))
             await db.execute(delete(Empresa).where(Empresa.id == EMPRESA_DEMO["id"]))
             await db.commit()
+
+        nombres_validos = {c["nombre"] for c in CATEGORIAS_DEMO}
+        all_cats = (await db.execute(select(Categoria))).scalars().all()
+        for cat in all_cats:
+            if cat.nombre not in nombres_validos:
+                await db.execute(text("DELETE FROM subcategorias WHERE categoria_id = :cid"), {"cid": cat.id})
+                await db.execute(text("DELETE FROM categorias WHERE id = :cid"), {"cid": cat.id})
+                print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
+        await db.commit()
 
         empresa = (await db.execute(select(Empresa).where(Empresa.id == EMPRESA_DEMO["id"]))).scalar_one_or_none()
         if empresa is None:
@@ -129,13 +160,36 @@ async def run(reset: bool = False) -> None:
                 cat_db = Categoria(nombre=cat_data["nombre"], descripcion=cat_data["descripcion"])
                 db.add(cat_db)
                 await db.commit()
+                await db.refresh(cat_db)
                 print(f"Categoría creada: id={cat_db.id} nombre={cat_db.nombre!r}")
             else:
                 print(f"Categoría ya existe: id={cat_db.id} nombre={cat_db.nombre!r}")
 
+            for sub_nombre, sub_desc in cat_data.get("subcategorias", []):
+                sub_db = (
+                    await db.execute(
+                        select(Subcategoria).where(
+                            Subcategoria.categoria_id == cat_db.id,
+                            Subcategoria.nombre == sub_nombre,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if sub_db is None:
+                    sub_db = Subcategoria(
+                        categoria_id=cat_db.id,
+                        nombre=sub_nombre,
+                        descripcion=sub_desc,
+                    )
+                    db.add(sub_db)
+                    await db.commit()
+                    print(f"  Subcategoría creada: id={sub_db.id} nombre={sub_db.nombre!r}")
+                else:
+                    print(f"  Subcategoría ya existe: id={sub_db.id} nombre={sub_db.nombre!r}")
+
         from sqlalchemy import text
         await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
+        await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
         await db.commit()
 
 

@@ -3,6 +3,7 @@ import type { Usuario } from "@/store/authStore";
 
 export type EstadoTicket = "abierto" | "asignado" | "en_progreso" | "resuelto" | "cerrado";
 export type PrioridadTicket = "baja" | "media" | "alta" | "urgente";
+export type ElementoInfraestructura = "torre" | "celda" | "mastil" | "punto_venta";
 
 export interface Ticket {
   id: string;
@@ -12,12 +13,20 @@ export interface Ticket {
   modificado_por_id: string | null;
   modificado_por_nombre: string | null;
   categoria_id: number;
+  subcategoria_id: number;
+  elemento_afectado: ElementoInfraestructura;
   titulo: string;
   descripcion: string;
+  ip_pcs: string | null;
+  ip_antena: string | null;
+  mascara_red: string | null;
+  puerta_enlace: string | null;
+  nombre_punto: string | null;
   estado: EstadoTicket;
   prioridad: PrioridadTicket;
   fecha_creacion: string;
   fecha_actualizacion: string;
+  subcategoria_nombre?: string | null;
 }
 
 export interface Pagina<T> {
@@ -65,6 +74,13 @@ export interface Categoria {
   descripcion: string | null;
 }
 
+export interface Subcategoria {
+  id: number;
+  categoria_id: number;
+  nombre: string;
+  descripcion: string | null;
+}
+
 export const authApi = {
   login: async (email: string, password: string) => {
     const r = await api.post("/api/auth/login", { email, password });
@@ -89,7 +105,7 @@ export const ticketApi = {
     const r = await api.get(`/api/tickets/${id}`);
     return r.data as Ticket;
   },
-  crear: async (data: { titulo: string; descripcion: string; categoria_id: number; prioridad: PrioridadTicket }) => {
+  crear: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null }) => {
     const r = await api.post("/api/tickets", data);
     return r.data as Ticket;
   },
@@ -153,6 +169,13 @@ export const categoriaApi = {
   listar: async () => {
     const r = await api.get("/api/categorias");
     return r.data as Categoria[];
+  },
+};
+
+export const subcategoriaApi = {
+  listarPorCategoria: async (categoriaId: number) => {
+    const r = await api.get(`/api/subcategorias/por-categoria/${categoriaId}`);
+    return r.data as Subcategoria[];
   },
 };
 

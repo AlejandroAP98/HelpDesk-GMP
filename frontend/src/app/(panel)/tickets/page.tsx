@@ -5,18 +5,38 @@ import Link from "next/link";
 import { ticketApi, type Ticket, type EstadoTicket, type PrioridadTicket } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
-import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
+import { EstadoBadge, PrioridadBadge, TotalBadge } from "@/components/Badges";
+import { DataTable } from "@/components/ui/Table";
+import { Pagination } from "@/components/ui/Pagination";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 
-const ESTADOS: ("todos" | EstadoTicket)[] = ["todos", "abierto", "asignado", "en_progreso", "resuelto", "cerrado"];
-const PRIORIDADES: ("todas" | PrioridadTicket)[] = ["todas", "baja", "media", "alta", "urgente"];
+const ESTADOS: { value: string; label: string }[] = [
+  { value: "todos", label: "Estado: todos" },
+  { value: "abierto", label: "Estado: abierto" },
+  { value: "asignado", label: "Estado: asignado" },
+  { value: "en_progreso", label: "Estado: en progreso" },
+  { value: "resuelto", label: "Estado: resuelto" },
+  { value: "cerrado", label: "Estado: cerrado" },
+];
+
+const PRIORIDADES: { value: string; label: string }[] = [
+  { value: "todas", label: "Prioridad: todas" },
+  { value: "baja", label: "Prioridad: baja" },
+  { value: "media", label: "Prioridad: media" },
+  { value: "alta", label: "Prioridad: alta" },
+  { value: "urgente", label: "Prioridad: urgente" },
+];
 
 export default function TicketsListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [estado, setEstado] = useState<typeof ESTADOS[number]>("todos");
-  const [prioridad, setPrioridad] = useState<typeof PRIORIDADES[number]>("todas");
+  const [estado, setEstado] = useState("todos");
+  const [prioridad, setPrioridad] = useState("todas");
   const [cargando, setCargando] = useState(true);
 
   const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
@@ -55,6 +75,13 @@ export default function TicketsListPage() {
           titulo: ev.titulo,
           descripcion: "",
           categoria_id: 0,
+          subcategoria_id: 0,
+          elemento_afectado: "punto_venta",
+          ip_pcs: null,
+          ip_antena: null,
+          mascara_red: null,
+          puerta_enlace: null,
+          nombre_punto: null,
           prioridad: ev.prioridad as PrioridadTicket,
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",
@@ -95,93 +122,77 @@ export default function TicketsListPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
-        <Link
-          href="/tickets/nuevo"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brandCustom px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 shadow-brand active:scale-[0.98] transition-all"
-        >
-          <NewTicketIcon />
-          Nuevo ticket
+        <Link href="/tickets/nuevo">
+          <Button
+            className="py-2 text-xs w-fit"
+            variant="primary"
+            disabled={cargando}
+            icon={<NewTicketIcon className="w-4 h-4" />}
+          >
+            Nuevo ticket
+          </Button>
         </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
-        <select
+        <Select
           value={estado}
-          onChange={(e) => { setEstado(e.target.value as typeof ESTADOS[number]); setPage(1); }}
-          className="w-full sm:w-auto rounded-xl border border-gray-200 bg-white text-gray-700 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-4 focus:ring-brand-50 outline-none transition-all cursor-pointer"
-        >
-          {ESTADOS.map((e) => (
-            <option key={e} value={e}>Estado: {e.replace("_", " ")}</option>
-          ))}
-        </select>
-        <select
+          onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+          options={ESTADOS}
+        />
+        <Select
           value={prioridad}
-          onChange={(e) => { setPrioridad(e.target.value as typeof PRIORIDADES[number]); setPage(1); }}
-          className="w-full sm:w-auto rounded-xl border border-gray-200 bg-white text-gray-700 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-4 focus:ring-brand-50 outline-none transition-all cursor-pointer"
-        >
-          {PRIORIDADES.map((p) => (
-            <option key={p} value={p}>Prioridad: {p}</option>
-          ))}
-        </select>
-        <span className="text-sm font-medium text-gray-500 bg-gray-100 border border-gray-200 px-3.5 py-1.5 rounded-lg">
-          {total} ticket{total !== 1 ? "s" : ""}
-        </span>
+          onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
+          options={PRIORIDADES}
+        />
+        <TotalBadge total={total} />
       </div>
 
       {cargando ? (
-        <p className="py-12 text-center text-sm text-gray-400">Cargando...</p>
+        <LoadingState />
       ) : tickets.length === 0 ? (
-        <p className="py-12 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100 shadow-card">
-          No hay tickets para estos filtros.
-        </p>
+        <EmptyState message="No hay tickets para estos filtros." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-card">
-          <table className="w-full text-sm text-left min-w-[560px]">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-100">
-              <tr>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Titulo</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Estado</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Prioridad</th>
-                <th className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase">Creado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {tickets.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
-                      {t.titulo}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3.5"><EstadoBadge estado={t.estado} /></td>
-                  <td className="px-5 py-3.5"><PrioridadBadge prioridad={t.prioridad} /></td>
-                  <td className="px-5 py-3.5 text-gray-400 text-xs">
-                    {new Date(t.fecha_creacion).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            {
+              key: "titulo",
+              header: "Titulo",
+              cell: (t: Ticket) => (
+                <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
+                  {t.titulo}
+                </Link>
+              ),
+            },
+            {
+              key: "estado",
+              header: "Estado",
+              cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
+            },
+            {
+              key: "prioridad",
+              header: "Prioridad",
+              cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
+            },
+            {
+              key: "creado",
+              header: "Creado",
+              cell: (t: Ticket) => (
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString()}</span>
+              ),
+            },
+          ]}
+          data={tickets}
+          keyExtractor={(t: Ticket) => t.id}
+        />
       )}
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page <= 1}
-          className="rounded-xl border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600 disabled:opacity-30 disabled:hover:bg-white transition-all"
-        >
-          Anterior
-        </button>
-        <span className="text-sm font-medium text-gray-400 px-2">Pagina {page}</span>
-        <button
-          onClick={() => setPage((p) => p + 1)}
-          disabled={tickets.length < 20}
-          className="rounded-xl border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600 disabled:opacity-30 disabled:hover:bg-white transition-all"
-        >
-          Siguiente
-        </button>
-      </div>
+      <Pagination
+        page={page}
+        hasMore={tickets.length >= 20}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => p + 1)}
+      />
     </div>
   );
 }

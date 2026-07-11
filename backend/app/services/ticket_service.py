@@ -10,6 +10,7 @@ from app.core.deps import tenant_filter
 from app.models.categoria import Categoria
 from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario
 from app.models.historial_estado import HistorialEstado
+from app.models.subcategoria import Subcategoria
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.ticket import (
@@ -22,6 +23,7 @@ from app.schemas.ticket import (
     TicketUpdate,
 )
 from app.services.estados import es_estado_final, es_transicion_valida
+from app.services.prioridad import calcular_prioridad
 from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
 
@@ -128,6 +130,22 @@ async def _get_categoria(categoria_id: int, db: AsyncSession) -> Categoria:
     return cat
 
 
+async def _get_subcategoria(subcategoria_id: int, categoria_id: int, db: AsyncSession) -> Subcategoria:
+    sub = (
+        await db.execute(
+            select(Subcategoria).where(
+                Subcategoria.id == subcategoria_id,
+                Subcategoria.categoria_id == categoria_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if sub is None:
+        raise RecursoNoEncontrado(
+            f"Subcategoría {subcategoria_id} no existe o no pertenece a la categoría {categoria_id}"
+        )
+    return sub
+
+
 async def _get_agente(agente_id: UUID, db: AsyncSession) -> Usuario:
     agente = (
         await db.execute(
@@ -156,6 +174,10 @@ async def crear(
         empresa_id = current.empresa_id
 
     await _get_categoria(data.categoria_id, db)
+    await _get_subcategoria(data.subcategoria_id, data.categoria_id, db)
+    prioridad = await calcular_prioridad(
+        data.categoria_id, data.subcategoria_id, data.elemento_afectado, db
+    )
 
     ticket = Ticket(
         empresa_id=empresa_id,
@@ -163,7 +185,14 @@ async def crear(
         titulo=data.titulo,
         descripcion=data.descripcion,
         categoria_id=data.categoria_id,
-        prioridad=data.prioridad,
+        subcategoria_id=data.subcategoria_id,
+        elemento_afectado=data.elemento_afectado,
+        ip_pcs=data.ip_pcs,
+        ip_antena=data.ip_antena,
+        mascara_red=data.mascara_red,
+        puerta_enlace=data.puerta_enlace,
+        nombre_punto=data.nombre_punto,
+        prioridad=prioridad,
         estado=EstadoTicket.abierto,
         modificado_por_id=current.id,
     )
@@ -194,6 +223,10 @@ async def crear_admin(
     if cliente is None:
         raise RecursoNoEncontrado("Cliente no encontrado en esa empresa")
     await _get_categoria(data.categoria_id, db)
+    await _get_subcategoria(data.subcategoria_id, data.categoria_id, db)
+    prioridad = await calcular_prioridad(
+        data.categoria_id, data.subcategoria_id, data.elemento_afectado, db
+    )
 
     ticket = Ticket(
         empresa_id=empresa_id,
@@ -201,7 +234,14 @@ async def crear_admin(
         titulo=data.titulo,
         descripcion=data.descripcion,
         categoria_id=data.categoria_id,
-        prioridad=data.prioridad,
+        subcategoria_id=data.subcategoria_id,
+        elemento_afectado=data.elemento_afectado,
+        ip_pcs=data.ip_pcs,
+        ip_antena=data.ip_antena,
+        mascara_red=data.mascara_red,
+        puerta_enlace=data.puerta_enlace,
+        nombre_punto=data.nombre_punto,
+        prioridad=prioridad,
         estado=EstadoTicket.abierto,
         modificado_por_id=None,
     )
@@ -283,6 +323,7 @@ async def obtener_detalle(
     cliente_nombre: str | None = None
     agente_nombre: str | None = None
     modificado_por_nombre: str | None = None
+    subcategoria_nombre: str | None = None
     usuario_ids = {ticket.cliente_id, ticket.agente_id, ticket.modificado_por_id}
     usuario_ids.discard(None)
     if usuario_ids:
@@ -295,6 +336,12 @@ async def obtener_detalle(
         cliente_nombre = nombres.get(ticket.cliente_id)
         agente_nombre = nombres.get(ticket.agente_id)
         modificado_por_nombre = nombres.get(ticket.modificado_por_id)
+    sub = (
+        await db.execute(
+            select(Subcategoria.nombre).where(Subcategoria.id == ticket.subcategoria_id)
+        )
+    ).scalar_one_or_none()
+    subcategoria_nombre = sub
     return TicketDetalle(
         id=ticket.id,
         empresa_id=ticket.empresa_id,
@@ -302,8 +349,15 @@ async def obtener_detalle(
         agente_id=ticket.agente_id,
         modificado_por_id=ticket.modificado_por_id,
         categoria_id=ticket.categoria_id,
+        subcategoria_id=ticket.subcategoria_id,
+        elemento_afectado=ticket.elemento_afectado,
         titulo=ticket.titulo,
         descripcion=ticket.descripcion,
+        ip_pcs=ticket.ip_pcs,
+        ip_antena=ticket.ip_antena,
+        mascara_red=ticket.mascara_red,
+        puerta_enlace=ticket.puerta_enlace,
+        nombre_punto=ticket.nombre_punto,
         estado=ticket.estado,
         prioridad=ticket.prioridad,
         fecha_creacion=ticket.fecha_creacion,
@@ -311,6 +365,7 @@ async def obtener_detalle(
         cliente_nombre=cliente_nombre,
         agente_nombre=agente_nombre,
         modificado_por_nombre=modificado_por_nombre,
+        subcategoria_nombre=subcategoria_nombre,
     )
 
 
@@ -324,7 +379,7 @@ async def actualizar(
         raise PermisoDenegado("Solo el autor puede editar su ticket")
     if data.categoria_id is not None:
         await _get_categoria(data.categoria_id, db)
-    for field in ("titulo", "descripcion", "categoria_id", "prioridad"):
+    for field in ("titulo", "descripcion", "categoria_id", "prioridad", "ip_pcs", "ip_antena", "mascara_red", "puerta_enlace", "nombre_punto"):
         val = getattr(data, field)
         if val is not None:
             setattr(ticket, field, val)

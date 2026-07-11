@@ -25,3 +25,10 @@ class PrioridadTicket(str, Enum):
     media = "media"
     alta = "alta"
     urgente = "urgente"
+
+
+class ElementoInfraestructura(str, Enum):
+    torre = "torre"
+    celda = "celda"
+    mastil = "mastil"
+    punto_venta = "punto_venta"

@@ -2,18 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #f3f4f6;
-  --bg-card: #ffffff;
-  --bg-input: #f9fafb;
-  --fg: #111827;
-  --fg-muted: #6b7280;
-  --border: #e5e7eb;
-  --brand: #087E8B;
-  --brand-light: #f0f9fa;
-  --accent: #EB6534;
-  --accent-light: #fef2ee;
-}
 
 html, body {
   background-color: var(--bg);

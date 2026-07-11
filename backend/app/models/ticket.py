@@ -8,7 +8,7 @@ from sqlalchemy import ForeignKey, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.models.enums import EstadoTicket, PrioridadTicket
+from app.models.enums import EstadoTicket, ElementoInfraestructura, PrioridadTicket
 
 if TYPE_CHECKING:
     from app.models.usuario import Usuario
@@ -35,8 +35,25 @@ class Ticket(Base):
     categoria_id: Mapped[int] = mapped_column(
         ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=False
     )
+    subcategoria_id: Mapped[int] = mapped_column(
+        ForeignKey("subcategorias.id", ondelete="RESTRICT"), nullable=False
+    )
+    elemento_afectado: Mapped[ElementoInfraestructura] = mapped_column(
+        SAEnum(
+            ElementoInfraestructura,
+            name="elemento_infraestructura",
+            create_type=True,
+            validate_strings=True,
+        ),
+        nullable=False,
+    )
     titulo: Mapped[str] = mapped_column(String(150), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text, nullable=False)
+    ip_pcs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ip_antena: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mascara_red: Mapped[str | None] = mapped_column(Text, nullable=True)
+    puerta_enlace: Mapped[str | None] = mapped_column(Text, nullable=True)
+    nombre_punto: Mapped[str | None] = mapped_column(Text, nullable=True)
     estado: Mapped[EstadoTicket] = mapped_column(
         SAEnum(
             EstadoTicket,
