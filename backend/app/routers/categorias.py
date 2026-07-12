@@ -19,13 +19,18 @@ from app.utils.pagination import Pagina
 router = APIRouter(prefix="/api/categorias", tags=["categorias"])
 
 
-@router.get("", response_model=list[CategoriaOut])
+@router.get("", response_model=Pagina[CategoriaOut])
 async def listar(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(get_current_user),
-) -> list[CategoriaOut]:
-    items = await categoria_service.listar_sin_paginar(db)
-    return [CategoriaOut.model_validate(c) for c in items]
+) -> Pagina[CategoriaOut]:
+    pagina = await categoria_service.listar(page=page, size=size, db=db)
+    return Pagina.of(
+        [CategoriaOut.model_validate(c) for c in pagina.items],
+        pagina.total, pagina.page, pagina.size,
+    )
 
 
 @router.get("/{categoria_id}", response_model=CategoriaOut)

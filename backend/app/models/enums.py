@@ -32,3 +32,9 @@ class ElementoInfraestructura(str, Enum):
     celda = "celda"
     mastil = "mastil"
     punto_venta = "punto_venta"
+
+
+class VistaTicket(str, Enum):
+    activos = "activos"
+    historial = "historial"
+    todos = "todos"

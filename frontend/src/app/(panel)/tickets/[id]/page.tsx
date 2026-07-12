@@ -50,26 +50,77 @@ export default function TicketDetallePage() {
   const [esNotaInterna, setEsNotaInterna] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [comentariosPage, setComentariosPage] = useState(1);
+  const [comentariosTotalPages, setComentariosTotalPages] = useState(1);
+  const [adjuntosPage, setAdjuntosPage] = useState(1);
+  const [adjuntosTotalPages, setAdjuntosTotalPages] = useState(1);
+  const [historialPage, setHistorialPage] = useState(1);
+  const [historialTotalPages, setHistorialTotalPages] = useState(1);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
       const [t, cs, as, hs] = await Promise.all([
         ticketApi.obtener(ticketId),
-        comentarioApi.listar(ticketId),
-        adjuntoApi.listar(ticketId),
-        ticketApi.historial(ticketId),
+        comentarioApi.listar(ticketId, { page: 1, size: 20 }),
+        adjuntoApi.listar(ticketId, { page: 1, size: 20 }),
+        ticketApi.historial(ticketId, { page: 1, size: 20 }),
       ]);
       setTicket(t);
-      setComentarios(cs);
-      setAdjuntos(as);
-      setHistorial(hs);
+      setComentarios(cs.items);
+      setComentariosTotalPages(cs.pages);
+      setComentariosPage(1);
+      setAdjuntos(as.items);
+      setAdjuntosTotalPages(as.pages);
+      setAdjuntosPage(1);
+      setHistorial(hs.items);
+      setHistorialTotalPages(hs.pages);
+      setHistorialPage(1);
     } catch {
       setError("No se pudo cargar el ticket");
     } finally {
       setCargando(false);
     }
   }, [ticketId]);
+
+  const cargarMasComentarios = async () => {
+    const nextPage = comentariosPage + 1;
+    if (nextPage > comentariosTotalPages) return;
+    try {
+      const data = await comentarioApi.listar(ticketId, { page: nextPage, size: 20 });
+      setComentarios((prev) => [...prev, ...data.items]);
+      setComentariosPage(nextPage);
+      setComentariosTotalPages(data.pages);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const cargarMasAdjuntos = async () => {
+    const nextPage = adjuntosPage + 1;
+    if (nextPage > adjuntosTotalPages) return;
+    try {
+      const data = await adjuntoApi.listar(ticketId, { page: nextPage, size: 20 });
+      setAdjuntos((prev) => [...prev, ...data.items]);
+      setAdjuntosPage(nextPage);
+      setAdjuntosTotalPages(data.pages);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const cargarMasHistorial = async () => {
+    const nextPage = historialPage + 1;
+    if (nextPage > historialTotalPages) return;
+    try {
+      const data = await ticketApi.historial(ticketId, { page: nextPage, size: 20 });
+      setHistorial((prev) => [...prev, ...data.items]);
+      setHistorialPage(nextPage);
+      setHistorialTotalPages(data.pages);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     cargar();
@@ -431,6 +482,15 @@ export default function TicketDetallePage() {
               ))}
             </div>
 
+            {comentariosPage < comentariosTotalPages && (
+              <button
+                onClick={cargarMasComentarios}
+                className="w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700 py-2 transition-colors"
+              >
+                Cargar mas comentarios...
+              </button>
+            )}
+
             {!estaCerrado && (
               <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
                 <textarea
@@ -505,6 +565,14 @@ export default function TicketDetallePage() {
                   ))}
                 </ul>
               )}
+              {adjuntosPage < adjuntosTotalPages && (
+                <button
+                  onClick={cargarMasAdjuntos}
+                  className="w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700 py-2 transition-colors"
+                >
+                  Cargar mas adjuntos...
+                </button>
+              )}
             </div>
           </section>
           <section className="space-y-4">
@@ -541,6 +609,14 @@ export default function TicketDetallePage() {
                     ))}
                   </ul>
                 </div>
+              )}
+              {historialPage < historialTotalPages && (
+                <button
+                  onClick={cargarMasHistorial}
+                  className="w-full text-center text-sm font-medium text-brand-600 hover:text-brand-700 py-2 transition-colors"
+                >
+                  Cargar mas historial...
+                </button>
               )}
             </div>
           </section>

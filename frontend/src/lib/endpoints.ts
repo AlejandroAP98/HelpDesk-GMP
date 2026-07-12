@@ -3,6 +3,7 @@ import type { Usuario } from "@/store/authStore";
 
 export type EstadoTicket = "abierto" | "asignado" | "en_progreso" | "resuelto" | "cerrado";
 export type PrioridadTicket = "baja" | "media" | "alta" | "urgente";
+export type VistaTicket = "activos" | "historial" | "todos";
 export type ElementoInfraestructura = "torre" | "celda" | "mastil" | "punto_venta";
 
 export interface Ticket {
@@ -81,6 +82,16 @@ export interface Subcategoria {
   descripcion: string | null;
 }
 
+export interface Stats {
+  total: number;
+  abiertos: number;
+  asignados: number;
+  en_progreso: number;
+  resueltos: number;
+  cerrados: number;
+  urgentes: number;
+}
+
 export const authApi = {
   login: async (email: string, password: string) => {
     const r = await api.post("/api/auth/login", { email, password });
@@ -129,16 +140,16 @@ export const ticketApi = {
     const r = await api.post(`/api/tickets/${id}/reabrir`);
     return r.data as Ticket;
   },
-  historial: async (id: string) => {
-    const r = await api.get(`/api/tickets/${id}/historial`);
-    return r.data as HistorialEstado[];
+  historial: async (id: string, params: Record<string, unknown> = {}) => {
+    const r = await api.get(`/api/tickets/${id}/historial`, { params });
+    return r.data as Pagina<HistorialEstado>;
   },
 };
 
 export const comentarioApi = {
-  listar: async (ticketId: string) => {
-    const r = await api.get(`/api/tickets/${ticketId}/comentarios`);
-    return r.data as Comentario[];
+  listar: async (ticketId: string, params: Record<string, unknown> = {}) => {
+    const r = await api.get(`/api/tickets/${ticketId}/comentarios`, { params });
+    return r.data as Pagina<Comentario>;
   },
   crear: async (ticketId: string, data: { contenido: string; es_nota_interna?: boolean }) => {
     const r = await api.post(`/api/tickets/${ticketId}/comentarios`, data);
@@ -147,9 +158,9 @@ export const comentarioApi = {
 };
 
 export const adjuntoApi = {
-  listar: async (ticketId: string) => {
-    const r = await api.get(`/api/tickets/${ticketId}/adjuntos`);
-    return r.data as Adjunto[];
+  listar: async (ticketId: string, params: Record<string, unknown> = {}) => {
+    const r = await api.get(`/api/tickets/${ticketId}/adjuntos`, { params });
+    return r.data as Pagina<Adjunto>;
   },
   subir: async (ticketId: string, file: File) => {
     const form = new FormData();
@@ -166,16 +177,23 @@ export const adjuntoApi = {
 };
 
 export const categoriaApi = {
-  listar: async () => {
-    const r = await api.get("/api/categorias");
-    return r.data as Categoria[];
+  listar: async (params: Record<string, unknown> = {}) => {
+    const r = await api.get("/api/categorias", { params });
+    return r.data as Pagina<Categoria>;
   },
 };
 
 export const subcategoriaApi = {
-  listarPorCategoria: async (categoriaId: number) => {
-    const r = await api.get(`/api/subcategorias/por-categoria/${categoriaId}`);
-    return r.data as Subcategoria[];
+  listarPorCategoria: async (categoriaId: number, params: Record<string, unknown> = {}) => {
+    const r = await api.get(`/api/subcategorias/por-categoria/${categoriaId}`, { params });
+    return r.data as Pagina<Subcategoria>;
+  },
+};
+
+export const statsApi = {
+  obtener: async () => {
+    const r = await api.get("/api/stats");
+    return r.data as Stats;
   },
 };
 
@@ -184,8 +202,8 @@ export const adminApi = {
     const r = await api.get("/api/usuarios", { params });
     return r.data as Pagina<Usuario>;
   },
-  listarEmpresas: async () => {
-    const r = await api.get("/api/empresas");
+  listarEmpresas: async (params: Record<string, unknown> = {}) => {
+    const r = await api.get("/api/empresas", { params });
     return r.data as Pagina<{ id: number; nombre: string; fecha_creacion: string }>;
   },
 };

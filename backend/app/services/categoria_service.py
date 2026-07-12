@@ -21,13 +21,6 @@ async def listar(page: int = 1, size: int = 20, db: AsyncSession = None) -> Pagi
     return Pagina.of(list(items), total, p.page, p.size)
 
 
-async def listar_sin_paginar(db: AsyncSession) -> list[Categoria]:
-    items = (
-        await db.execute(select(Categoria).order_by(Categoria.id))
-    ).scalars().all()
-    return list(items)
-
-
 async def obtener(categoria_id: int, db: AsyncSession) -> Categoria:
     categoria = (
         await db.execute(select(Categoria).where(Categoria.id == categoria_id))

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.comentario import Comentario
@@ -15,6 +15,7 @@ from app.schemas.comentario import ComentarioCreate, ComentarioOut
 from app.services import ticket_service
 from app.services.estados import es_estado_final
 from app.utils.exceptions import Conflicto, PermisoDenegado
+from app.utils.pagination import Pagina, paginacion
 
 
 async def _resolve_ticket(
@@ -24,17 +25,34 @@ async def _resolve_ticket(
 
 
 async def listar(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> list[ComentarioOut]:
+    ticket_id: UUID,
+    current: Usuario,
+    db: AsyncSession,
+    page: int = 1,
+    size: int = 20,
+) -> Pagina[ComentarioOut]:
     """Lista comentarios visibles: clientes solo ven publicos; agente/admin ven todos."""
     await _resolve_ticket(ticket_id, current, db)
+    p = paginacion(page, size)
 
-    stmt = select(Comentario).where(Comentario.ticket_id == ticket_id)
+    base = select(Comentario).where(Comentario.ticket_id == ticket_id)
+    count_base = select(func.count(Comentario.id)).where(
+        Comentario.ticket_id == ticket_id
+    )
+
     if current.rol == RolUsuario.cliente.value:
-        stmt = stmt.where(Comentario.es_nota_interna == False)  # noqa: E712
-    stmt = stmt.order_by(Comentario.fecha_creacion.asc())
+        base = base.where(Comentario.es_nota_interna == False)  # noqa: E712
+        count_base = count_base.where(Comentario.es_nota_interna == False)  # noqa: E712
 
-    comentarios = (await db.execute(stmt)).scalars().all()
+    total = (await db.execute(count_base)).scalar_one()
+    comentarios = (
+        await db.execute(
+            base.order_by(Comentario.fecha_creacion.asc())
+            .offset(p.offset)
+            .limit(p.limit)
+        )
+    ).scalars().all()
+
     out: list[ComentarioOut] = []
     for c in comentarios:
         usuario = (
@@ -48,7 +66,7 @@ async def listar(
                 }
             )
         )
-    return out
+    return Pagina.of(out, total, p.page, p.size)
 
 
 async def crear(

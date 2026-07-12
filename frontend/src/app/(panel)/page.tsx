@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { ticketApi, type Ticket, type PrioridadTicket, type EstadoTicket } from "@/lib/endpoints";
+import { ticketApi, statsApi, type Ticket, type PrioridadTicket, type EstadoTicket, type Stats } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
 import { StatsCard } from "@/components/ui/StatsCard";
@@ -21,48 +21,22 @@ import TicketProgressIcon from "../assets/icons/TicketProgressIcon";
 import AssingUserIcon from "../assets/icons/AssignUserIcon";
 
 
-
-
-interface Stats {
-  total: number;
-  abiertos: number;
-  urgentes: number;
-  resueltos: number;
-  cerrados: number;
-  enProgreso: number;
-  asignados: number;
-}
-
 export default function PanelHomePage() {
   const usuario = useAuthStore((s) => s.usuario);
   const [recientes, setRecientes] = useState<Ticket[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0,enProgreso: 0,asignados: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0, en_progreso: 0, asignados: 0 });
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       try {
-        const [ultimos, totalData, abiertosData, urgentesData, resueltosData, cerradosData, enProgresoData, asignadosData] = await Promise.all([
-          ticketApi.listar({ size: 5 }),
-          ticketApi.listar({ size: 1 }),
-          ticketApi.listar({ estado: "abierto", size: 1 }),
-          ticketApi.listar({ prioridad: "urgente", size: 1 }),
-          ticketApi.listar({ estado: "resuelto", size: 1 }),
-          ticketApi.listar({ estado: "cerrado", size: 1 }),
-          ticketApi.listar({ estado: "en_progreso", size: 1 }),
-          ticketApi.listar({ estado: "asignado", size: 1 }),
+        const [ultimos, statsData] = await Promise.all([
+          ticketApi.listar({ size: 10 }),
+          statsApi.obtener(),
         ]);
         setRecientes(ultimos.items);
-        setStats({
-          total: totalData.total,
-          abiertos: abiertosData.total,
-          urgentes: urgentesData.total,
-          resueltos: resueltosData.total,
-          cerrados: cerradosData.total,
-          enProgreso: enProgresoData.total,
-          asignados: asignadosData.total,
-        });
+        setStats(statsData);
       } catch {
         setRecientes([]);
       } finally {
@@ -164,7 +138,7 @@ export default function PanelHomePage() {
           : <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-scale-in bg-redCustom" />
         }
         <StatsCard label="Asignados" value={stats.asignados} icon={<AssingUserIcon />}  className="animate-scale-in bg-violetCustom" />
-        <StatsCard label="En Progreso" value={stats.enProgreso} icon={<TicketProgressIcon />} className="animate-scale-in bg-yellowCustom" />
+        <StatsCard label="En Progreso" value={stats.en_progreso} icon={<TicketProgressIcon />} className="animate-scale-in bg-yellowCustom" />
         <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />}  className="animate-scale-in bg-greenCustom" />
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </div>
@@ -185,11 +159,20 @@ export default function PanelHomePage() {
           <DataTable
             columns={[
               {
+                key: "icono",
+                header: "Detalle",
+                cell: (t: Ticket) => (
+                  <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
+                    <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
+                  </Link>
+                ),
+              },
+              {
                 key: "titulo",
                 header: "Titulo",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
-                    {t.titulo}
+                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-sm text-gray-800 hover:text-brand-600 transition-colors">
+                    {t.titulo.substring(0, 20) + "..."}
                   </Link>
                 ),
               },
@@ -207,7 +190,7 @@ export default function PanelHomePage() {
                 key: "actualizado",
                 header: "Actualizado",
                 cell: (t: Ticket) => (
-                  <span className="text-gray-400 text-xs">{new Date(t.fecha_actualizacion).toLocaleDateString(undefined, { timeZone: "America/Bogota" })}</span>
+                  <span className="text-gray-400 text-xs">{new Date(t.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                 ),
               },
             ]}

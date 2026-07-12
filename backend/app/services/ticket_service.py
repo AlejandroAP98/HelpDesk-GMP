@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import tenant_filter
 from app.models.categoria import Categoria
-from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario
+from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario, VistaTicket
 from app.models.historial_estado import HistorialEstado
 from app.models.subcategoria import Subcategoria
 from app.models.ticket import Ticket
@@ -27,9 +27,15 @@ from app.services.estados import es_estado_final, es_transicion_valida
 from app.services.prioridad import calcular_prioridad
 from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
-
+from sqlalchemy import case
 
 _logger = __import__("logging").getLogger(__name__)
+
+VISTA_ESTADOS: dict[VistaTicket, list[EstadoTicket]] = {
+    VistaTicket.activos: [EstadoTicket.abierto, EstadoTicket.asignado, EstadoTicket.en_progreso],
+    VistaTicket.historial: [EstadoTicket.resuelto, EstadoTicket.cerrado],
+    VistaTicket.todos: [],
+}
 
 
 async def _registrar_historial(
@@ -49,18 +55,28 @@ async def _registrar_historial(
 
 
 async def listar_historial(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> list[HistorialEstadoOut]:
+    ticket_id: UUID, current: Usuario, db: AsyncSession,
+    page: int = 1, size: int = 20,
+) -> Pagina[HistorialEstadoOut]:
     ticket = await obtener(ticket_id, current, db)
+    p = paginacion(page, size)
+    base = (
+        select(HistorialEstado, Usuario.nombre)
+        .join(Usuario, HistorialEstado.usuario_id == Usuario.id, isouter=True)
+        .where(HistorialEstado.ticket_id == ticket.id)
+    )
+    count_base = select(func.count(HistorialEstado.id)).where(
+        HistorialEstado.ticket_id == ticket.id
+    )
+    total = (await db.execute(count_base)).scalar_one()
     rows = (
         await db.execute(
-            select(HistorialEstado, Usuario.nombre)
-            .join(Usuario, HistorialEstado.usuario_id == Usuario.id, isouter=True)
-            .where(HistorialEstado.ticket_id == ticket.id)
-            .order_by(HistorialEstado.fecha.asc())
+            base.order_by(HistorialEstado.fecha.asc())
+            .offset(p.offset)
+            .limit(p.limit)
         )
     ).all()
-    return [
+    items = [
         HistorialEstadoOut(
             id=h.id,
             ticket_id=h.ticket_id,
@@ -72,6 +88,7 @@ async def listar_historial(
         )
         for h, nombre in rows
     ]
+    return Pagina.of(items, total, p.page, p.size)
 
 
 def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
@@ -264,6 +281,7 @@ async def listar(
     empresa_id: int | None = None,
     agente_id: UUID | None = None,
     cliente_id: UUID | None = None,
+    vista: VistaTicket | None = None,
 ) -> Pagina[Ticket]:
     p = paginacion(page, size)
     base = select(Ticket)
@@ -277,6 +295,12 @@ async def listar(
     if current.rol == RolUsuario.agente.value and agente_id is None:
         base = base.where(Ticket.agente_id == current.id)
         count_base = count_base.where(Ticket.agente_id == current.id)
+
+    if vista is not None:
+        estados_vista = VISTA_ESTADOS.get(vista, [])
+        if estados_vista:
+            base = base.where(Ticket.estado.in_(estados_vista))
+            count_base = count_base.where(Ticket.estado.in_(estados_vista))
 
     if estado is not None:
         base = base.where(Ticket.estado == estado)
@@ -294,12 +318,39 @@ async def listar(
         base = base.where(Ticket.cliente_id == cliente_id)
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
 
+    # 1. Creamos una escala de peso para las prioridades (Menor número = Más arriba)
+    peso_prioridad = case(
+        (Ticket.prioridad == "urgente", 1),
+        (Ticket.prioridad == "alta", 2),
+        (Ticket.prioridad == "media", 3),
+        (Ticket.prioridad == "baja", 4),
+        else_=5
+    )
+
+    # 2. Opcional: Separamos el ciclo de vida (Activos primero, cerrados al fondo)
+    peso_estado = case(
+        (Ticket.estado == "en_progreso", 1),
+        (Ticket.estado == "asignado", 2),
+        (Ticket.estado == "abierto", 3),
+        (Ticket.estado == "resuelto", 4),
+        (Ticket.estado == "cerrado", 5),
+        else_=6
+    )
+
+    # Ejecución de la consulta modificando el ordenamiento
     total = (await db.execute(count_base)).scalar_one()
     items = (
         await db.execute(
-            base.order_by(Ticket.fecha_creacion.desc()).offset(p.offset).limit(p.limit)
+            base.order_by(
+                peso_estado.asc(),           # 1° Estados que requieren acción primero
+                peso_prioridad.asc(),        # 2° Lo más urgente arriba de cada estado
+                Ticket.fecha_creacion.asc()  # 3° El que más tiempo lleva esperando (SLA)
+            )
+            .offset(p.offset)
+            .limit(p.limit)
         )
     ).scalars().all()
+
     return Pagina.of(list(items), total, p.page, p.size)
 
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ticketApi, type Ticket, type EstadoTicket, type PrioridadTicket } from "@/lib/endpoints";
+import { ticketApi, type Ticket, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
 import { EstadoBadge, PrioridadBadge, TotalBadge } from "@/components/Badges";
@@ -13,30 +13,54 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
+import TicketIcon from "@/app/assets/icons/TicketIcon";
 
 const ESTADOS: { value: string; label: string }[] = [
-  { value: "todos", label: "Estado: todos" },
-  { value: "abierto", label: "Estado: abierto" },
-  { value: "asignado", label: "Estado: asignado" },
-  { value: "en_progreso", label: "Estado: en progreso" },
-  { value: "resuelto", label: "Estado: resuelto" },
-  { value: "cerrado", label: "Estado: cerrado" },
+  { value: "todos", label: "Todos" },
+  { value: "abierto", label: "Abierto" },
+  { value: "asignado", label: "Asignado" },
+  { value: "en_progreso", label: "En progreso" },
+  { value: "resuelto", label: "Resuelto" },
+  { value: "cerrado", label: "Cerrado" },
 ];
 
 const PRIORIDADES: { value: string; label: string }[] = [
-  { value: "todas", label: "Prioridad: todas" },
-  { value: "baja", label: "Prioridad: baja" },
-  { value: "media", label: "Prioridad: media" },
-  { value: "alta", label: "Prioridad: alta" },
-  { value: "urgente", label: "Prioridad: urgente" },
+  { value: "todas", label: "Todos" },
+  { value: "baja", label: "Baja" },
+  { value: "media", label: "Media" },
+  { value: "alta", label: "Alta" },
+  { value: "urgente", label: "Urgente" },
 ];
+
+const VISTAS: { value: VistaTicket; label: string }[] = [
+  { value: "activos", label: "Activos" },
+  { value: "historial", label: "Historial" },
+  { value: "todos", label: "Todos" },
+];
+
+const ESTADOS_POR_VISTA: Record<VistaTicket, { value: string; label: string }[]> = {
+  activos: [
+    { value: "todos", label: "Todos" },
+    { value: "abierto", label: "Abierto" },
+    { value: "asignado", label: "Asignado" },
+    { value: "en_progreso", label: "En progreso" },
+  ],
+  historial: [
+    { value: "todos", label: "Todos" },
+    { value: "resuelto", label: "Resuelto" },
+    { value: "cerrado", label: "Cerrado" },
+  ],
+  todos: ESTADOS,
+};
 
 export default function TicketsListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
   const [estado, setEstado] = useState("todos");
   const [prioridad, setPrioridad] = useState("todas");
+  const [vista, setVista] = useState<VistaTicket>("activos");
   const [cargando, setCargando] = useState(true);
 
   const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
@@ -48,12 +72,14 @@ export default function TicketsListPage() {
     (async () => {
       setCargando(true);
       try {
-        const params: Record<string, unknown> = { page, size: 20 };
+        const params: Record<string, unknown> = { page, size: 15 };
+        if (vista !== "todos") params.vista = vista;
         if (estado !== "todos") params.estado = estado;
         if (prioridad !== "todas") params.prioridad = prioridad;
         const data = await ticketApi.listar(params);
         setTickets(data.items);
         setTotal(data.total);
+        setTotalPages(data.pages);
       } catch {
         setTickets([]);
         setTotal(0);
@@ -61,7 +87,7 @@ export default function TicketsListPage() {
         setCargando(false);
       }
     })();
-  }, [page, estado, prioridad]);
+  }, [page, estado, prioridad, vista]);
 
   useEffect(() => {
     setOnTicketCreated((ev) => {
@@ -93,7 +119,7 @@ export default function TicketsListPage() {
         };
         return [nuevo, ...prev];
       });
-      setTotal((t) => t + 1);
+      setTotalPages((t) => t + 1);
     });
 
     setOnTicketUpdated((ev) => {
@@ -118,10 +144,19 @@ export default function TicketsListPage() {
     };
   }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
+  const cambiarVista = (nueva: VistaTicket) => {
+    setVista(nueva);
+    setEstado("todos");
+    setPage(1);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
+        <div className="text-sm text-gray-500 flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
+          <h2 className="text-sm text-gray-500">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </h2>
+        </div>
         <Link href="/tickets/nuevo">
           <Button
             className="py-2 text-sm w-fit"
@@ -133,21 +168,40 @@ export default function TicketsListPage() {
           </Button>
         </Link>
       </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
-        <Select
-          value={estado}
-          onChange={(e) => { setEstado(e.target.value); setPage(1); }}
-          options={ESTADOS}
-        />
-        <Select
-          value={prioridad}
-          onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
-          options={PRIORIDADES}
-        />
-        <TotalBadge total={total} />
+      <div className="flex gap-4 sm:flex-row flex-col-reverse justify-between">
+        <div className="flex rounded-lg gap-8 justify-between items-end">
+          <div className="flex w-fit border-b-2 border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit">
+            {VISTAS.map((v) => (
+            <button
+              key={v.value}
+              onClick={() => cambiarVista(v.value)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                vista === v.value
+                  ? "bg-brandCustom text-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+          </div>
+          <TotalBadge total={total} />
+        </div>
+        <div className="flex gap-4 justify-end w-full">
+          <Select
+            label="Estado"
+            value={estado}
+            onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+            options={ESTADOS_POR_VISTA[vista]}
+          />
+          <Select
+            label="Prioridad"
+            value={prioridad}
+            onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
+            options={PRIORIDADES}
+          />
+        </div>
       </div>
-
       {cargando ? (
         <LoadingState />
       ) : tickets.length === 0 ? (
@@ -156,11 +210,11 @@ export default function TicketsListPage() {
         <DataTable
           columns={[
             {
-              key: "id",
-              header: "ID Ticket",
+              key: "icono",
+              header: "Detalle",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} className="font-regular text-sm hover:text-brand-600 transition-all text-gray-500  ">
-                  {t.id}
+                <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
+                  <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
                 </Link>
               ),
             },
@@ -168,8 +222,8 @@ export default function TicketsListPage() {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
-                  {t.titulo}
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-gray-800 hover:text-brandCustom transition-colors">
+                  {t.titulo.substring(0, 20) + "..."}
                 </Link>
               ),
             },
@@ -187,7 +241,7 @@ export default function TicketsListPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString(undefined, { timeZone: "America/Bogota" })}</span>
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota",  day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               ),
             },
           ]}
@@ -198,7 +252,7 @@ export default function TicketsListPage() {
 
       <Pagination
         page={page}
-        hasMore={tickets.length >= 20}
+        totalPages={totalPages}
         onPrev={() => setPage((p) => Math.max(1, p - 1))}
         onNext={() => setPage((p) => p + 1)}
       />

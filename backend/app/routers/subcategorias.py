@@ -5,7 +5,7 @@
 """
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -14,18 +14,26 @@ from app.models.usuario import Usuario
 from app.schemas.categoria import SubcategoriaCreate, SubcategoriaOut, SubcategoriaUpdate
 from app.schemas.usuario import Mensaje
 from app.services import subcategoria_service
+from app.utils.pagination import Pagina
 
 router = APIRouter(prefix="/api/subcategorias", tags=["subcategorias"])
 
 
-@router.get("/por-categoria/{categoria_id}", response_model=list[SubcategoriaOut])
+@router.get("/por-categoria/{categoria_id}", response_model=Pagina[SubcategoriaOut])
 async def listar_por_categoria(
     categoria_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(get_current_user),
-) -> list[SubcategoriaOut]:
-    items = await subcategoria_service.listar_por_categoria(categoria_id, db)
-    return [SubcategoriaOut.model_validate(s) for s in items]
+) -> Pagina[SubcategoriaOut]:
+    pagina = await subcategoria_service.listar_por_categoria(
+        categoria_id, page=page, size=size, db=db
+    )
+    return Pagina.of(
+        [SubcategoriaOut.model_validate(s) for s in pagina.items],
+        pagina.total, pagina.page, pagina.size,
+    )
 
 
 @router.get("/{subcategoria_id}", response_model=SubcategoriaOut)

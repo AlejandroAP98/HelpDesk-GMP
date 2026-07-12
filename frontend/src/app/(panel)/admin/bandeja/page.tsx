@@ -13,6 +13,8 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import AssingUserIcon from "@/app/assets/icons/AssignUserIcon";
+import TicketIcon from "@/app/assets/icons/TicketIcon";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function BandejaPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -21,24 +23,27 @@ export default function BandejaPage() {
   const [asignandoId, setAsignandoId] = useState<string | null>(null);
   const [agenteSel, setAgenteSel] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       try {
         const [tk, ags] = await Promise.all([
-          ticketApi.listar({ estado: "abierto", size: 100 }),
-          adminApi.listarUsuarios({ rol: "agente", size: 100 }),
+          ticketApi.listar({ estado: "abierto", page, size: 15 }),
+          adminApi.listarUsuarios({ rol: "agente", size: 10 }),
         ]);
         setTickets(tk.items);
         setAgentes(ags.items);
+        setTotalPages(tk.pages);
       } catch {
         setError("No se pudo cargar la bandeja");
       } finally {
         setCargando(false);
       }
     })();
-  }, []);
+  }, [page]);
 
   const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
@@ -159,10 +164,19 @@ export default function BandejaPage() {
           rowClassName={(t: Ticket) => t.prioridad === "urgente" ? "bg-red-50/30" : ""}
           columns={[
             {
+              key: "icono",
+              header: "Detalle",
+              cell: (t: Ticket) => (
+                <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
+                  <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
+                </Link>
+              ),
+            },
+            {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} className="font-semibold text-gray-900 hover:text-brand-600 transition-colors">
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
                   {t.titulo}
                 </Link>
               ),
@@ -181,32 +195,27 @@ export default function BandejaPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString(undefined, { timeZone: "America/Bogota" })}</span>
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               ),
             },
             {
               key: "asignar_select",
-              header: "Asignar a",
+              header: "Asignar",
               cell: (t: Ticket) => (
-                <select
+                <Select
                   value={agenteSel[t.id] ?? ""}
                   onChange={(e) => setAgenteSel((p) => ({ ...p, [t.id]: e.target.value }))}
-                  className="rounded-xl border border-gray-200 bg-white text-gray-700 px-3 py-2 text-xs font-medium focus:border-brand-500 focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
-                >
-                  <option value="">Seleccione agente...</option>
-                  {agentes.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nombre} {a.empresa_id ? `(emp ${a.empresa_id})` : "(interno)"}
-                    </option>
-                  ))}
-                </select>
+                  options={agentes.map((a) => ({ value: a.id, label: a.nombre }))}
+                  className="w-full max-w-sm px-1 py-1.5 text-xs border border-gray-300 rounded-lg"
+                  placeholder="Seleccione agente..."
+                />
               ),
             },
             {
               key: "asignar_btn",
-              header: "",
+              header: "Acción",
               cell: (t: Ticket) => (
-                <div className="flex items-center justify-end">
+                <div className="flex items-center">
                   <Button
                     variant="primary"
                     onClick={() => asignar(t.id)}
@@ -226,6 +235,12 @@ export default function BandejaPage() {
           minWidth="min-w-[700px]"
         />
       )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => p + 1)}
+      />
     </div>
   );
 }

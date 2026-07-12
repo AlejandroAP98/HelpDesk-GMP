@@ -1,23 +1,33 @@
 """Servicio CRUD de Subcategorías (solo admin)."""
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.subcategoria import Subcategoria
 from app.schemas.categoria import SubcategoriaCreate, SubcategoriaUpdate
 from app.utils.exceptions import Conflicto, RecursoNoEncontrado
+from app.utils.pagination import Pagina, paginacion
 
 
-async def listar_por_categoria(categoria_id: int, db: AsyncSession) -> list[Subcategoria]:
+async def listar_por_categoria(
+    categoria_id: int, page: int = 1, size: int = 20, db: AsyncSession = None
+) -> Pagina[Subcategoria]:
+    p = paginacion(page, size)
+    base = select(Subcategoria).where(Subcategoria.categoria_id == categoria_id)
+    total = (
+        await db.execute(
+            select(func.count(Subcategoria.id)).where(
+                Subcategoria.categoria_id == categoria_id
+            )
+        )
+    ).scalar_one()
     items = (
         await db.execute(
-            select(Subcategoria)
-            .where(Subcategoria.categoria_id == categoria_id)
-            .order_by(Subcategoria.id)
+            base.order_by(Subcategoria.id).offset(p.offset).limit(p.limit)
         )
     ).scalars().all()
-    return list(items)
+    return Pagina.of(list(items), total, p.page, p.size)
 
 
 async def obtener(subcategoria_id: int, db: AsyncSession) -> Subcategoria:

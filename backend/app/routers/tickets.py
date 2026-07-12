@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_admin
-from app.models.enums import EstadoTicket, PrioridadTicket
+from app.models.enums import EstadoTicket, PrioridadTicket, VistaTicket
 from app.models.usuario import Usuario
 from app.schemas.ticket import (
     AsignacionRequest,
@@ -37,13 +37,14 @@ async def listar(
     empresa_id: int | None = Query(None),
     agente_id: UUID | None = Query(None),
     cliente_id: UUID | None = Query(None),
+    vista: VistaTicket | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[TicketOut]:
     pagina = await ticket_service.listar(
         current=current, db=db, page=page, size=size, estado=estado,
         prioridad=prioridad, empresa_id=empresa_id,
-        agente_id=agente_id, cliente_id=cliente_id,
+        agente_id=agente_id, cliente_id=cliente_id, vista=vista,
     )
     return Pagina.of(
         [TicketOut.model_validate(t) for t in pagina.items],
@@ -60,13 +61,17 @@ async def obtener(
     return await ticket_service.obtener_detalle(ticket_id, current, db)
 
 
-@router.get("/{ticket_id}/historial", response_model=list[HistorialEstadoOut])
+@router.get("/{ticket_id}/historial", response_model=Pagina[HistorialEstadoOut])
 async def historial(
     ticket_id: UUID,
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
-) -> list[HistorialEstadoOut]:
-    return await ticket_service.listar_historial(ticket_id, current, db)
+) -> Pagina[HistorialEstadoOut]:
+    return await ticket_service.listar_historial(
+        ticket_id, current, db, page=page, size=size
+    )
 
 
 @router.post("", response_model=TicketOut, status_code=status.HTTP_201_CREATED)

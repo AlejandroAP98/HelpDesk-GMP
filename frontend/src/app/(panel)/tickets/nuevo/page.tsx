@@ -61,14 +61,14 @@ export default function NuevoTicketPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    categoriaApi.listar().then(setCategorias).catch(() => setCategorias([]));
+    categoriaApi.listar().then((r) => setCategorias(r.items)).catch(() => setCategorias([]));
   }, []);
 
   useEffect(() => {
     if (categoriaId) {
       subcategoriaApi
         .listarPorCategoria(categoriaId)
-        .then(setSubcategorias)
+        .then((r) => setSubcategorias(r.items))
         .catch(() => setSubcategorias([]));
     } else {
       setSubcategorias([]);

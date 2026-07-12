@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import BinaryIO
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -19,19 +19,36 @@ from app.schemas.adjunto import AdjuntoOut
 from app.services import ticket_service
 from app.services.estados import es_estado_final
 from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
+from app.utils.pagination import Pagina, paginacion
 
 MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 async def listar(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> list[AdjuntoOut]:
+    ticket_id: UUID, current: Usuario, db: AsyncSession,
+    page: int = 1, size: int = 20,
+) -> Pagina[AdjuntoOut]:
     """Lista adjuntos de un ticket (con aislamiento multi-tenant por ticket_service.obtener)."""
     await ticket_service.obtener(ticket_id, current, db)
+    p = paginacion(page, size)
+    total = (
+        await db.execute(
+            select(func.count(Adjunto.id)).where(Adjunto.ticket_id == ticket_id)
+        )
+    ).scalar_one()
     items = (
-        await db.execute(select(Adjunto).where(Adjunto.ticket_id == ticket_id))
+        await db.execute(
+            select(Adjunto)
+            .where(Adjunto.ticket_id == ticket_id)
+            .order_by(Adjunto.fecha_creacion.desc())
+            .offset(p.offset)
+            .limit(p.limit)
+        )
     ).scalars().all()
-    return [AdjuntoOut.model_validate(a) for a in items]
+    return Pagina.of(
+        [AdjuntoOut.model_validate(a) for a in items],
+        total, p.page, p.size,
+    )
 
 
 async def subir(
