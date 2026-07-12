@@ -1,7 +1,7 @@
 """Schemas del dominio Empresa."""
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas import DatetimeUTC
 
 
 class EmpresaBase(BaseModel):
@@ -21,4 +21,4 @@ class EmpresaOut(BaseModel):
 
     id: int
     nombre: str
-    fecha_creacion: datetime
+    fecha_creacion: DatetimeUTC

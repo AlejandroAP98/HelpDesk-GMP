@@ -1,10 +1,11 @@
 """Schemas del dominio Comentario."""
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas import DatetimeUTC
 
 
 class ComentarioCreate(BaseModel):
@@ -21,4 +22,4 @@ class ComentarioOut(BaseModel):
     usuario_nombre: str | None = None
     contenido: str
     es_nota_interna: bool
-    fecha_creacion: datetime
+    fecha_creacion: DatetimeUTC

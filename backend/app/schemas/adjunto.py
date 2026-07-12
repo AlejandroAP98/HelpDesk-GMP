@@ -1,10 +1,11 @@
 """Schemas del dominio Adjunto."""
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
+
+from app.schemas import DatetimeUTC
 
 
 class AdjuntoOut(BaseModel):
@@ -17,7 +18,7 @@ class AdjuntoOut(BaseModel):
     nombre_archivo: str
     tipo_mime: str | None
     tamano_bytes: int | None
-    fecha_creacion: datetime
+    fecha_creacion: DatetimeUTC
 
 
 class AdjuntoUploadResponse(BaseModel):

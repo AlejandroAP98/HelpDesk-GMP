@@ -222,41 +222,50 @@ export default function TicketDetallePage() {
         {/* Columna izquierda: Info + Comentarios (en mobile: info primero, comentarios despues) */}
         <div className="flex flex-col gap-6 flex-1 min-w-0 ">
           {/* Informacion del ticket */}
-          <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-6 sm:p-8">
-            <dl className="grid grid-cols-2 md:grid-cols-5 gap-2 w-full mb-4">
-              <div>
-                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Empresa</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">#{ticket.empresa_id}</dd>
+          <div className="bg-cardCustom rounded-2xl shadow-card">
+            <dl className="flex items-center justify-between  gap-2 w-full mb-6 bg-brandCustom rounded-t-2xl sm:px-6 px-4 py-4">
+             <div className="flex sm:flex-row flex-col self-start sm:gap-10 gap-2">
+                <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">ID Ticket</dt>
+                  <dd className="font-regular text-white text-[11px] ">#{ticket.id}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Empresa</dt>
+                  <dd className="font-regular text-white text-[11px]">#{ticket.empresa_id}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Subcategoría</dt>
+                  <dd className="font-regular text-white text-[11px]">{ticket.subcategoria_nombre ?? `#${ticket.subcategoria_id}`}</dd>
               </div>
-              <div>
-                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Subcategoría</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">{ticket.subcategoria_nombre ?? `#${ticket.subcategoria_id}`}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Elemento</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">{elementoLabels[ticket.elemento_afectado] ?? ticket.elemento_afectado}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Creado</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString()}</dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-gray-500 font-medium  tracking-wider mb-0.5">Actualizado</dt>
-                <dd className="font-semibold text-gray-700 text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString()}</dd>
+               <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Elemento</dt>
+                  <dd className="font-regular text-white text-[11px]">{elementoLabels[ticket.elemento_afectado] ?? ticket.elemento_afectado}</dd>
+                </div>
+             </div>
+              <div className="flex sm:flex-row flex-col self-start sm:gap-4 gap-2">
+                <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Creado</dt>
+                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Actualizado</dt>
+                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</dd>
+                </div>
               </div>
             </dl>
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-4">
+              <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0 " >
+                <EstadoBadge estado={ticket.estado} />
+                <PrioridadBadge prioridad={ticket.prioridad} />
+              </div>
               <div className="space-y-2 min-w-0">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 break-words">{ticket.titulo}</h1>
                 <p className="text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{ticket.descripcion}</p>
               </div>
-              <div className="flex flex-row md:flex-col items-center md:items-end gap-2 shrink-0">
-                <EstadoBadge estado={ticket.estado} />
-                <PrioridadBadge prioridad={ticket.prioridad} />
-              </div>
+              
             </div>
             {(ticket.ip_pcs || ticket.ip_antena || ticket.mascara_red || ticket.puerta_enlace || ticket.nombre_punto) && (
-              <div className="sm:mt-8 mt-4 ">
+              <div className="sm:mt-8 mt-4 px-4 pb-4 ">
                 <span className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block">Información adicional</span>
                 <dl className="grid grid-cols-2 sm:grid-cols-4 sm:gap-4 gap-1">
                   {ticket.nombre_punto && (
@@ -317,61 +326,67 @@ export default function TicketDetallePage() {
                 </dl>
               </div>
             )}
-            {!estaCerrado && (
-              <div className="mt-6 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
-                {puedeProgresar && ticket.estado === "asignado" && (
+            {!estaCerrado &&  (
+              <div className="flex justify-between p-4 rounded-b-2xl">
+                <div className="w-full flex-col justify-between">
+                  {((!esCliente && (ticket.estado !== "abierto")) || (esCliente && ticket.estado === "resuelto")) && (
+                    <label className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block pl-1">Acciones</label>
+                  )}
+                  {puedeProgresar && ticket.estado === "asignado" && (
                   <button
                     onClick={() => cambiarEstado("en_progreso")}
-                    className="rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2 text-xs font-semibold text-white active:scale-[0.98] transition-all"
+                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
                   >
                     Iniciar trabajo
                   </button>
-                )}
-                {puedeResolver && ticket.estado === "en_progreso" && (
-                  <button
-                    onClick={() => cambiarEstado("resuelto")}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white active:scale-[0.98] transition-all"
-                  >
-                    Marcar resuelto
-                  </button>
-                )}
-                {puedeCerrar && ticket.estado === "resuelto" && (
-                  <button
-                    onClick={cerrar}
-                    className="rounded-xl bg-gray-800 hover:bg-gray-900 px-4 py-2 text-xs font-semibold text-white active:scale-[0.98] transition-all"
-                  >
-                    Cerrar ticket
-                  </button>
-                )}
-                {puedeReabrir && !estaCerrado && (
-                  <button
-                    onClick={reabrir}
-                    className="rounded-xl bg-brandCustom hover:bg-brandCustom/80 px-4 py-2 text-xs font-medium text-white active:scale-[0.98] transition-all"
-                  >
-                    Reabrir
-                  </button>
-                )}
-                {!esCliente && (
-                  <div className="flex flex-col ml-auto h-full justify-center">
-                    <label className="text-xs font-medium text-textCustom/60 mb-1 self-center">Cambiar prioridad</label>
-                    <select
-                    value={ticket.prioridad}
-                    onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                    className="rounded-xl border border-gray-400 bg-white text-textCustom px-3 py-2 text-xs font-medium focus:border-brandCustom/50 focus:ring-2 focus:ring-brandCustom/10 outline-none transition-all cursor-pointer ml-auto"
-                  >
-                    {PRIORIDADES.map((p) => (
-                      <option key={p} value={p}>{prioridadLabels[p]}</option>
-                    ))}
-                  </select>
+                  )}
+                  {puedeResolver && ticket.estado === "en_progreso" && (
+                    <button
+                      onClick={() => cambiarEstado("resuelto")}
+                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                    >
+                      Marcar resuelto
+                    </button>
+                  )}
+                  {puedeCerrar && ticket.estado === "resuelto" && (
+                    <button
+                      onClick={cerrar}
+                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                    >
+                      Cerrar ticket
+                    </button>
+                  )}
+                  {puedeReabrir && !estaCerrado && ticket.estado === "cerrado" && (
+                    <button
+                      onClick={reabrir}
+                      className="self-end rounded-xl bg-brandCustom hover:bg-brandCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                    >
+                      Reabrir
+                    </button>
+                  )}
                 </div>
-                )}
+                {!esCliente && (
+                  <div className="flex flex-col self-end w-full">
+                    <label className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block self-end">Cambiar prioridad</label>
+                    <select
+                      value={ticket.prioridad}
+                      onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
+                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom px-3 py-2.5 text-xs font-medium focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto"
+                      >
+                      {PRIORIDADES.map((p) => (
+                        <option key={p} value={p}>{prioridadLabels[p]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  )}
               </div>
             )}
-            {estaCerrado && puedeReabrir && (
-              <div className="mt-6 pt-6 border-t border-gray-100">
+            {estaCerrado && puedeReabrir && !esCliente && (
+              <div className="flex flex-col p-4 rounded-b-2xl w-fit">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block pl-1">Acciones</label>
                 <button
                   onClick={reabrir}
-                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 px-4 py-2 text-xs font-semibold text-white active:scale-[0.98] transition-all"
+                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
                 >
                   Reabrir ticket
                 </button>
@@ -379,9 +394,7 @@ export default function TicketDetallePage() {
             )}
             {error && (
               <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 flex items-center gap-2">
-                <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <svg fill="none" stroke="currentColor" className="w-4 h-4 text-red-500 shrink-0" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"/></svg>
                 <p className="text-sm font-medium text-red-600">{error}</p>
               </div>
             )}
@@ -411,7 +424,7 @@ export default function TicketDetallePage() {
                         </span>
                       )}
                     </div>
-                    <span className="text-gray-500">{new Date(c.fecha_creacion).toLocaleString()}</span>
+                    <span className="text-gray-500">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
                   </div>
                   <p className="text-sm whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
                 </div>
@@ -429,7 +442,7 @@ export default function TicketDetallePage() {
                   ${esNotaInterna ? "bg-accentCustom/5 focus:ring-accentCustom" : " focus:ring-brandCustom"}
                   rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-brandCustom focus:ring-1 focus:bg-white outline-none transition-all resize-none`}
                 />
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex sm:flex-row items-center sm:items-center justify-between gap-2">
                   {!esCliente && (
                     <label className="text-xs font-medium text-gray-600 flex items-center gap-2 cursor-pointer select-none">
                       <input
@@ -455,44 +468,7 @@ export default function TicketDetallePage() {
         </div>
 
         {/* Columna derecha: Historial + Adjuntos */}
-        <div className="w-full lg:w-[380px] xl:w-[440px] shrink-0 space-y-6">
-          <section className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
-            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
-              {historial.length === 0 ? (
-                <p className="text-xs text-gray-400 py-3 text-center">Sin cambios de estado registrados.</p>
-              ) : (
-                <div className="relative">
-                  <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" />
-                  <ul className="space-y-4">
-                    {historial.map((h) => (
-                      <li key={h.id} className="relative flex gap-3 pl-7">
-                        <div className="absolute left-0 top-1 w-[22px] h-[22px] text-brandCustom rounded-full bg-gray-200 border-2 border-gray-200 flex items-center justify-center shrink-0">
-                          <ChangeStatusIcon strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_anterior] ?? ""}`}>
-                              {h.estado_anterior.replace("_", " ")}
-                            </span>
-                            <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_nuevo] ?? ""}`}>
-                              {h.estado_nuevo.replace("_", " ")}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 mt-1">
-                            {h.usuario_nombre ?? "Usuario"} &middot; {new Date(h.fecha).toLocaleString()}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </section>
+        <div className="w-full lg:w-80 shrink-0 space-y-6">
 
           <section className="space-y-4">
             <h2 className="text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
@@ -528,6 +504,43 @@ export default function TicketDetallePage() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+          </section>
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
+            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
+              {historial.length === 0 ? (
+                <p className="text-xs text-gray-400 py-3 text-center">Sin cambios de estado registrados.</p>
+              ) : (
+                <div className="relative">
+                  <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" />
+                  <ul className="space-y-4">
+                    {historial.map((h) => (
+                      <li key={h.id} className="relative flex gap-3 pl-7">
+                        <div className="absolute left-0 top-1 w-[22px] h-[22px] text-brandCustom rounded-full bg-gray-200 border-2 border-gray-200 flex items-center justify-center shrink-0">
+                          <ChangeStatusIcon strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_anterior] ?? ""}`}>
+                              {h.estado_anterior.replace("_", " ")}
+                            </span>
+                            <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_nuevo] ?? ""}`}>
+                              {h.estado_nuevo.replace("_", " ")}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-1">
+                            {h.usuario_nombre ?? "Usuario"} &middot; {new Date(h.fecha).toLocaleString(undefined, { timeZone: "America/Bogota" })}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </section>

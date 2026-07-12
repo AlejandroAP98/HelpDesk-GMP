@@ -1,10 +1,10 @@
 """Schemas Pydantic para el dominio Usuario."""
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.enums import RolUsuario
+from app.schemas import DatetimeUTC
 
 
 class UsuarioBase(BaseModel):
@@ -36,7 +36,7 @@ class UsuarioOut(BaseModel):
     email: EmailStr
     rol: RolUsuario
     empresa_id: int | None
-    fecha_creacion: datetime
+    fecha_creacion: DatetimeUTC
 
 
 class UsuarioConEmpresa(UsuarioOut):

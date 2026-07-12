@@ -181,7 +181,7 @@ export default function BandejaPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString()}</span>
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString(undefined, { timeZone: "America/Bogota" })}</span>
               ),
             },
             {

@@ -19,19 +19,19 @@ export function Select({
   ...props
 }: SelectProps) {
   return (
-    <label className="block">
+    <label className="flex flex-col gap-2 ">
       {label && (
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-normal">
           {label}
         </span>
       )}
       <select
-        className={`w-full rounded-xl border border-gray-200 bg-white text-gray-700 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ${className}`}
+        className={`w-full rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2 py-2.5 text-sm focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ${className}`}
         {...props}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value} >
             {opt.label}
           </option>
         ))}

@@ -124,10 +124,10 @@ export default function TicketsListPage() {
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
         <Link href="/tickets/nuevo">
           <Button
-            className="py-2 text-xs w-fit"
+            className="py-2 text-sm w-fit"
             variant="primary"
             disabled={cargando}
-            icon={<NewTicketIcon className="w-4 h-4" />}
+            icon={<NewTicketIcon />}
           >
             Nuevo ticket
           </Button>
@@ -156,6 +156,15 @@ export default function TicketsListPage() {
         <DataTable
           columns={[
             {
+              key: "id",
+              header: "ID Ticket",
+              cell: (t: Ticket) => (
+                <Link href={`/tickets/${t.id}`} className="font-regular text-sm hover:text-brand-600 transition-all text-gray-500  ">
+                  {t.id}
+                </Link>
+              ),
+            },
+            {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
@@ -178,7 +187,7 @@ export default function TicketsListPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString()}</span>
+                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleDateString(undefined, { timeZone: "America/Bogota" })}</span>
               ),
             },
           ]}

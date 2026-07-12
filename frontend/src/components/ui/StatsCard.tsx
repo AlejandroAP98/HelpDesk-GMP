@@ -4,28 +4,18 @@ interface StatsCardProps {
   label: string;
   value: string | number;
   icon: ReactNode;
-  color?: "brand" | "amber" | "red" | "emerald";
+  className?: string;
 }
 
-const colorMap = {
-  brand: { bg: "bg-brand-50", text: "text-brand-600", icon: "text-brand-500" },
-  amber: { bg: "bg-amber-50", text: "text-amber-600", icon: "text-amber-500" },
-  red: { bg: "bg-red-50", text: "text-red-600", icon: "text-red-500" },
-  emerald: { bg: "bg-emerald-50", text: "text-emerald-600", icon: "text-emerald-500" },
-};
-
-export function StatsCard({ label, value, icon, color = "brand" }: StatsCardProps) {
-  const c = colorMap[color];
-
+export function StatsCard({ label, value, icon, className }: StatsCardProps) {
   return (
-    <div className="bg-cardCustom rounded-2xl shadow-card p-5 sm:p-6 animate-scale-in">
-      <div className="flex items-center gap-4">
-        <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
-          <div className={`w-5 h-5 ${c.icon}`}>{icon}</div>
-        </div>
+    <div className={`rounded-2xl shadow-card p-2 flex flex-col justify-between items-start ${className}`}>
+      <p className="text-xs text-gray-50 truncate px-2">{label}</p>
+      <div className="flex items-center sm:gap-4 gap-2 px-2">
+        <div className={`text-white`}>{icon}</div>
         <div className="min-w-0">
-          <p className="text-sm text-gray-500 truncate">{label}</p>
-          <p className={`text-2xl font-bold tracking-tight mt-0.5 ${c.text}`}>{value}</p>
+          
+          <p className={`text-xl md:text-2xl text-white font-bold tracking-tight mt-0.5`}>{value}</p>
         </div>
       </div>
     </div>

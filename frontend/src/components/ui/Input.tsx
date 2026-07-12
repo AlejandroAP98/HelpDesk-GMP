@@ -6,9 +6,9 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ label, className = "", ...props }: InputProps) {
   return (
-    <label className="block">
+    <label className="flex flex-col gap-2">
       {label && (
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
           {label}
         </span>
       )}
@@ -26,9 +26,9 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 
 export function Textarea({ label, className = "", ...props }: TextareaProps) {
   return (
-    <label className="block">
+    <label className="flex flex-col gap-2">
       {label && (
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
           {label}
         </span>
       )}

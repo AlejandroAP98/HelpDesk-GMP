@@ -8,17 +8,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bgCustom: "#eef0f2",
+        bgCustom: "#f0f4ef",
+        bgSiderBar: "#416165",
         cardCustom: "#fbfcff",
         accentCustom: "#EB6534",
         textCustom: "#111827",
         textCustomMuted: "#6b7280",
         borderCustom: "#e5e7eb",
-        brandCustom: "#087E8B",
+        brandCustom: "#508484",
         urgent: {
           DEFAULT: "#DC2626",
           light: "#fef2f2",
         },
+        blueCustom:"#007991",
+        redCustom:"#fe4a49",
+        violetCustom:"#824c71",
+        yellowCustom:"#c8963e",
+        greenCustom:"#60993e",
+        grayCustom:"#7e7f83",
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out forwards',

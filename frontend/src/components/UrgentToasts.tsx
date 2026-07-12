@@ -38,7 +38,7 @@ export default function UrgentToasts() {
           className="rounded-2xl bg-white border border-red-100 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden"
           role="alert"
         >
-          <div className="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl" />
+          <div className="absolute top-0 left-0 w-1 h-full bg-redCustom rounded-l-2xl" />
           <div className="flex items-start justify-between gap-2 pl-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">

@@ -1,6 +1,7 @@
 """Servicio de comentarios: publicos y notas internas."""
 from __future__ import annotations
 
+from datetime import timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -83,7 +84,7 @@ async def crear(
             "usuario_nombre": current.nombre,
             "contenido": data.contenido,
             "es_nota_interna": data.es_nota_interna,
-            "fecha_creacion": comentario.fecha_creacion.isoformat(),
+            "fecha_creacion": comentario.fecha_creacion.replace(tzinfo=timezone.utc).isoformat(),
         }
         await publish_to_ticket(ticket_id=ticket_id, event=event)
         await publish_broadcast(event=event)

@@ -1,12 +1,12 @@
 """Schemas del dominio Ticket."""
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import EstadoTicket, ElementoInfraestructura, PrioridadTicket
+from app.schemas import DatetimeUTC
 
 
 class TicketCreate(BaseModel):
@@ -66,8 +66,8 @@ class TicketOut(BaseModel):
     nombre_punto: str | None = None
     estado: EstadoTicket
     prioridad: PrioridadTicket
-    fecha_creacion: datetime
-    fecha_actualizacion: datetime
+    fecha_creacion: DatetimeUTC
+    fecha_actualizacion: DatetimeUTC
 
 
 class TicketDetalle(TicketOut):
@@ -88,4 +88,4 @@ class HistorialEstadoOut(BaseModel):
     usuario_nombre: str | None = None
     estado_anterior: EstadoTicket
     estado_nuevo: EstadoTicket
-    fecha: datetime
+    fecha: DatetimeUTC

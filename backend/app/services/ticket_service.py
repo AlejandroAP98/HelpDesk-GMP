@@ -1,6 +1,7 @@
 """Servicio CRUD y maquina de estados de Tickets."""
 from __future__ import annotations
 
+from datetime import timezone
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -83,7 +84,7 @@ def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
         "estado": ticket.estado.value,
         "cliente_id": str(ticket.cliente_id) if ticket.cliente_id else None,
         "agente_id": str(ticket.agente_id) if ticket.agente_id else None,
-        "fecha_actualizacion": ticket.fecha_actualizacion.isoformat(),
+        "fecha_actualizacion": ticket.fecha_actualizacion.replace(tzinfo=timezone.utc).isoformat(),
     }
 
 

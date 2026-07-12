@@ -15,6 +15,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 
 const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
   { value: "torre", label: "Torre" },
@@ -24,7 +25,7 @@ const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
 ];
 
 const CAMPOS_RED = [
-  { key: "ip_pcs", label: "IP PC(s)", placeholder: "Ej: 192.168.1.10, 192.168.1.11" },
+  { key: "ip_pcs", label: "IP's PC's", placeholder: "Ej: 192.168.1.10, 192.168.1.11" },
   { key: "ip_antena", label: "IP Antena", placeholder: "Ej: 10.0.0.1" },
   { key: "mascara_red", label: "Máscara de red", placeholder: "Ej: 255.255.255.0" },
   { key: "puerta_enlace", label: "Puerta de enlace", placeholder: "Ej: 192.168.1.1" },
@@ -124,10 +125,38 @@ export default function NuevoTicketPage() {
   };
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-6">Nuevo Ticket</h1>
+    <div className="animate-scale-in max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-1">Nuevo Ticket</h1>
+      <p className="text-gray-600 text-sm font-medium mb-6">Completa el siguiente formulario de la forma más detallada posible para crear un nuevo ticket.</p>
       <form onSubmit={submit} className="space-y-5">
-        <Card>
+        <Card >
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5 items-start mb-4 ">
+            <Select
+              label="Categoría"
+              value={categoriaId ?? ""}
+              onChange={(e) => setCategoriaId(Number(e.target.value) || null)}
+              placeholder="Seleccione..."
+              options={categorias.map((c) => ({ value: String(c.id), label: c.nombre }))}
+            />
+
+            <Select
+              label="Subcategoría"
+              value={subcategoriaId ?? ""}
+              onChange={(e) => setSubcategoriaId(Number(e.target.value) || null)}
+              placeholder="Seleccione..."
+              disabled={!categoriaId}
+              options={subcategorias.map((s) => ({ value: String(s.id), label: s.nombre }))}
+            />
+
+            <Select
+              label="Infraestructura"
+              value={elemento ?? ""}
+              onChange={(e) => setElemento((e.target.value as ElementoInfraestructura) || null)}
+              placeholder="Seleccione..."
+              disabled={!subcategoriaId}
+              options={ELEMENTOS.map((el) => ({ value: el.value, label: el.label }))}
+            />
+          </div>
           <Input
             label="Titulo"
             type="text"
@@ -148,38 +177,8 @@ export default function NuevoTicketPage() {
               placeholder="Describa el problema detalladamente"
             />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-            <Select
-              label="Categoría"
-              value={categoriaId ?? ""}
-              onChange={(e) => setCategoriaId(Number(e.target.value) || null)}
-              placeholder="Seleccione..."
-              options={categorias.map((c) => ({ value: String(c.id), label: c.nombre }))}
-            />
-
-            <Select
-              label="Subcategoría"
-              value={subcategoriaId ?? ""}
-              onChange={(e) => setSubcategoriaId(Number(e.target.value) || null)}
-              placeholder="Seleccione..."
-              disabled={!categoriaId}
-              options={subcategorias.map((s) => ({ value: String(s.id), label: s.nombre }))}
-            />
-
-            <Select
-              label="Elemento de infraestructura"
-              value={elemento ?? ""}
-              onChange={(e) => setElemento((e.target.value as ElementoInfraestructura) || null)}
-              placeholder="Seleccione..."
-              disabled={!subcategoriaId}
-              options={ELEMENTOS.map((el) => ({ value: el.value, label: el.label }))}
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 block">
+          <section className="mt-5 border border-gray-200 rounded-xl p-4">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 block">
             Información de red (opcional)
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -209,18 +208,17 @@ export default function NuevoTicketPage() {
               </div>
             ))}
           </div>
-        </Card>
-
+          </section>
+          <div className="flex gap-3 justify-end mt-5">
+            <Button type="submit" loading={enviando} icon={<NewTicketIcon />}>
+              {!enviando ? "Crear ticket" : "Creando..."}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
+              Cancelar
+            </Button>
+          </div>
         {error && <ErrorMessage message={error} />}
-
-        <div className="flex gap-3">
-          <Button type="submit" loading={enviando}>
-            Crear ticket
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => router.back()}>
-            Cancelar
-          </Button>
-        </div>
+        </Card>
       </form>
     </div>
   );
