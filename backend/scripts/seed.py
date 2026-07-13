@@ -102,6 +102,10 @@ async def run(reset: bool = False) -> None:
         all_cats = (await db.execute(select(Categoria))).scalars().all()
         for cat in all_cats:
             if cat.nombre not in nombres_validos:
+                await db.execute(text("DELETE FROM historial_estados WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
+                await db.execute(text("DELETE FROM adjuntos WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
+                await db.execute(text("DELETE FROM comentarios WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
+                await db.execute(text("DELETE FROM tickets WHERE categoria_id = :cid"), {"cid": cat.id})
                 await db.execute(text("DELETE FROM subcategorias WHERE categoria_id = :cid"), {"cid": cat.id})
                 await db.execute(text("DELETE FROM categorias WHERE id = :cid"), {"cid": cat.id})
                 print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
