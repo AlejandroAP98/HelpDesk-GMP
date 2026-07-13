@@ -89,12 +89,12 @@ docker compose exec backend python -m scripts.seed
 | Dispositivo | URL | TLS |
 |---|---|---|
 | PC (Windows) | `https://helpdesk.local` | Si (con CA instalado) |
-| Movil (Android/iOS) | `http://192.168.1.8` | No (HTTP en LAN) |
+| Movil (Android/iOS) | `http://192.168.1.9` | No (HTTP en LAN) |
 
 Para que el PC resuelva `helpdesk.local`, agregar al archivo `C:\Windows\System32\drivers\etc\hosts`:
 
 ```
-192.168.1.8  helpdesk.local
+192.168.1.9  helpdesk.local
 ```
 
 ### TLS / CA interna (produccion)
@@ -112,7 +112,7 @@ Doble click en `servidor-root-ca.crt` > **Instalar certificado** > **Equipo loca
 
 #### Android
 
-1. Abrir `http://192.168.1.8/ca.crt` en el navegador (descarga automatica)
+1. Abrir `http://9/ca.crt` en el navegador (descarga automatica)
 2. Ajustes > Seguridad > **Cifrado y credenciales** > **Instalar un certificado** > **CA de confianza**
 3. Seleccionar el archivo descargado
 

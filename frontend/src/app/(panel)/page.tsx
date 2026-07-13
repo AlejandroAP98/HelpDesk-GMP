@@ -32,7 +32,7 @@ export default function PanelHomePage() {
       setCargando(true);
       try {
         const [ultimos, statsData] = await Promise.all([
-          ticketApi.listar({ size: 10 }),
+          ticketApi.listar({ size: 5 }),
           statsApi.obtener(),
         ]);
         setRecientes(ultimos.items);

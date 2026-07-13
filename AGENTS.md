@@ -140,7 +140,7 @@ Fase 10 completada: Deploy en Ubuntu Server + acceso movil.
 - `frontend/src/app/providers.tsx`: WebSocket URL dinamico desde `window.location`
   (funciona en desktop HTTPS y movil HTTP automaticamente).
 - `backend/app/core/config.py`: CORS origins incluye `https://helpdesk.local`,
-  `http://192.168.1.8` y `http://localhost:3000`.
+  `http://192.168.1.9` y `http://localhost:3000`.
 - `.env` produccion: `COOKIE_SECURE=false` para que las cookies de sesion funcionen
   en HTTP movil. `APP_ENV=prod`.
 - Instalacion de root CA de Caddy en clientes (Windows, Android, iOS).

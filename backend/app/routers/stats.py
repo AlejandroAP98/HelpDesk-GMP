@@ -33,7 +33,7 @@ async def obtener_stats(
     en_progreso = (await db.execute(base.where(Ticket.estado == EstadoTicket.en_progreso))).scalar_one()
     resueltos = (await db.execute(base.where(Ticket.estado == EstadoTicket.resuelto))).scalar_one()
     cerrados = (await db.execute(base.where(Ticket.estado == EstadoTicket.cerrado))).scalar_one()
-    urgentes = (await db.execute(base.where(Ticket.prioridad == PrioridadTicket.urgente))).scalar_one()
+    urgentes = (await db.execute(base.where(Ticket.prioridad == PrioridadTicket.urgente, Ticket.estado != EstadoTicket.resuelto, Ticket.estado != EstadoTicket.cerrado))).scalar_one()
 
     return StatsOut(
         total=total,

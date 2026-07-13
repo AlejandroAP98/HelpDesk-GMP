@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/Button";
 import TicketIcon from "@/app/assets/icons/TicketIcon";
 import HomeIcon from "@/app/assets/icons/HomeIcon";
 import InboxIcon from "@/app/assets/icons/InboxIcon";
+import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 import logo from "../app/assets/logo-white.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
   cliente: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
     { href: "/tickets", label: "Mis tickets", icon: <TicketIcon/> },
-    { href: "/tickets/nuevo", label: "Crear ticket", icon: <TicketIcon/> },
+    { href: "/tickets/nuevo", label: "Crear ticket", icon: <NewTicketIcon/> },
   ],
   agente: [
     { href: "/", label: "Inicio", icon: <HomeIcon/> },
@@ -75,7 +76,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
         <nav className="flex-1 py-4 space-y-1 overflow-y-auto border-r border-brandCustom">
           {links.map((l) => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
+            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && pathname === "/");
             return (
               <Link
                 key={l.href}

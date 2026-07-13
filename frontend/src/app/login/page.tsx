@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import logo from "../assets/logo.svg";
+import LoginIcon from "../assets/icons/LoginIcon";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function LoginPage() {
             {error && <div className="mt-4"><ErrorMessage message={error} /></div>}
 
             <div className="mt-5">
-              <Button type="submit" loading={loading} className="w-full py-3">
+              <Button type="submit" loading={loading} icon={<LoginIcon className="w-5 h-5" />} className="w-full py-3 flex items-center gap-2">
                 Ingresar al Panel
               </Button>
             </div>
