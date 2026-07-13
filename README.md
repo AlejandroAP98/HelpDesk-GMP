@@ -112,7 +112,7 @@ Doble click en `servidor-root-ca.crt` > **Instalar certificado** > **Equipo loca
 
 #### Android
 
-1. Abrir `http://9/ca.crt` en el navegador (descarga automatica)
+1. Abrir `http://192.168.1.9/ca.crt` en el navegador (descarga automatica)
 2. Ajustes > Seguridad > **Cifrado y credenciales** > **Instalar un certificado** > **CA de confianza**
 3. Seleccionar el archivo descargado
 

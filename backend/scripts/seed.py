@@ -186,7 +186,6 @@ async def run(reset: bool = False) -> None:
                 else:
                     print(f"  Subcategoría ya existe: id={sub_db.id} nombre={sub_db.nombre!r}")
 
-        from sqlalchemy import text
         await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
         await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
