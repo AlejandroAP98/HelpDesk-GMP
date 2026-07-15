@@ -23,6 +23,7 @@ import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
 import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Button } from "@/components/ui/Button";
+import BackIcon from "@/app/assets/icons/BackIcon";
 
 const elementoLabels: Record<ElementoInfraestructura, string> = {
   torre: "Torre",
@@ -261,11 +262,9 @@ export default function TicketDetallePage() {
     <div className="space-y-6">
       <button
         onClick={() => router.back()}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+        className="inline-flex items-center text-sm font-medium border-gray-300 border border-1  rounded-xl px-2 py-2 cursor-pointer text-gray-500 hover:text-gray-800 transition-colors"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
+        <BackIcon className="w-5 h-5" />
         Volver
       </button>
 

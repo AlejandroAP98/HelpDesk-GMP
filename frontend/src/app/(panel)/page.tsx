@@ -146,8 +146,9 @@ export default function PanelHomePage() {
       <section className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-900">Tickets recientes</h2>
-          <Link href="/tickets" className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors">
-            Ver todos &rarr;
+          <Link href="/tickets" className="text-sm font-medium text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">
+            Ver todos
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-chevron-right" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m9 6 6 6-6 6"/></svg>
           </Link>
         </div>
 
