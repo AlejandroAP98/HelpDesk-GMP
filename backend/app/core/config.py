@@ -30,11 +30,17 @@ class Settings(BaseSettings):
     minio_bucket: str = "adjuntos"
     minio_use_ssl: bool = False
 
+    # --- Web Push (VAPID) ---
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:admin@helpdesk.local"
+
     # --- CORS ---
     cors_origins: list[str] = [
         "http://localhost:3000",
         "https://helpdesk.local",
         "http://192.168.1.9",
+        "https://soporte.gmpredes.online",
     ]
 
     @property

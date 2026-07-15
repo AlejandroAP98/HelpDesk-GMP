@@ -13,6 +13,7 @@ from app.routers import auth as auth_router
 from app.routers import categorias as categorias_router
 from app.routers import comentarios as comentarios_router
 from app.routers import empresas as empresas_router
+from app.routers import push as push_router
 from app.routers import stats as stats_router
 from app.routers import subcategorias as subcategorias_router
 from app.routers import tickets as tickets_router
@@ -92,6 +93,7 @@ app.include_router(tickets_router.router)
 app.include_router(comentarios_router.router)
 app.include_router(adjuntos_router.router)
 app.include_router(stats_router.router)
+app.include_router(push_router.router)
 app.include_router(ws_router.router)
 
 

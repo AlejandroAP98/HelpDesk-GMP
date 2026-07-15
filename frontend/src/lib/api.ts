@@ -3,7 +3,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/authStore";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export const api = axios.create({ baseURL });
 

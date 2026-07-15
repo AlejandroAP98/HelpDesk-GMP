@@ -21,7 +21,10 @@ interface UseWebSocketOptions {
   onEvent?: (ev: WsEvent) => void;
   reconnectDelay?: number;
   maxRetries?: number;
+  pingIntervalMs?: number;
 }
+
+const PING_INTERVAL_MS_DEFAULT = 60_000;
 
 export function useWebSocket({
   url,
@@ -29,16 +32,26 @@ export function useWebSocket({
   onEvent,
   reconnectDelay = 3000,
   maxRetries = 10,
+  pingIntervalMs = PING_INTERVAL_MS_DEFAULT,
 }: UseWebSocketOptions) {
   const [status, setStatus] = useState<WsStatus>("idle");
   const wsRef = useRef<WebSocket | null>(null);
   const retriesRef = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
+  const stopPing = useCallback(() => {
+    if (pingTimer.current) {
+      clearInterval(pingTimer.current);
+      pingTimer.current = null;
+    }
+  }, []);
+
   const cleanup = useCallback(() => {
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    stopPing();
     const ws = wsRef.current;
     if (ws) {
       ws.onopen = null;
@@ -50,7 +63,7 @@ export function useWebSocket({
       }
     }
     wsRef.current = null;
-  }, []);
+  }, [stopPing]);
 
   const connect = useCallback(() => {
     if (!token) {
@@ -66,6 +79,12 @@ export function useWebSocket({
     ws.onopen = () => {
       retriesRef.current = 0;
       setStatus("open");
+      stopPing();
+      pingTimer.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+        }
+      }, pingIntervalMs);
     };
 
     ws.onmessage = (msg) => {
@@ -84,16 +103,37 @@ export function useWebSocket({
     ws.onclose = () => {
       setStatus("closed");
       wsRef.current = null;
+      stopPing();
       if (retriesRef.current < maxRetries) {
         retriesRef.current += 1;
         reconnectTimer.current = setTimeout(connect, reconnectDelay);
       }
     };
-  }, [url, token, maxRetries, reconnectDelay, cleanup]);
+  }, [url, token, maxRetries, reconnectDelay, cleanup, pingIntervalMs, stopPing]);
 
   useEffect(() => {
     connect();
-    return cleanup;
+    const onVisibility = () => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        (wsRef.current === null ||
+          wsRef.current.readyState === WebSocket.CLOSED ||
+          wsRef.current.readyState === WebSocket.CLOSING)
+      ) {
+        retriesRef.current = 0;
+        connect();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+      cleanup();
+    };
   }, [connect, cleanup]);
 
   const send = useCallback((payload: unknown) => {

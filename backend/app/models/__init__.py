@@ -12,6 +12,7 @@ from app.models.ticket import Ticket
 from app.models.comentario import Comentario
 from app.models.adjunto import Adjunto
 from app.models.historial_estado import HistorialEstado
+from app.models.push_subscription import PushSubscription
 
 __all__ = [
     "EstadoTicket",
@@ -26,4 +27,5 @@ __all__ = [
     "Comentario",
     "Adjunto",
     "HistorialEstado",
+    "PushSubscription",
 ]

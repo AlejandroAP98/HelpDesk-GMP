@@ -130,8 +130,7 @@ services:
     env_file:
       - .env
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
     depends_on:
       - backend
     networks:
@@ -160,3 +159,22 @@ services:
       - backend
     profiles:
       - prod   # Solo arranca en prod (el override activa este profile)
+
+  # ---------------------------------------------------------------------------
+  # Cloudflare Tunnel (cloudflared) - expone Caddy a internet sin abrir puertos
+  # Solo activo en prod via override. Conexion OUTBOUND a Cloudflare, no publica
+  # puertos en el host. Requiere CLOUDFLARE_TUNNEL_TOKEN en .env.
+  # ---------------------------------------------------------------------------
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - internal
+      - proxy
+    depends_on:
+      - caddy
+    profiles:
+      - prod

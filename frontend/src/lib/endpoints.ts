@@ -207,3 +207,36 @@ export const adminApi = {
     return r.data as Pagina<{ id: number; nombre: string; fecha_creacion: string }>;
   },
 };
+
+export interface PushSubscriptionOut {
+  id: string;
+  endpoint: string;
+  user_agent: string | null;
+  fecha_creacion: string;
+}
+
+export const pushApi = {
+  getVapidKey: async () => {
+    const r = await api.get("/api/push/vapid-public-key");
+    return r.data as { public_key: string };
+  },
+  listMySubscriptions: async () => {
+    const r = await api.get("/api/push/subscriptions");
+    return r.data as PushSubscriptionOut[];
+  },
+  subscribe: async (data: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+    user_agent: string | null;
+  }) => {
+    const r = await api.post("/api/push/subscribe", data);
+    return r.data as PushSubscriptionOut;
+  },
+  unsubscribe: async (endpoint: string) => {
+    await api.delete("/api/push/subscribe", { data: { endpoint } });
+  },
+  sendTest: async () => {
+    const r = await api.post("/api/push/test");
+    return r.data as { delivered: number };
+  },
+};

@@ -41,6 +41,7 @@ export default function TicketDetallePage() {
   const subscribeTicket = useWsTicketStore((s) => s.subscribeTicket);
   const unsubscribeTicket = useWsTicketStore((s) => s.unsubscribeTicket);
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
+  const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
   const setOnTicketCommented = useWsTicketStore((s) => s.setOnTicketCommented);
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -145,6 +146,21 @@ export default function TicketDetallePage() {
       }
     });
 
+    setOnTicketAssigned((ev) => {
+      if (ev.ticket_id === ticketId) {
+        setTicket((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            estado: ev.estado as EstadoTicket,
+            prioridad: ev.prioridad as PrioridadTicket,
+            agente_id: ev.agente_id,
+            fecha_actualizacion: ev.fecha_actualizacion,
+          };
+        });
+      }
+    });
+
     setOnTicketCommented((ev) => {
       if (ev.ticket_id !== ticketId) return;
       if (ev.es_nota_interna && usuario?.rol === "cliente") return;
@@ -169,9 +185,10 @@ export default function TicketDetallePage() {
     return () => {
       unsubscribeTicket(ticketId);
       setOnTicketUpdated(null);
+      setOnTicketAssigned(null);
       setOnTicketCommented(null);
     };
-  }, [ticketId, usuario?.rol, subscribeTicket, unsubscribeTicket, setOnTicketUpdated, setOnTicketCommented]);
+  }, [ticketId, usuario?.rol, subscribeTicket, unsubscribeTicket, setOnTicketUpdated, setOnTicketAssigned, setOnTicketCommented]);
   const enviarComentario = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoComentario.trim()) return;

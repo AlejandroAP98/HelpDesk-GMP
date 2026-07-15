@@ -104,6 +104,22 @@ class ConnectionManager:
         logger.debug("broadcast_all: enviado a %d/%d conexiones", n, len(self.active))
         return n
 
+    def get_connected_user_ids(self) -> set[UUID]:
+        """Devuelve el set de usuario_id actualmente conectados por WebSocket.
+
+        Utilizado por el push_dispatcher para NO enviar push a usuarios que ya
+        estan viendo la app (reciben la notificacion via WS toast).
+        """
+        result: set[UUID] = set()
+        for meta in self.meta.values():
+            uid = meta.get("usuario_id")
+            if uid:
+                try:
+                    result.add(UUID(uid))
+                except (TypeError, ValueError):
+                    continue
+        return result
+
     def subscribe_ticket(self, conn_id: UUID, ticket_id: UUID) -> None:
         if conn_id not in self.active:
             return

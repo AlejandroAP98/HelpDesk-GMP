@@ -26,6 +26,18 @@ export interface TicketUpdatedEvent {
   fecha_actualizacion: string;
 }
 
+export interface TicketAssignedEvent {
+  type: "ticket:assigned";
+  ticket_id: string;
+  empresa_id: number;
+  titulo: string;
+  prioridad: string;
+  estado: string;
+  cliente_id: string | null;
+  agente_id: string | null;
+  fecha_actualizacion: string;
+}
+
 export interface TicketCommentedEvent {
   type: "ticket:commented";
   ticket_id: string;
@@ -37,7 +49,11 @@ export interface TicketCommentedEvent {
   fecha_creacion: string;
 }
 
-export type WsTicketEvent = TicketCreatedEvent | TicketUpdatedEvent | TicketCommentedEvent;
+export type WsTicketEvent =
+  | TicketCreatedEvent
+  | TicketUpdatedEvent
+  | TicketAssignedEvent
+  | TicketCommentedEvent;
 
 type Handler<T> = (ev: T) => void;
 
@@ -49,9 +65,11 @@ interface WsTicketStore {
   unsubscribeTicket: (ticketId: string) => void;
   onTicketCreated: Handler<TicketCreatedEvent> | null;
   onTicketUpdated: Handler<TicketUpdatedEvent> | null;
+  onTicketAssigned: Handler<TicketAssignedEvent> | null;
   onTicketCommented: Handler<TicketCommentedEvent> | null;
   setOnTicketCreated: (h: Handler<TicketCreatedEvent> | null) => void;
   setOnTicketUpdated: (h: Handler<TicketUpdatedEvent> | null) => void;
+  setOnTicketAssigned: (h: Handler<TicketAssignedEvent> | null) => void;
   setOnTicketCommented: (h: Handler<TicketCommentedEvent> | null) => void;
   dispatch: (event: WsTicketEvent) => void;
 }
@@ -84,14 +102,17 @@ export const useWsTicketStore = create<WsTicketStore>((set, get) => ({
   },
   onTicketCreated: null,
   onTicketUpdated: null,
+  onTicketAssigned: null,
   onTicketCommented: null,
   setOnTicketCreated: (h) => set({ onTicketCreated: h }),
   setOnTicketUpdated: (h) => set({ onTicketUpdated: h }),
+  setOnTicketAssigned: (h) => set({ onTicketAssigned: h }),
   setOnTicketCommented: (h) => set({ onTicketCommented: h }),
   dispatch: (event) => {
     const s = get();
     if (event.type === "ticket:created") s.onTicketCreated?.(event);
     else if (event.type === "ticket:updated") s.onTicketUpdated?.(event);
+    else if (event.type === "ticket:assigned") s.onTicketAssigned?.(event);
     else if (event.type === "ticket:commented") s.onTicketCommented?.(event);
   },
 }));

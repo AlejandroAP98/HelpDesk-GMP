@@ -2,8 +2,11 @@
 
 import { create } from "zustand";
 
+export type AlertKind = "urgent" | "assigned";
+
 export interface UrgentAlert {
   id: string;
+  kind: AlertKind;
   ticket_id: string;
   empresa_id: number;
   titulo: string;
@@ -14,7 +17,7 @@ export interface UrgentAlert {
 
 interface UrgentStore {
   alerts: UrgentAlert[];
-  addAlert: (a: Omit<UrgentAlert, "id" | "createdAt">) => void;
+  addAlert: (a: Omit<UrgentAlert, "id" | "createdAt" | "kind"> & { kind?: AlertKind }) => void;
   dismiss: (id: string) => void;
   clear: () => void;
 }
@@ -24,7 +27,12 @@ export const useUrgentStore = create<UrgentStore>((set) => ({
   addAlert: (a) =>
     set((s) => ({
       alerts: [
-        { ...a, id: crypto.randomUUID(), createdAt: Date.now() },
+        {
+          ...a,
+          kind: a.kind ?? "urgent",
+          id: crypto.randomUUID(),
+          createdAt: Date.now(),
+        },
         ...s.alerts,
       ].slice(0, 20),
     })),

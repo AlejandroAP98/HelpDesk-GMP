@@ -139,6 +139,29 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
         _logger.warning("No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True)
 
 
+async def _publicar_asignacion(ticket: Ticket) -> None:
+    """Publica evento ticket:assigned (dispara Web Push al agente asignado).
+
+    Se publica a:
+    - El room del ticket (para quien tenga el detalle abierto)
+    - El rol agente+administrador (para que el agente asignado lo reciba
+      aunque este viendo la lista, no el detalle)
+    """
+    from app.websockets.pubsub import publish_to_ticket, publish_to_roles
+
+    if ticket.agente_id is None:
+        return
+    payload = _ticket_payload(ticket, "ticket:assigned")
+    try:
+        await publish_to_ticket(ticket.id, event=payload)
+        await publish_to_roles(
+            roles=[RolUsuario.agente.value, RolUsuario.administrador.value],
+            event=payload,
+        )
+    except Exception:
+        _logger.warning("No se pudo publicar ticket:assigned para %s", ticket.id, exc_info=True)
+
+
 async def _get_categoria(categoria_id: int, db: AsyncSession) -> Categoria:
     cat = (
         await db.execute(select(Categoria).where(Categoria.id == categoria_id))
@@ -463,6 +486,7 @@ async def asignar(
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
+    await _publicar_asignacion(ticket)
     return ticket
 
 

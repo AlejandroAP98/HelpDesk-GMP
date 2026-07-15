@@ -138,9 +138,80 @@ Fase 10 completada: Deploy en Ubuntu Server + acceso movil.
 - `frontend/src/lib/api.ts`: `??` en lugar de `||` para que `baseURL=""` funcione
   correctamente con axios (rutas relativas al mismo origen).
 - `frontend/src/app/providers.tsx`: WebSocket URL dinamico desde `window.location`
-  (funciona en desktop HTTPS y movil HTTP automaticamente).
+  (funciona en desktop HTTPS y movil HTTP automaticamente). Se elimina
+  `NEXT_PUBLIC_WS_URL` del build args en prod para que SIEMPRE use el fallback
+  `window.location.host` (asi el mismo bundle sirve para LAN y para Cloudflare
+  Tunnel sin recompilar).
 - `backend/app/core/config.py`: CORS origins incluye `https://helpdesk.local`,
   `http://192.168.1.9` y `http://localhost:3000`.
 - `.env` produccion: `COOKIE_SECURE=false` para que las cookies de sesion funcionen
   en HTTP movil. `APP_ENV=prod`.
 - Instalacion de root CA de Caddy en clientes (Windows, Android, iOS).
+Fase 11 completada: Cloudflare Tunnel + Zero Trust (free tier).
+- Servicio `cloudflared` en `docker-compose.yml` (profile prod, no publica
+  puertos; conexion outbound a Cloudflare). Requiere `CLOUDFLARE_TUNNEL_TOKEN`
+  en `.env`. Ingress publico: `https://soporte.tudominio.com` -> `caddy:80`.
+- Caddy se mantiene como reverse proxy interno con TLS auto-firmado; el
+  certificado valido para el usuario final es el de Cloudflare.
+- Zero Trust Access: One-Time PIN por email (gratis, sin IdP externo). El
+  operador debe configurar la policy en el dashboard y agregar los emails
+  autorizados (max 50 usuarios en el tier free).
+- WebSocket keepalive: `useWebSocket.ts` envia `{type:"ping"}` cada 60s para
+  evitar el idle timeout de Cloudflare (100s no configurable en free tier).
+- CORS agrega `https://soporte.tudominio.com` en `config.py`. `COOKIE_SECURE`
+  puede pasar a `true` en `.env` (todo el trafico externo es HTTPS).
+Fase 12 completada: PWA instalable.
+- `frontend/public/manifest.json` con name, short_name, icons (192, 512,
+  maskable 512), shortcuts a /tickets y /tickets/nuevo, display standalone.
+- `frontend/public/sw.js` con estrategia mixta: network-first para HTML y
+  navegacion, cache-first para `/_next/static/*` e iconos, network-only para
+  `/api/*`, bypass total para `/ws` y WebSockets. Versionado por
+  `CACHE_VERSION` para invalidar al desplegar.
+- Iconos PNG generados por `scripts/generate_pwa_icons.py` (Pillow): 16, 32,
+  48, 192, 512, maskable-512, apple-touch 180. Diseno simple ticket azul
+  (#2563eb) - reemplazar cuando se tenga logo oficial.
+- `frontend/src/components/ServiceWorkerRegister.tsx`: registra el SW solo
+  en produccion (`process.env.NODE_ENV !== "production"` saltea el registro).
+- `frontend/src/app/layout.tsx`: meta tags `apple-mobile-web-app-*`,
+  `mobile-web-app-capable`, `theme-color`, manifest link, icon links.
+- `frontend/next.config.js`: headers custom para `/sw.js` (no-cache +
+  `Service-Worker-Allowed: /`) y `/manifest.json` (Content-Type correcto).
+- `frontend/Dockerfile`: agregado `COPY --from=builder /app/public ./public`
+  porque el output `standalone` NO copia `public/` automaticamente.
+- Resultado: en Chrome mobile aparece el banner "Agregar a pantalla de
+  inicio". En iOS Safari: Compartir > Agregar a pantalla de inicio.
+Fase 13 completada: Web Push notifications (VAPID self-hosted).
+- Backend: tabla `push_subscriptions` (UUID, usuario_id FK CASCADE, endpoint
+  UNIQUE, p256dh_key, auth_key, user_agent, ultimo_envio_at). Migracion
+  `a9b8c7d6e5f4`.
+- Backend: `services/push_service.py` con `send_push_to_user` y
+  `send_push_to_users`. Usa `pywebpush` + VAPID PEM. Cachea conversion
+  raw-base64url -> PEM en el primer uso. Limpia suscripciones 404/410 Gone.
+- Backend: `routers/push.py` expone `GET /api/push/vapid-public-key`,
+  `GET /api/push/subscriptions`, `POST /api/push/subscribe`,
+  `DELETE /api/push/subscribe`.
+- Backend: `websockets/pubsub.py` ahora dispatcha push en paralelo al WS.
+  Usa `manager.get_connected_user_ids()` para excluir usuarios ya
+  conectados (evita notificacion doble).
+- Backend: nuevo evento `ticket:assigned` (publicado por
+  `ticket_service.asignar()` ademas del `ticket:updated` existente).
+  El dispatcher lo enruta como push al usuario asignado.
+- Backend: VAPID keys generadas una vez con cryptography (EC P-256). Las
+  raw keys se guardan en `.env` como base64url; el PEM se deriva en
+  runtime y se cachea.
+- Frontend: `lib/notifications.ts` con `subscribeToPush`, `unsubscribeFromPush`,
+  `isCurrentlySubscribed`, `isPushSupported`. Maneja permiso, conversion
+  VAPID key a ArrayBuffer, registro de SW.
+- Frontend: `hooks/useNotificationPermission.ts` con estado reactivo
+  (`unsupported` | `loading` | `inactive` | `active` | `denied`).
+- Frontend: `components/NotificationSettings.tsx` con toggle y lista de
+  devices suscritos. Accesible via boton flotante (gear) en panel layout.
+- Frontend: `sw.js` con handlers `push` (parsea payload JSON, muestra
+  `Notification` con icon y badge) y `notificationclick` (foco/abre la
+  URL del ticket, con fallback a `clients.openWindow`).
+- Eventos que disparan push: `ticket:urgent_created` (a roles
+  agente+administrador no conectados), `ticket:assigned` (al agente
+  asignado si no esta conectado).
+- Limite: iOS Safari solo recibe push si la PWA esta instalada (iOS 16.4+).
+  No es objetivo actual.
+- Proximas fases: 14 (WARP client para SSH al server).
