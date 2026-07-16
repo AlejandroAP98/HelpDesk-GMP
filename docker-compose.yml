@@ -91,6 +91,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - ./backend/app/firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
       postgres:
         condition: service_healthy

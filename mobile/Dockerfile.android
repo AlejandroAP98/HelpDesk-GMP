@@ -1,0 +1,47 @@
+# Build container for Android APK
+# Generates a release APK that can be sideloaded to Android devices
+# for testing push notifications end-to-end.
+#
+# Build:
+#   docker build -t helpdesk-gmp-android-builder -f mobile/Dockerfile.android .
+#
+# Run:
+#   docker run --rm -v ${PWD}/mobile/dist:/dist helpdesk-gmp-android-builder
+#
+# Requirements:
+#   - google-services.json must be present in mobile/android/app/
+
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --legacy-peer-deps
+
+COPY frontend/ ./
+
+RUN npm run build
+
+# Build the Capacitor app
+WORKDIR /mobile
+
+COPY mobile/package.json mobile/package-lock.json* ./
+RUN npm install --legacy-peer-deps
+
+COPY mobile/ ./
+
+# Copy built frontend to mobile/webDir
+RUN mkdir -p ../frontend/.next && cp -r /frontend/.next/standalone/* ../frontend/.next/
+RUN cp -r /frontend/public ../frontend/public || true
+RUN npx cap sync android
+
+# Gradle build stage
+FROM gradle:8.7-jdk17 AS android-builder
+
+WORKDIR /app
+
+COPY --from=frontend-builder /mobile/android /app
+
+RUN gradle assembleRelease --no-daemon
+
+CMD ["sh", "-c", "mkdir -p /dist && cp app/build/outputs/apk/release/app-release.apk /dist/HelpDesk-GMP.apk && echo 'APK built: /dist/HelpDesk-GMP.apk'"]

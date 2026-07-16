@@ -24,6 +24,7 @@ apscheduler = "^3.10.4"
 httpx = "^0.27.2"
 psycopg2-binary = "^2.9.9"  # Sincrono, usado por Alembic
 pywebpush = "^2.0.0"        # Web Push (VAPID) para notificaciones PWA
+firebase-admin = "^6.5.0"    # FCM (Android nativo) y APNs via FCM (iOS nativo)
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"

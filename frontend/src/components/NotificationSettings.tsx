@@ -11,12 +11,20 @@ function shortEndpoint(ep: string): string {
   return ep.slice(0, 28) + "..." + ep.slice(-18);
 }
 
-function shortUA(ua: string | null): string {
-  if (!ua) return "Dispositivo";
+function shortUA(ua: string | null, plataforma: string): string {
+  if (plataforma === "ios") return "iOS (nativo)";
+  if (plataforma === "android") return "Android (nativo)";
+  if (!ua) return "Web";
   if (ua.includes("Chrome")) return ua.includes("Edg") ? "Edge" : "Chrome";
   if (ua.includes("Firefox")) return "Firefox";
   if (ua.includes("Safari")) return "Safari";
-  return "Otro navegador";
+  return "Web";
+}
+
+function platformIcon(plataforma: string): string {
+  if (plataforma === "ios") return "phone_iphone";
+  if (plataforma === "android") return "android";
+  return "language";
 }
 
 export default function NotificationSettings() {
@@ -225,7 +233,7 @@ export default function NotificationSettings() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-800">
-                      {shortUA(s.user_agent)}
+                      {shortUA(s.user_agent, s.plataforma)}
                     </p>
                     <p className="truncate text-xs text-gray-400" title={s.endpoint}>
                       {shortEndpoint(s.endpoint)}

@@ -46,3 +46,27 @@ Thumbs.db
 # ---------- MinIO / datos locales ----------
 minio_data/
 pg_data/
+
+# ---------- Capacitor / Android / iOS ----------
+mobile/node_modules/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/.idea/
+mobile/android/captures/
+mobile/android/app/release/
+mobile/android/app/src/main/assets/public/
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/ios/DerivedData/
+mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/*.xcodeproj/xcuserdata/
+mobile/ios/App/Podfile.lock
+frontend/src/lib/capacitor/
+
+# ---------- Firebase ----------
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist

@@ -1,0 +1,33 @@
+{
+  "name": "helpdesk-gmp-mobile",
+  "version": "1.0.0",
+  "description": "HelpDesk-GMP mobile app (Capacitor + FCM/APNs push)",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync",
+    "android:open": "cap open android",
+    "android:run": "cap run android",
+    "ios:open": "cap open ios",
+    "ios:run": "cap run ios",
+    "build:android": "cap sync && cd android && ./gradlew assembleRelease",
+    "build:ios": "cap sync && cd ios && xcodebuild -workspace HelpDeskGMP.xcworkspace -scheme HelpDeskGMP -configuration Release"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/device": "^6.0.1",
+    "@capacitor/haptics": "^6.0.1",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/network": "^6.0.1",
+    "@capacitor/preferences": "^6.0.1",
+    "@capacitor/push-notifications": "^6.0.1",
+    "@capacitor/splash-screen": "^6.0.1",
+    "@capacitor/status-bar": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "sharp": "^0.35.3",
+    "typescript": "^7.0.2"
+  }
+}

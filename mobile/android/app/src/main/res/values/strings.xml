@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HelpDesk GMP</string>
+    <string name="title_activity_main">HelpDesk GMP</string>
+    <string name="package_name">com.gmpredes.helpdesk</string>
+    <string name="custom_url_scheme">com.gmpredes.helpdesk</string>
+</resources>

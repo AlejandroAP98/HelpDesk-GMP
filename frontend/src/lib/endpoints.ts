@@ -211,8 +211,16 @@ export const adminApi = {
 export interface PushSubscriptionOut {
   id: string;
   endpoint: string;
+  plataforma: "web" | "ios" | "android";
   user_agent: string | null;
   fecha_creacion: string;
+}
+
+export interface PushSubscribeInput {
+  endpoint: string;
+  keys?: { p256dh: string; auth: string };
+  plataforma: "web" | "ios" | "android";
+  user_agent: string | null;
 }
 
 export const pushApi = {
@@ -224,11 +232,7 @@ export const pushApi = {
     const r = await api.get("/api/push/subscriptions");
     return r.data as PushSubscriptionOut[];
   },
-  subscribe: async (data: {
-    endpoint: string;
-    keys: { p256dh: string; auth: string };
-    user_agent: string | null;
-  }) => {
+  subscribe: async (data: PushSubscribeInput) => {
     const r = await api.post("/api/push/subscribe", data);
     return r.data as PushSubscriptionOut;
   },

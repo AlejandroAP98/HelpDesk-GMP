@@ -1,4 +1,6 @@
-"""Schemas para suscripciones Web Push."""
+"""Schemas para suscripciones push (Web Push VAPID + FCM/APNs nativo)."""
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -8,14 +10,21 @@ class PushKeys(BaseModel):
 
 
 class PushSubscribeIn(BaseModel):
+    """Schema unificado para suscribir a push (web o nativo).
+
+    - Web (VAPID): requiere endpoint (URL) + keys {p256dh, auth}
+    - Nativo (FCM/APNs): requiere endpoint (token) + plataforma (ios/android)
+    """
     endpoint: str = Field(..., min_length=10, max_length=700)
-    keys: PushKeys
+    keys: PushKeys | None = None
+    plataforma: Literal["web", "ios", "android"] = "web"
     user_agent: str | None = Field(default=None, max_length=255)
 
 
 class PushSubscribeOut(BaseModel):
     id: str
     endpoint: str
+    plataforma: str
     user_agent: str | None
     fecha_creacion: str
 

@@ -2,6 +2,28 @@
 
 import { pushApi } from "@/lib/endpoints";
 
+declare global {
+  interface Window {
+    Capacitor?: {
+      isNativePlatform: () => boolean;
+      getPlatform: () => string;
+      isPluginAvailable: (name: string) => boolean;
+    };
+  }
+}
+
+function isCapacitorNative(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform());
+}
+
+function getCapacitorPlatform(): "ios" | "android" | null {
+  if (!isCapacitorNative()) return null;
+  const p = window.Capacitor?.getPlatform();
+  if (p === "ios" || p === "android") return p;
+  return null;
+}
+
 export function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -13,6 +35,7 @@ export function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 
 export function isPushSupported(): boolean {
   if (typeof window === "undefined") return false;
+  if (isCapacitorNative()) return true;
   return (
     "serviceWorker" in navigator &&
     "PushManager" in window &&
@@ -25,7 +48,19 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   return navigator.serviceWorker.ready;
 }
 
-export async function subscribeToPush(): Promise<PushSubscription | null> {
+async function subscribeNative(): Promise<boolean> {
+  const { initPush, subscribeToNativePush } = await import("./capacitor/push");
+  await initPush({});
+  const result = await subscribeToNativePush();
+  return result.ok;
+}
+
+export async function subscribeToPush(): Promise<unknown | null> {
+  if (isCapacitorNative()) {
+    const ok = await subscribeNative();
+    return ok ? { native: true } : null;
+  }
+
   if (!isPushSupported()) return null;
   if (Notification.permission === "denied") return null;
   if (Notification.permission === "default") {
@@ -62,12 +97,21 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   await pushApi.subscribe({
     endpoint: json.endpoint,
     keys: { p256dh, auth },
+    plataforma: "web",
     user_agent: navigator.userAgent.slice(0, 255),
   });
   return newSub;
 }
 
+async function unsubscribeNative(): Promise<boolean> {
+  const { unsubscribeFromNativePush } = await import("./capacitor/push");
+  return unsubscribeFromNativePush();
+}
+
 export async function unsubscribeFromPush(): Promise<boolean> {
+  if (isCapacitorNative()) {
+    return unsubscribeNative();
+  }
   if (!isPushSupported()) return false;
   const reg = await getServiceWorkerRegistration();
   if (!reg) return false;
@@ -83,9 +127,28 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 }
 
 export async function isCurrentlySubscribed(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  if (isCapacitorNative()) {
+    try {
+      const { getPushPermission } = await import("./capacitor/push");
+      const perm = await getPushPermission();
+      return perm === "granted";
+    } catch {
+      return false;
+    }
+  }
+
   if (!isPushSupported()) return false;
   const reg = await getServiceWorkerRegistration();
   if (!reg) return false;
   const sub = await reg.pushManager.getSubscription();
   return !!sub;
+}
+
+export function getPlatformInfo(): "ios" | "android" | "web" {
+  if (isCapacitorNative()) {
+    return getCapacitorPlatform() ?? "web";
+  }
+  return "web";
 }

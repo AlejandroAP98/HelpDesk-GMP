@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@helpdesk.local"
 
+    # --- Firebase Cloud Messaging (FCM) para push nativo en Android ---
+    # Path al archivo de credenciales del service account de Firebase
+    # Descargar desde: Firebase Console -> Project Settings -> Service Accounts
+    firebase_credentials_path: str = ""
+
     # --- CORS ---
     cors_origins: list[str] = [
         "http://localhost:3000",

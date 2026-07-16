@@ -1,8 +1,15 @@
 /** @type {import('next').NextConfig} */
+const isStaticExport = process.env.STATIC_EXPORT === "true";
+const isMobileBuild = process.env.MOBILE_BUILD === "true";
+
 const nextConfig = {
   reactStrictMode: true,
-  output: "standalone",
+  output: isStaticExport ? "export" : (isMobileBuild ? undefined : "standalone"),
+  images: {
+    unoptimized: isStaticExport,
+  },
   async rewrites() {
+    if (isStaticExport || isMobileBuild) return [];
     return [
       {
         source: "/api/:path*",
