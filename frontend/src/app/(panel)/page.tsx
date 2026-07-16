@@ -130,8 +130,8 @@ export default function PanelHomePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl">
-        <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in border-2 " />
+      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center">
+        <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
         {
           stats.urgentes > 0 ? <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-pulse bg-redCustom shadow-lg shadow-red-400/70 " />
@@ -160,19 +160,10 @@ export default function PanelHomePage() {
           <DataTable
             columns={[
               {
-                key: "icono",
-                header: "Detalle",
-                cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
-                    <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
-                  </Link>
-                ),
-              },
-              {
                 key: "titulo",
                 header: "Titulo",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-sm text-gray-800 hover:text-brand-600 transition-colors">
+                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-gray-800 hover:text-brand-600 transition-colors">
                     {t.titulo.substring(0, 20) + "..."}
                   </Link>
                 ),
@@ -191,7 +182,7 @@ export default function PanelHomePage() {
                 key: "actualizado",
                 header: "Actualizado",
                 cell: (t: Ticket) => (
-                  <span className="text-gray-400 text-xs">{new Date(t.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                 ),
               },
             ]}

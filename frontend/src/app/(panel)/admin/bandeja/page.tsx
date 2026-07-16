@@ -164,20 +164,11 @@ export default function BandejaPage() {
           rowClassName={(t: Ticket) => t.prioridad === "urgente" ? "bg-red-50/30" : ""}
           columns={[
             {
-              key: "icono",
-              header: "Detalle",
-              cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
-                  <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
-                </Link>
-              ),
-            },
-            {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
-                  {t.titulo}
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
+                  {t.titulo.substring(0, 20) + "..."}
                 </Link>
               ),
             },
@@ -195,7 +186,7 @@ export default function BandejaPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               ),
             },
             {

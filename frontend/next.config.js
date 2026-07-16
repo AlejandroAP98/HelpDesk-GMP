@@ -10,10 +10,11 @@ const nextConfig = {
   },
   async rewrites() {
     if (isStaticExport || isMobileBuild) return [];
+    const apiBase = process.env.API_INTERNAL_URL || "http://backend:8000";
     return [
       {
         source: "/api/:path*",
-        destination: "http://backend:8000/api/:path*",
+        destination: `${apiBase}/api/:path*`,
       },
     ];
   },

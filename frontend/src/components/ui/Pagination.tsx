@@ -7,7 +7,7 @@ interface PaginationProps {
 
 export function Pagination({ page, totalPages, onPrev, onNext }: PaginationProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 justify-between sm:justify-center ">
       <button
         onClick={onPrev}
         disabled={page <= 1}

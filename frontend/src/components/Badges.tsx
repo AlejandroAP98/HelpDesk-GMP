@@ -16,14 +16,14 @@ export const estadoStyles: Record<string, string> = {
 };
 
 const prioridadStyles: Record<string, string> = {
-  baja: "text-gray-400  text-xs font-medium",
-  media: "text-gray-600 text-xs font-medium",
-  alta: "text-orange-600  text-xs font-semibold",
-  urgente: "bg-redCustom/20 text-redCustom border-redCustom text-xs font-bold px-2 py-0.5 rounded-md",
+  baja: "text-gray-400 bg-gray-300/5 px-2 py-1 font-medium",
+  media: "text-gray-600 bg-gray-300/5 px-2 py-1 font-medium",
+  alta: "text-orange-600 bg-orange-300/5 px-2 py-1 font-semibold",
+  urgente: "bg-redCustom/5 text-redCustom border-redCustom font-bold px-2 py-0.5 rounded-md",
 };
 export function EstadoBadge({ estado }: { estado: string }) {
   return (
-    <span className={`inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase border ${estadoStyles[estado] ?? ""}`}>
+    <span className={`inline-flex rounded-lg sm:px-2.5 px-1 py-1 sm:text-[11px] text-[9px] font-semibold tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
       {estado.replace("_", " ")}
     </span>
   );
@@ -31,7 +31,7 @@ export function EstadoBadge({ estado }: { estado: string }) {
 
 export function PrioridadBadge({ prioridad }: { prioridad: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase border ${prioridadStyles[prioridad] ?? ""}`}>
+    <span className={`inline-flex items-center gap-1 rounded-lg sm:px-2.5 uppercase px-1 py-1 sm:text-[11px] text-[9px] font-semibold  ${prioridadStyles[prioridad] ?? ""}`}>
       {prioridad === "urgente" && (
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-redCustom animate-pulse" />
       )}

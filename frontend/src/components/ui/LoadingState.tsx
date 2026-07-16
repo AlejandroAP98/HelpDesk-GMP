@@ -12,8 +12,8 @@ export function LoadingState() {
         .onda {
           fill: none;
           stroke: black;
-          strokeWidth: 8;
-          strokeLinecap: round;
+          stroke-width: 8;
+          stroke-linecap: round;
         }
         .punto {
           fill: black;

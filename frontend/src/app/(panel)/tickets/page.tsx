@@ -197,14 +197,14 @@ export default function TicketsListPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500 flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
-          <h2 className="text-sm text-gray-500">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </h2>
+          <h1 className="sm:text-2xl text-xl font-bold tracking-tight text-gray-900">Tickets</h1>
+          <h2 className="sm:text-sm text-xs  text-gray-500">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </h2>
         </div>
         <Link href="/tickets/nuevo">
           <Button
-            className="py-2 text-sm w-fit"
+            className="sm:py-2 py-1 text-xs sm:text-sm w-fit text-nowrap"
             variant="primary"
             disabled={cargando}
             icon={<NewTicketIcon />}
@@ -214,13 +214,13 @@ export default function TicketsListPage() {
         </Link>
       </div>
       <div className="flex gap-4 sm:flex-row flex-col-reverse justify-between">
-        <div className="flex rounded-lg gap-8 justify-between items-end">
-          <div className="flex w-fit border-b-2 border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit">
+        <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
+          <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit">
             {VISTAS.map((v) => (
             <button
               key={v.value}
               onClick={() => cambiarVista(v.value)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+              className={`px-4 py-1.5 sm:text-sm text-xs font-medium rounded-md transition-all ${
                 vista === v.value
                   ? "bg-brandCustom text-white"
                   : "text-gray-500 hover:text-gray-700"
@@ -255,19 +255,10 @@ export default function TicketsListPage() {
         <DataTable
           columns={[
             {
-              key: "icono",
-              header: "Detalle",
-              cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} className="font-regular text-sm  transition-all text-gray-500 cursor-pointer" title={`Ver ticket: ${t.titulo}`}>
-                  <TicketIcon className="w-5 h-5 text-gray-400 hover:text-brandCustom transition-colors" />
-                </Link>
-              ),
-            },
-            {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-semibold text-gray-800 hover:text-brandCustom transition-colors">
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium  text-gray-800 hover:text-brandCustom transition-colors lowercase">
                   {t.titulo.substring(0, 20) + "..."}
                 </Link>
               ),
@@ -286,7 +277,7 @@ export default function TicketsListPage() {
               key: "creado",
               header: "Creado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 text-xs">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota",  day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota",  day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
               ),
             },
           ]}

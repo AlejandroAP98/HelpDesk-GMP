@@ -276,7 +276,7 @@ export default function TicketDetallePage() {
   const puedeReabrir = esAdmin;
   const estaCerrado = ticket.estado === "cerrado";
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <button
         onClick={() => router.back()}
         className="inline-flex items-center text-sm font-medium border-gray-300 border border-1  rounded-xl px-2 py-2 cursor-pointer text-gray-500 hover:text-gray-800 transition-colors"
@@ -287,15 +287,11 @@ export default function TicketDetallePage() {
 
       <div className="flex flex-col lg:flex-row gap-6 ">
         {/* Columna izquierda: Info + Comentarios (en mobile: info primero, comentarios despues) */}
-        <div className="flex flex-col gap-6 flex-1 min-w-0 ">
+        <div className="flex flex-col gap-4 flex-1 min-w-0 ">
           {/* Informacion del ticket */}
           <div className="bg-cardCustom rounded-2xl shadow-card">
-            <dl className="flex items-center justify-between  gap-2 w-full mb-6 bg-brandCustom rounded-t-2xl sm:px-6 px-4 py-4">
-             <div className="flex sm:flex-row flex-col self-start sm:gap-10 gap-2">
-                <div>
-                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">ID Ticket</dt>
-                  <dd className="font-regular text-white text-[11px] ">#{ticket.id}</dd>
-                </div>
+            <dl className="flex sm:flex-row flex-col items-center justify-between  gap-2 w-full mb-2 sm:mb-4 bg-brandCustom rounded-t-2xl sm:px-6 px-4 py-2">
+             <div className="flex sm:justify-start w-full justify-between sm:gap-10 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Empresa</dt>
                   <dd className="font-regular text-white text-[11px]">#{ticket.empresa_id}</dd>
@@ -303,13 +299,13 @@ export default function TicketDetallePage() {
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Subcategoría</dt>
                   <dd className="font-regular text-white text-[11px]">{ticket.subcategoria_nombre ?? `#${ticket.subcategoria_id}`}</dd>
-              </div>
-               <div>
+                </div>
+                <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Elemento</dt>
                   <dd className="font-regular text-white text-[11px]">{elementoLabels[ticket.elemento_afectado] ?? ticket.elemento_afectado}</dd>
                 </div>
              </div>
-              <div className="flex sm:flex-row flex-col self-start sm:gap-4 gap-2">
+              <div className="flex sm:justify-end justify-between w-full sm:gap-4 gap-2">
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Creado</dt>
                   <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</dd>
@@ -320,12 +316,12 @@ export default function TicketDetallePage() {
                 </div>
               </div>
             </dl>
-            <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-4">
+            <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-2">
               <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0 " >
                 <EstadoBadge estado={ticket.estado} />
                 <PrioridadBadge prioridad={ticket.prioridad} />
               </div>
-              <div className="space-y-2 min-w-0">
+              <div className="space-y-1 min-w-0">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 break-words">{ticket.titulo}</h1>
                 <p className="text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{ticket.descripcion}</p>
               </div>
@@ -397,12 +393,12 @@ export default function TicketDetallePage() {
               <div className="flex justify-between p-4 rounded-b-2xl">
                 <div className="w-full flex-col justify-between">
                   {((!esCliente && (ticket.estado !== "abierto")) || (esCliente && ticket.estado === "resuelto")) && (
-                    <label className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block pl-1">Acciones</label>
+                    <label className="sm:text-xs text-[10px] font-semibold text-gray-600 tracking-wider mb-2 block pl-1">Acciones:</label>
                   )}
                   {puedeProgresar && ticket.estado === "asignado" && (
                   <button
                     onClick={() => cambiarEstado("en_progreso")}
-                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
                   >
                     Iniciar trabajo
                   </button>
@@ -410,7 +406,7 @@ export default function TicketDetallePage() {
                   {puedeResolver && ticket.estado === "en_progreso" && (
                     <button
                       onClick={() => cambiarEstado("resuelto")}
-                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
                     >
                       Marcar resuelto
                     </button>
@@ -418,7 +414,7 @@ export default function TicketDetallePage() {
                   {puedeCerrar && ticket.estado === "resuelto" && (
                     <button
                       onClick={cerrar}
-                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
                     >
                       Cerrar ticket
                     </button>
@@ -426,7 +422,7 @@ export default function TicketDetallePage() {
                   {puedeReabrir && !estaCerrado && ticket.estado === "cerrado" && (
                     <button
                       onClick={reabrir}
-                      className="self-end rounded-xl bg-brandCustom hover:bg-brandCustom/80 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                      className="self-end rounded-xl bg-brandCustom hover:bg-brandCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
                     >
                       Reabrir
                     </button>
@@ -434,11 +430,11 @@ export default function TicketDetallePage() {
                 </div>
                 {!esCliente && (
                   <div className="flex flex-col self-end w-full">
-                    <label className="text-xs font-semibold text-gray-600 tracking-wider mb-2 block self-end">Cambiar prioridad</label>
+                    <label className="sm:text-xs text-[10px] font-semibold text-gray-600 tracking-wider mb-2 block self-end">Cambiar prioridad:</label>
                     <select
                       value={ticket.prioridad}
                       onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom px-3 py-2.5 text-xs font-medium focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto"
+                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-medium focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto"
                       >
                       {PRIORIDADES.map((p) => (
                         <option key={p} value={p}>{prioridadLabels[p]}</option>
@@ -469,7 +465,7 @@ export default function TicketDetallePage() {
 
           {/* Comentarios: debajo de info en ambas vistas */}
           <section className="w-full space-y-4 ">
-            <h2 className="text-lg font-bold tracking-tight text-gray-900">Comentarios ({comentarios.length})</h2>
+            <h2 className="text-sm sm:text-lg font-bold tracking-tight text-gray-900">Comentarios ({comentarios.length})</h2>
             <div className="space-y-2.5">
               {comentarios.map((c) => (
                 <div
@@ -479,21 +475,23 @@ export default function TicketDetallePage() {
                     : "border-gray-100 bg-cardCustom shadow-card"
                     }`}
                 >
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full text-brandCustom bg-brandCustom/10 flex items-center justify-center">
-                        <UserCommentsIcon />
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs mb-2">
+                    <div className="flex justify-between items-center sm:gap-4 gap-1 ">
+                      <div className="flex justify-center items-center sm:gap-4 gap-1 ">
+                        <div className="w-7 h-7 rounded-full text-brandCustom bg-brandCustom/10 flex items-center justify-center">
+                          <UserCommentsIcon />
+                        </div>
+                        <span className="font-semibold text-gray-600 ">{c.usuario_nombre ?? "Usuario"}</span>
                       </div>
-                      <span className="font-semibold text-gray-700">{c.usuario_nombre ?? "Usuario"}</span>
-                      {c.es_nota_interna && (
-                        <span className="bg-accentCustom text-white border border-accentCustom rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide">
-                          Nota interna
-                        </span>
-                      )}
+                      <span className="text-gray-400 sm:text-xs text-[10px] text-center">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
                     </div>
-                    <span className="text-gray-500">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
+                    {c.es_nota_interna && (
+                      <span className="bg-accentCustom flex w-fit self-end text-white border border-accentCustom rounded-md px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide">
+                        Nota interna
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
+                  <p className="text-sm pl-4 whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
                 </div>
               ))}
             </div>
@@ -532,7 +530,7 @@ export default function TicketDetallePage() {
                   )}
                   <button
                     type="submit"
-                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 text-sm font-regular text-white hover:bg-brandCustom/90 shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
+                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 sm:text-sm text-[12px] font-regular text-white hover:bg-brandCustom/90 shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
                   >
                     Comentar
                     <SendCommentIcon className="w-5 h-5" />
@@ -547,7 +545,7 @@ export default function TicketDetallePage() {
         <div className="w-full lg:w-80 shrink-0 space-y-6">
 
           <section className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
+            <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-4">
               {!estaCerrado && (
                 <label className="block w-full">
@@ -592,7 +590,7 @@ export default function TicketDetallePage() {
             </div>
           </section>
           <section className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
+            <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               {historial.length === 0 ? (
                 <p className="text-xs text-gray-400 py-3 text-center">Sin cambios de estado registrados.</p>

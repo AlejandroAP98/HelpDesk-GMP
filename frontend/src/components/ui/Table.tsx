@@ -21,7 +21,7 @@ export function DataTable<T>({
   columns,
   data,
   keyExtractor,
-  minWidth = "min-w-[560px]",
+  minWidth = "min-w-[540px]",
   onRowClick,
   rowClassName,
 }: DataTableProps<T>) {
@@ -33,7 +33,7 @@ export function DataTable<T>({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="px-5 py-3.5 text-xs font-semibold tracking-wider uppercase"
+                className="px-5 py-2 sm:py-3.5 sm:text-xs text-[10px] font-semibold tracking-wider uppercase"
               >
                 {col.header}
               </th>
