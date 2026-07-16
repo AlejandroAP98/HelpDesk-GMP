@@ -63,9 +63,10 @@ async def registrar_cliente(data: RegistroRequest, db: AsyncSession) -> Token:
 async def registrar_interno(
     data: RegistroAgenteRequest, db: AsyncSession
 ) -> UsuarioOut:
-    """Crea agente/admin. Solo admins. No emite tokens (el admin ya los tiene)."""
-    if data.rol == RolUsuario.cliente:
-        raise Conflicto("Use el endpoint publico para registrar clientes")
+    """Crea agente/admin/cliente. Solo admins. No emite tokens (el admin ya los tiene).
+    Si el rol es cliente, `empresa_id` es obligatorio."""
+    if data.rol == RolUsuario.cliente and data.empresa_id is None:
+        raise Conflicto("Cliente requiere empresa_id")
     if data.empresa_id is not None:
         empresa = (
             await db.execute(select(Empresa).where(Empresa.id == data.empresa_id))

@@ -174,3 +174,53 @@ async def test_register_agente_por_admin_201(client, db_session):  # type: ignor
     )
     assert r.status_code == 201
     assert r.json()["rol"] == "agente"
+
+
+async def test_register_cliente_por_admin_201(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_empresa(db_session, pk=1, nombre="Demo")
+    await seed_usuario(
+        db_session,
+        nombre="Admin",
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    token = await login_token(client, "admin@test.com", "Password12345")
+    r = await client.post(
+        "/api/auth/register/agente",
+        headers=auth_header(token),
+        json={
+            "nombre": "Nuevo Cliente",
+            "email": "cliente@test.com",
+            "password": "Password12345",
+            "rol": "cliente",
+            "empresa_id": 1,
+        },
+    )
+    assert r.status_code == 201, r.text
+    data = r.json()
+    assert data["rol"] == "cliente"
+    assert data["empresa_id"] == 1
+
+
+async def test_register_cliente_sin_empresa_409(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_usuario(
+        db_session,
+        nombre="Admin",
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    token = await login_token(client, "admin@test.com", "Password12345")
+    r = await client.post(
+        "/api/auth/register/agente",
+        headers=auth_header(token),
+        json={
+            "nombre": "Nuevo Cliente",
+            "email": "cliente@test.com",
+            "password": "Password12345",
+            "rol": "cliente",
+        },
+    )
+    assert r.status_code == 409
+    assert "empresa_id" in r.json()["detail"]
