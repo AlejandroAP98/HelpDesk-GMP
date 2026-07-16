@@ -69,6 +69,7 @@ services:
     command: ["node", "server.js"]
     environment:
       NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
     networks:
       - internal
       - proxy
