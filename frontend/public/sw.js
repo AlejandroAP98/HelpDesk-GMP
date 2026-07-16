@@ -7,7 +7,7 @@
  *   - Iconos y manifest: cache-first con revalidacion.
  */
 
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const STATIC_CACHE = `helpdesk-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `helpdesk-runtime-${CACHE_VERSION}`;
 
@@ -16,9 +16,9 @@ const PRECACHE_URLS = [
   "/login",
   "/tickets",
   "/manifest.json",
-  "/icon-192.png?v3",
-  "/icon-512.png?v3",
-  "/apple-touch-icon.png?v3",
+  "/icon-192.png?v4",
+  "/icon-512.png?v4",
+  "/apple-touch-icon.png?v4",
 ];
 
 self.addEventListener("install", (event) => {
@@ -142,17 +142,18 @@ self.addEventListener("push", (event) => {
       const parsed = event.data.json();
       payload = { ...payload, ...parsed };
     } catch {
-      payload.body = event.data.text() || payload.body;
+      try {
+        payload.body = event.data.text() || payload.body;
+      } catch {}
     }
   }
   const urgent = _isUrgent(payload);
   const options = {
     body: payload.body,
-      icon: "/icon-192.png?v3",
-      badge: "/icon-192.png?v3",
+    icon: "/icon-192.png?v4",
+    badge: "/icon-192.png?v4",
     data: { url: payload.url, ...(payload.data || {}) },
     requireInteraction: urgent,
-    renotify: true,
     silent: false,
     vibrate: urgent ? [300, 100, 300, 100, 300] : [200],
     timestamp: Date.now(),
@@ -162,7 +163,9 @@ self.addEventListener("push", (event) => {
     ],
   };
   event.waitUntil(
-    self.registration.showNotification(payload.title, options)
+    self.registration.showNotification(payload.title, options).catch((err) => {
+      console.error("SW showNotification fallo:", err);
+    })
   );
 });
 

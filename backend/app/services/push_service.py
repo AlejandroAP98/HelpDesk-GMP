@@ -215,6 +215,7 @@ async def send_push_to_user(
         "title": title,
         "body": body,
         "url": url,
+        "prioridad": (data or {}).get("prioridad", ""),
         "data": data or {},
     }
 
