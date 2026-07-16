@@ -49,8 +49,26 @@ async def listar(
     return Pagina.of(
         [
             TicketOut(
-                **TicketOut.model_validate(t).model_dump(),
+                id=t.id,
+                empresa_id=t.empresa_id,
                 empresa_nombre=emp_nombre,
+                cliente_id=t.cliente_id,
+                agente_id=t.agente_id,
+                modificado_por_id=t.modificado_por_id,
+                categoria_id=t.categoria_id,
+                subcategoria_id=t.subcategoria_id,
+                elemento_afectado=t.elemento_afectado,
+                titulo=t.titulo,
+                descripcion=t.descripcion,
+                ip_pcs=t.ip_pcs,
+                ip_antena=t.ip_antena,
+                mascara_red=t.mascara_red,
+                puerta_enlace=t.puerta_enlace,
+                nombre_punto=t.nombre_punto,
+                estado=t.estado,
+                prioridad=t.prioridad,
+                fecha_creacion=t.fecha_creacion,
+                fecha_actualizacion=t.fecha_actualizacion,
             )
             for t, emp_nombre in pagina.items
         ],
