@@ -268,7 +268,7 @@ export const adminApi = {
     const r = await api.get(`/api/usuarios/${id}`);
     return r.data as Usuario;
   },
-  actualizarUsuario: async (id: string, data: { nombre?: string; email?: string; rol?: string; empresa_id?: number | null; password?: string }) => {
+  actualizarUsuario: async (id: string, data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string }) => {
     const r = await api.patch(`/api/usuarios/${id}`, data);
     return r.data as Usuario;
   },
@@ -277,7 +277,13 @@ export const adminApi = {
     return r.data;
   },
   crearUsuario: async (data: { nombre: string; email: string; password: string; rol: string; empresa_id?: number | null }) => {
-    const r = await api.post("/api/auth/register", data);
+    const r = await api.post("/api/auth/register/agente", {
+      nombre: data.nombre,
+      email: data.email,
+      password: data.password,
+      rol: data.rol,
+      empresa_id: data.empresa_id ?? null,
+    });
     return r.data as { access_token: string; refresh_token: string; usuario: Usuario };
   },
   crearAgente: async (data: { nombre: string; email: string; password: string; empresa_id?: number | null }) => {

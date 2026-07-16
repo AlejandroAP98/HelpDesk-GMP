@@ -116,11 +116,11 @@ export default function UsuariosPage() {
     setError(null);
     try {
       if (editando) {
-        const data: { nombre?: string; email?: string; rol?: string; empresa_id?: number | null; password?: string } = {};
+        const data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string } = {};
         if (form.nombre.trim()) data.nombre = form.nombre.trim();
         if (form.email.trim()) data.email = form.email.trim();
         if (form.rol) data.rol = form.rol;
-        data.empresa_id = form.empresa_id;
+        if (form.empresa_id !== null && form.empresa_id !== undefined) data.empresa_id = form.empresa_id;
         if (form.password) data.password = form.password;
         await adminApi.actualizarUsuario(editando.id, data);
       } else {
