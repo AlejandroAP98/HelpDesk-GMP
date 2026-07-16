@@ -23,7 +23,7 @@ const prioridadStyles: Record<string, string> = {
 };
 export function EstadoBadge({ estado }: { estado: string }) {
   return (
-    <span className={`inline-flex rounded-lg sm:px-2.5 px-1 py-1 sm:text-[11px] text-[9px] font-semibold tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
+    <span className={`inline-flex text-nowrap rounded-lg sm:px-2.5 px-1 py-1 sm:text-[11px] text-[9px] font-semibold tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
       {estado.replace("_", " ")}
     </span>
   );

@@ -61,8 +61,8 @@ function WebSocketListener() {
                 try {
                   const n = new Notification("Te asignaron un ticket", {
                     body: `${assigned.titulo} - ${assigned.estado} (${assigned.prioridad})`,
-                    icon: "/icon-192.png?v2",
-                    badge: "/icon-192.png?v2",
+                    icon: "/icon-192.png?v4",
+                    badge: "/icon-192.png?v4",
                     tag: `assigned-${assigned.ticket_id}`,
                     data: { url: `/tickets/${assigned.ticket_id}` },
                   });

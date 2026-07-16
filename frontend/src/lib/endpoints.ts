@@ -9,6 +9,7 @@ export type ElementoInfraestructura = "torre" | "celda" | "mastil" | "punto_vent
 export interface Ticket {
   id: string;
   empresa_id: number;
+  empresa_nombre?: string | null;
   cliente_id: string;
   agente_id: string | null;
   modificado_por_id: string | null;
@@ -67,6 +68,12 @@ export interface HistorialEstado {
   estado_anterior: EstadoTicket;
   estado_nuevo: EstadoTicket;
   fecha: string;
+}
+
+export interface Empresa {
+  id: number;
+  nombre: string;
+  fecha_creacion: string;
 }
 
 export interface Categoria {
@@ -181,12 +188,44 @@ export const categoriaApi = {
     const r = await api.get("/api/categorias", { params });
     return r.data as Pagina<Categoria>;
   },
+  obtener: async (id: number) => {
+    const r = await api.get(`/api/categorias/${id}`);
+    return r.data as Categoria;
+  },
+  crear: async (data: { nombre: string; descripcion?: string }) => {
+    const r = await api.post("/api/categorias", data);
+    return r.data as Categoria;
+  },
+  actualizar: async (id: number, data: { nombre?: string; descripcion?: string }) => {
+    const r = await api.patch(`/api/categorias/${id}`, data);
+    return r.data as Categoria;
+  },
+  eliminar: async (id: number) => {
+    const r = await api.delete(`/api/categorias/${id}`);
+    return r.data;
+  },
 };
 
 export const subcategoriaApi = {
   listarPorCategoria: async (categoriaId: number, params: Record<string, unknown> = {}) => {
     const r = await api.get(`/api/subcategorias/por-categoria/${categoriaId}`, { params });
     return r.data as Pagina<Subcategoria>;
+  },
+  obtener: async (id: number) => {
+    const r = await api.get(`/api/subcategorias/${id}`);
+    return r.data as Subcategoria;
+  },
+  crear: async (data: { categoria_id: number; nombre: string; descripcion?: string }) => {
+    const r = await api.post("/api/subcategorias", data);
+    return r.data as Subcategoria;
+  },
+  actualizar: async (id: number, data: { nombre?: string; descripcion?: string }) => {
+    const r = await api.patch(`/api/subcategorias/${id}`, data);
+    return r.data as Subcategoria;
+  },
+  eliminar: async (id: number) => {
+    const r = await api.delete(`/api/subcategorias/${id}`);
+    return r.data;
   },
 };
 
@@ -197,14 +236,57 @@ export const statsApi = {
   },
 };
 
+export const empresaApi = {
+  listar: async (params: Record<string, unknown> = {}) => {
+    const r = await api.get("/api/empresas", { params });
+    return r.data as Pagina<Empresa>;
+  },
+  obtener: async (id: number) => {
+    const r = await api.get(`/api/empresas/${id}`);
+    return r.data as Empresa;
+  },
+  crear: async (data: { nombre: string }) => {
+    const r = await api.post("/api/empresas", data);
+    return r.data as Empresa;
+  },
+  actualizar: async (id: number, data: { nombre?: string }) => {
+    const r = await api.patch(`/api/empresas/${id}`, data);
+    return r.data as Empresa;
+  },
+  eliminar: async (id: number) => {
+    const r = await api.delete(`/api/empresas/${id}`);
+    return r.data;
+  },
+};
+
 export const adminApi = {
   listarUsuarios: async (params: Record<string, unknown> = {}) => {
     const r = await api.get("/api/usuarios", { params });
     return r.data as Pagina<Usuario>;
   },
+  obtenerUsuario: async (id: string) => {
+    const r = await api.get(`/api/usuarios/${id}`);
+    return r.data as Usuario;
+  },
+  actualizarUsuario: async (id: string, data: { nombre?: string; email?: string; rol?: string; empresa_id?: number | null; password?: string }) => {
+    const r = await api.patch(`/api/usuarios/${id}`, data);
+    return r.data as Usuario;
+  },
+  eliminarUsuario: async (id: string) => {
+    const r = await api.delete(`/api/usuarios/${id}`);
+    return r.data;
+  },
+  crearUsuario: async (data: { nombre: string; email: string; password: string; rol: string; empresa_id?: number | null }) => {
+    const r = await api.post("/api/auth/register", data);
+    return r.data as { access_token: string; refresh_token: string; usuario: Usuario };
+  },
+  crearAgente: async (data: { nombre: string; email: string; password: string; empresa_id?: number | null }) => {
+    const r = await api.post("/api/auth/register/agente", data);
+    return r.data as { access_token: string; refresh_token: string; usuario: Usuario };
+  },
   listarEmpresas: async (params: Record<string, unknown> = {}) => {
     const r = await api.get("/api/empresas", { params });
-    return r.data as Pagina<{ id: number; nombre: string; fecha_creacion: string }>;
+    return r.data as Pagina<Empresa>;
   },
 };
 

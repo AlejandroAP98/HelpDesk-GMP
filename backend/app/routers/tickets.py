@@ -47,7 +47,13 @@ async def listar(
         agente_id=agente_id, cliente_id=cliente_id, vista=vista,
     )
     return Pagina.of(
-        [TicketOut.model_validate(t) for t in pagina.items],
+        [
+            TicketOut(
+                **TicketOut.model_validate(t).model_dump(),
+                empresa_nombre=emp_nombre,
+            )
+            for t, emp_nombre in pagina.items
+        ],
         pagina.total, pagina.page, pagina.size,
     )
 

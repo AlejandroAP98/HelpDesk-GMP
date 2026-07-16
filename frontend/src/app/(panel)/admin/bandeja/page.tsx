@@ -175,7 +175,7 @@ export default function BandejaPage() {
             {
               key: "empresa",
               header: "Empresa",
-              cell: (t: Ticket) => <span className="text-gray-400 text-xs">#{t.empresa_id}</span>,
+              cell: (t: Ticket) => <span className="text-gray-400 text-xs">{t.empresa_nombre ?? `#${t.empresa_id}`}</span>,
             },
             {
               key: "prioridad",
@@ -197,7 +197,7 @@ export default function BandejaPage() {
                   value={agenteSel[t.id] ?? ""}
                   onChange={(e) => setAgenteSel((p) => ({ ...p, [t.id]: e.target.value }))}
                   options={agentes.map((a) => ({ value: a.id, label: a.nombre }))}
-                  className="w-full max-w-sm px-1 py-1.5 text-xs border border-gray-300 rounded-lg"
+                  className="w-full max-w-sm px-1 py-1.5 sm:text-xs text-[10px] border border-gray-300 rounded-lg"
                   placeholder="Seleccione agente..."
                 />
               ),

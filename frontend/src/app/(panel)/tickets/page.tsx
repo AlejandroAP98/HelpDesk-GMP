@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
-import TicketIcon from "@/app/assets/icons/TicketIcon";
+
 
 const ESTADOS: { value: string; label: string }[] = [
   { value: "todos", label: "Todos" },
@@ -197,7 +197,7 @@ export default function TicketsListPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="text-sm text-gray-500 flex flex-col gap-2">
           <h1 className="sm:text-2xl text-xl font-bold tracking-tight text-gray-900">Tickets</h1>
           <h2 className="sm:text-sm text-xs  text-gray-500">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </h2>
@@ -258,7 +258,7 @@ export default function TicketsListPage() {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium  text-gray-800 hover:text-brandCustom transition-colors lowercase">
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-gray-800 hover:text-brandCustom transition-colors lowercase">
                   {t.titulo.substring(0, 20) + "..."}
                 </Link>
               ),

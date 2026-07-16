@@ -294,7 +294,7 @@ export default function TicketDetallePage() {
              <div className="flex sm:justify-start w-full justify-between sm:gap-10 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Empresa</dt>
-                  <dd className="font-regular text-white text-[11px]">#{ticket.empresa_id}</dd>
+                  <dd className="font-regular text-white text-[11px]">{ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
                 </div>
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Subcategoría</dt>

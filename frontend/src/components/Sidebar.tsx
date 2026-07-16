@@ -8,6 +8,9 @@ import TicketIcon from "@/app/assets/icons/TicketIcon";
 import HomeIcon from "@/app/assets/icons/HomeIcon";
 import InboxIcon from "@/app/assets/icons/InboxIcon";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
+import UsersIcon from "@/app/assets/icons/UsersIcon";
+import CategoryIcon from "@/app/assets/icons/CategoryIcon";
+import FactoryIcon from "@/app/assets/icons/FactoryIcon";
 import logo from "../app/assets/logo-white.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
@@ -24,6 +27,25 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
     { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
     { href: "/admin/bandeja", label: "Bandeja abiertos", icon: <InboxIcon/> },
+    {
+      href: "/admin/empresas",
+      label: "Empresas",
+      icon: (
+        <FactoryIcon/>
+      ),
+    },
+    {
+      href: "/admin/usuarios",
+      label: "Usuarios",
+      icon: <UsersIcon/>,
+    },
+    {
+      href: "/admin/categorias",
+      label: "Categorías",
+      icon: (
+        <CategoryIcon/>
+      ),
+    },
   ],
 };
 
@@ -77,7 +99,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
 
         <nav className="flex-1 py-4 space-y-1 overflow-y-auto border-r border-brandCustom">
           {links.map((l) => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && pathname === "/");
+            const active = l.href === "/" ? pathname === "/" : pathname === l.href || pathname.startsWith(l.href + "/");
             return (
               <Link
                 key={l.href}

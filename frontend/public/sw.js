@@ -151,7 +151,6 @@ self.addEventListener("push", (event) => {
   const options = {
     body: payload.body,
     icon: "/icon-192.png?v4",
-    badge: "/icon-192.png?v4",
     data: { url: payload.url, ...(payload.data || {}) },
     requireInteraction: urgent,
     silent: false,

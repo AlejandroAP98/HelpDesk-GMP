@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import tenant_filter
 from app.models.categoria import Categoria
+from app.models.empresa import Empresa
 from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario, VistaTicket
 from app.models.historial_estado import HistorialEstado
 from app.models.subcategoria import Subcategoria
@@ -305,9 +306,12 @@ async def listar(
     agente_id: UUID | None = None,
     cliente_id: UUID | None = None,
     vista: VistaTicket | None = None,
-) -> Pagina[Ticket]:
+) -> Pagina[tuple[Ticket, str | None]]:
     p = paginacion(page, size)
-    base = select(Ticket)
+    base = (
+        select(Ticket, Empresa.nombre.label("empresa_nombre"))
+        .outerjoin(Empresa, Ticket.empresa_id == Empresa.id)
+    )
     count_base = select(func.count(Ticket.id))
 
     tf = tenant_filter(current)
@@ -341,7 +345,6 @@ async def listar(
         base = base.where(Ticket.cliente_id == cliente_id)
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
 
-    # 1. Creamos una escala de peso para las prioridades (Menor número = Más arriba)
     peso_prioridad = case(
         (Ticket.prioridad == "urgente", 1),
         (Ticket.prioridad == "alta", 2),
@@ -350,7 +353,6 @@ async def listar(
         else_=5
     )
 
-    # 2. Opcional: Separamos el ciclo de vida (Activos primero, cerrados al fondo)
     peso_estado = case(
         (Ticket.estado == "en_progreso", 1),
         (Ticket.estado == "asignado", 2),
@@ -360,21 +362,21 @@ async def listar(
         else_=6
     )
 
-    # Ejecución de la consulta modificando el ordenamiento
     total = (await db.execute(count_base)).scalar_one()
-    items = (
+    rows = (
         await db.execute(
             base.order_by(
-                peso_estado.asc(),           # 1° Estados que requieren acción primero
-                peso_prioridad.asc(),        # 2° Lo más urgente arriba de cada estado
-                Ticket.fecha_creacion.asc()  # 3° El que más tiempo lleva esperando (SLA)
+                peso_estado.asc(),
+                peso_prioridad.asc(),
+                Ticket.fecha_creacion.asc()
             )
             .offset(p.offset)
             .limit(p.limit)
         )
-    ).scalars().all()
+    ).all()
 
-    return Pagina.of(list(items), total, p.page, p.size)
+    items = [(ticket, emp_nombre) for ticket, emp_nombre in rows]
+    return Pagina.of(items, total, p.page, p.size)
 
 
 async def obtener(
@@ -399,6 +401,7 @@ async def obtener_detalle(
     agente_nombre: str | None = None
     modificado_por_nombre: str | None = None
     subcategoria_nombre: str | None = None
+    empresa_nombre: str | None = None
     usuario_ids = {ticket.cliente_id, ticket.agente_id, ticket.modificado_por_id}
     usuario_ids.discard(None)
     if usuario_ids:
@@ -417,9 +420,16 @@ async def obtener_detalle(
         )
     ).scalar_one_or_none()
     subcategoria_nombre = sub
+    emp = (
+        await db.execute(
+            select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+        )
+    ).scalar_one_or_none()
+    empresa_nombre = emp
     return TicketDetalle(
         id=ticket.id,
         empresa_id=ticket.empresa_id,
+        empresa_nombre=empresa_nombre,
         cliente_id=ticket.cliente_id,
         agente_id=ticket.agente_id,
         modificado_por_id=ticket.modificado_por_id,

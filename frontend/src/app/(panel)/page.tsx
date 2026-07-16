@@ -115,7 +115,7 @@ export default function PanelHomePage() {
             Hola, {usuario?.nombre?.split(" ")[0]}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte de manera eficiente"}
+            {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte"}
             {usuario?.rol === "agente" && "Revisa y resuelve tus tickets asignados"}
             {usuario?.rol === "administrador" && "Panel de administracion y control global"}
           </p>
