@@ -75,6 +75,15 @@ export default function NotificationSettings() {
     }
   };
 
+  const handleQuitarTodas = async () => {
+    try {
+      await pushApi.unsubscribeAll();
+      await cargar();
+      await refresh();
+    } catch {
+    }
+  };
+
   const handleTest = async () => {
     setError(null);
     setSuccess(null);
@@ -217,29 +226,39 @@ export default function NotificationSettings() {
           ) : subs.length === 0 ? (
             <p className="mt-2 text-sm text-gray-400">No hay dispositivos suscritos.</p>
           ) : (
-            <ul className="mt-2 space-y-2">
-              {subs.map((s) => (
-                <li
-                  key={s.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-800">
-                      {shortUA(s.user_agent)}
-                    </p>
-                    <p className="truncate text-xs text-gray-400" title={s.endpoint}>
-                      {shortEndpoint(s.endpoint)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleQuitar(s.endpoint)}
-                    className="ml-2 text-xs font-medium text-red-600 hover:text-red-700"
+            <>
+              <ul className="mt-2 space-y-2">
+                {subs.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2"
                   >
-                    Quitar
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-800">
+                        {shortUA(s.user_agent)}
+                      </p>
+                      <p className="truncate text-xs text-gray-400" title={s.endpoint}>
+                        {shortEndpoint(s.endpoint)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleQuitar(s.endpoint)}
+                      className="ml-2 text-xs font-medium text-red-600 hover:text-red-700"
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {subs.length > 1 && (
+                <button
+                  onClick={handleQuitarTodas}
+                  className="mt-3 text-xs font-medium text-red-600 hover:text-red-700"
+                >
+                  Quitar todas las suscripciones
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

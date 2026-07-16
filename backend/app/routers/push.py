@@ -64,6 +64,15 @@ async def subscribe(
             detail="Se requieren keys p256dh y auth",
         )
 
+    if data.user_agent:
+        await db.execute(
+            delete(PushSubscription).where(
+                PushSubscription.usuario_id == current.id,
+                PushSubscription.user_agent == data.user_agent,
+                PushSubscription.endpoint != data.endpoint,
+            )
+        )
+
     existing = (
         await db.execute(
             select(PushSubscription).where(PushSubscription.endpoint == data.endpoint)
@@ -135,3 +144,15 @@ async def unsubscribe(
         )
     )
     await db.commit()
+
+
+@router.delete("/subscriptions/all", status_code=status.HTTP_204_NO_CONTENT)
+async def unsubscribe_all(
+    current: Annotated[Usuario, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    await db.execute(
+        delete(PushSubscription).where(PushSubscription.usuario_id == current.id)
+    )
+    await db.commit()
+    logger.info("Todas las push subscriptions eliminadas: usuario=%s", current.id)

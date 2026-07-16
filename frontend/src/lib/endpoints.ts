@@ -239,6 +239,9 @@ export const pushApi = {
   unsubscribe: async (endpoint: string) => {
     await api.delete("/api/push/subscribe", { data: { endpoint } });
   },
+  unsubscribeAll: async () => {
+    await api.delete("/api/push/subscriptions/all");
+  },
   sendTest: async () => {
     const r = await api.post("/api/push/test");
     return r.data as { delivered: number };
