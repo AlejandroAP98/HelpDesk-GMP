@@ -1,15 +1,9 @@
 """Modelo PushSubscription: suscripciones de push por dispositivo/usuario.
 
-Soporta dos tipos de suscripcion:
-- Web Push (VAPID): endpoint = URL del push service (Mozilla/Google), keys {p256dh, auth}
-- FCM (Android): endpoint = FCM token, keys vacias
-- APNs (iOS): endpoint = APNs device token, keys vacias
-
-El campo `plataforma` distingue entre web/ios/android para que el backend sepa
-que servicio usar al enviar el push.
+Soporta Web Push (VAPID): endpoint = URL del push service (Mozilla/Google),
+keys {p256dh, auth}.
 """
 from datetime import datetime
-from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -22,12 +16,6 @@ if TYPE_CHECKING:
     from app.models.usuario import Usuario
 
 
-class PushPlatform(str, Enum):
-    WEB = "web"
-    ANDROID = "android"
-    IOS = "ios"
-
-
 class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
@@ -38,7 +26,7 @@ class PushSubscription(Base):
         ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True
     )
     plataforma: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=PushPlatform.WEB.value
+        String(16), nullable=False, default="web"
     )
     endpoint: Mapped[str] = mapped_column(String(700), unique=True, nullable=False)
     p256dh_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -53,14 +41,5 @@ class PushSubscription(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<PushSubscription id={self.id} usuario_id={self.usuario_id} "
-            f"plataforma={self.plataforma}>"
+            f"<PushSubscription id={self.id} usuario_id={self.usuario_id}>"
         )
-
-    @property
-    def is_native(self) -> bool:
-        return self.plataforma in (PushPlatform.ANDROID.value, PushPlatform.IOS.value)
-
-    @property
-    def is_web(self) -> bool:
-        return self.plataforma == PushPlatform.WEB.value

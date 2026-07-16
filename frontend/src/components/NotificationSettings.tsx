@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useNotificationPermission } from "@/hooks/useNotificationPermission";
-import { getPlatformInfo, isNotificationApiAvailable } from "@/lib/notifications";
 import { pushApi, type PushSubscriptionOut } from "@/lib/endpoints";
 import { useAuthStore } from "@/store/authStore";
 
@@ -12,20 +11,12 @@ function shortEndpoint(ep: string): string {
   return ep.slice(0, 28) + "..." + ep.slice(-18);
 }
 
-function shortUA(ua: string | null, plataforma: string): string {
-  if (plataforma === "ios") return "iOS (nativo)";
-  if (plataforma === "android") return "Android (nativo)";
+function shortUA(ua: string | null): string {
   if (!ua) return "Web";
   if (ua.includes("Chrome")) return ua.includes("Edg") ? "Edge" : "Chrome";
   if (ua.includes("Firefox")) return "Firefox";
   if (ua.includes("Safari")) return "Safari";
   return "Web";
-}
-
-function platformIcon(plataforma: string): string {
-  if (plataforma === "ios") return "phone_iphone";
-  if (plataforma === "android") return "android";
-  return "language";
 }
 
 export default function NotificationSettings() {
@@ -87,26 +78,42 @@ export default function NotificationSettings() {
   const handleTest = async () => {
     setError(null);
     setSuccess(null);
-    const platform = getPlatformInfo();
-    const isNative = platform === "android" || platform === "ios";
     try {
-      if (!isNative && !isNotificationApiAvailable()) {
+      if (typeof window === "undefined" || !("Notification" in window)) {
         setError("Tu navegador no soporta notificaciones.");
         return;
       }
-      if (!isNative && Notification.permission !== "granted") {
+      if (Notification.permission !== "granted") {
         const perm = await Notification.requestPermission();
         if (perm !== "granted") {
           setError("Permiso de notificaciones no concedido. Habilitalo en el candado junto a la URL.");
           return;
         }
       }
+      let inAppOk = false;
+      try {
+        const n = new Notification("HelpDesk-GMP - Notificacion de prueba", {
+          body: "Notificacion in-app funcionando. Las push reales requieren PWA instalada.",
+          icon: "/icon-192.png?v4",
+          badge: "/icon-192.png?v4",
+          tag: "test-in-app",
+        });
+        n.onclick = () => {
+          try {
+            window.focus();
+          } catch {
+          }
+          n.close();
+        };
+        inAppOk = true;
+      } catch {
+      }
       if (state === "active" && subs.length > 0) {
         const result = await pushApi.sendTest();
         if (result.delivered > 0) {
           setSuccess(
             `Push enviado a ${result.delivered} dispositivo(s).` +
-              (isNative ? " Revisa tu telefono/tablet." : " Notificacion in-app mostrada tambien.")
+              (inAppOk ? " Notificacion in-app mostrada tambien." : "")
           );
         } else {
           setError(
@@ -115,14 +122,14 @@ export default function NotificationSettings() {
         }
       } else if (state === "active" && subs.length === 0) {
         setSuccess(
-          isNative
-            ? "No hay suscripciones push. Desactiva y vuelve a activar para crear una."
-            : "Notificacion in-app funcionando. No hay dispositivos suscritos para push real. Volvé a activar para crear una suscripción."
+          inAppOk
+            ? "Notificacion in-app funcionando. No hay dispositivos suscritos para push real. Volvé a activar para crear una suscripción."
+            : "No hay suscripciones push. Desactiva y vuelve a activar para crear una."
         );
       } else {
         setSuccess(
-          isNative
-            ? "Activa las notificaciones para recibir alertas con la app cerrada."
+          inAppOk
+            ? "Notificacion in-app funcionando. Activa las notificaciones push para recibir alertas con la PWA instalada."
             : "Activa las notificaciones para recibir alertas."
         );
       }
@@ -218,7 +225,7 @@ export default function NotificationSettings() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-800">
-                      {shortUA(s.user_agent, s.plataforma)}
+                      {shortUA(s.user_agent)}
                     </p>
                     <p className="truncate text-xs text-gray-400" title={s.endpoint}>
                       {shortEndpoint(s.endpoint)}

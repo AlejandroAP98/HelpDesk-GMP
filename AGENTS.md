@@ -216,66 +216,22 @@ Fase 13 completada: Web Push notifications (VAPID self-hosted).
   No es objetivo actual.
 - Proximas fases: 14 (WARP client para SSH al server).
 
-Fase 14 completada: App nativa con Capacitor + FCM/APNs (push nativos).
-- **Backend**: modelo `PushSubscription` extendido con campo `plataforma`
-  (web/ios/android). `p256dh_key` y `auth_key` ahora nullable (FCM/APNs
-  no usan claves VAPID). Migracion `c3d4e5f6a7b8`.
-- **Backend**: `services/push_service.py` soporta dos canales: Web Push
-  (VAPID via pywebpush) y nativo (FCM via firebase-admin). Auto-seleccion
-  basado en `plataforma` de la suscripcion. Firebase Admin SDK singleton
-  inicializado con `firebase_credentials_path`.
-- **Backend**: configuracion nueva `firebase_credentials_path` en
-  `core/config.py`. FCM solo se activa si la variable esta definida.
-- **Backend**: `schemas/push.py` con `PushSubscribeIn` unificado: acepta
-  web (con keys) o nativo (solo endpoint + plataforma). Validacion
-  condicional de keys solo para plataforma web.
-- **Backend**: `routers/push.py` ahora maneja ambos tipos. `PushSubscribeOut`
-  incluye `plataforma`. Validacion 400 si web no trae keys.
-- **Mobile** (nuevo directorio): proyecto Capacitor 6 standalone que
-  envuelve la PWA como shell nativo iOS/Android.
-  - `mobile/capacitor.config.ts`: appId `com.gmpredes.helpdesk`, webDir
-    apunta a `frontend/.next/standalone`.
-  - `mobile/src/push.ts`: wrapper unificado de push que detecta plataforma
-    via `Capacitor.isNativePlatform()`. Crea canal Android "helpdesk-default"
-    con importance HIGH. Handlers para `registration`, `registrationError`,
-    `pushNotificationReceived`, `pushNotificationActionPerformed`.
-  - `mobile/src/platform.ts`: helpers `isNative()`, `isIOS()`, `isAndroid()`.
-  - `mobile/scripts/sync-to-frontend.js`: copia wrappers al frontend
-    antes del build (sincronizacion manual por ahora).
-- **Frontend**: `lib/notifications.ts` detecta Capacitor via
-  `window.Capacitor.isNativePlatform()` y delega a
-  `lib/capacitor/push.ts` para push nativos. Si no, usa el flujo Web Push
-  VAPID existente (sin cambios).
-- **Frontend**: `components/NotificationSettings.tsx` ahora muestra
-  plataforma de cada dispositivo ("iOS nativo", "Android nativo", "Chrome",
-  etc.) con icono segun plataforma.
-- **Android** (`mobile/android/`): `build.gradle` con classpath
-  `com.google.gms:google-services:4.4.1`. `AndroidManifest.xml` con
-  permisos `POST_NOTIFICATIONS`, `VIBRATE`, `WAKE_LOCK`. Servicio
-  `FirebaseMessagingService` registrado. Canal "helpdesk-default" con
-  importance HIGH.
-- **iOS** (`mobile/ios/`): `Info.plist` con `UIBackgroundModes:
-  remote-notification` (push en background) y `NSAppTransportSecurity`
-  permisivo para desarrollo. `AppDelegate.swift` registra APNs token via
-  `capacitorDidRegisterForRemoteNotifications`.
-- **Docker**: `mobile/Dockerfile.android` para build de APK release
-  (requiere `google-services.json` en `mobile/android/app/`).
-- **Dependencias nuevas**: backend `firebase-admin = "^6.5.0"`. Frontend
-  `@capacitor/core` y `@capacitor/push-notifications` (imports dinamicos
-  en runtime, no inflan el bundle web si no se usan).
-- **Costo**: FCM es 100% gratis (mensajes ilimitados). Apple Developer
-  Program requerido solo para iOS ($99/año). Android se puede probar
-  con sideload sin Play Store.
-- **Setup inicial**:
-  1. Crear proyecto en https://console.firebase.google.com
-  2. Agregar app Android con package `com.gmpredes.helpdesk`
-  3. Descargar `google-services.json` -> `mobile/android/app/`
-  4. (iOS) Descargar `GoogleService-Info.plist` -> `mobile/ios/App/`
-  5. Project Settings -> Service Accounts -> Generate new private key
-     -> Guardar como `firebase-credentials.json`
-  6. En backend `.env`: `FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json`
-  7. `cd mobile && npm install && npm run android:open` (o `ios:open`)
-- **Resultado**: push funcionan con app cerrada, movil bloqueado, y en
-  background en iOS y Android. Vibracion personalizada segun prioridad
-  (urgente vs normal). Badges dinamicos en iOS.
+Fase 14 (revisada): Notificaciones push unificadas via PWA + Web Push.
+- Se elimino el proyecto Capacitor/Android/iOS (app nativa) en favor de
+  la PWA instalable con Web Push VAPID como unico canal de push.
+- Backend: `services/push_service.py` simplificado a solo Web Push (VAPID
+  via pywebpush). Se removio firebase-admin y FCM.
+- Backend: `core/config.py` sin `firebase_credentials_path`.
+- Backend: `routers/push.py` y `schemas/push.py` simplificados (solo web).
+- Backend: `models/push_subscription.py` sin `PushPlatform` enum ni
+  `is_native`/`is_web` (la columna `plataforma` se conserva en DB por
+  compatibilidad con la migracion existente).
+- Frontend: `lib/notifications.ts` sin deteccion de Capacitor.
+- Frontend: `lib/capacitor/` eliminado. Deps `@capacitor/core` y
+  `@capacitor/push-notifications` removidos de `package.json`.
+- `mobile/` eliminado por completo.
+- `.gitignore`: entradas de Capacitor/Firebase removidas.
+- `docker-compose.yml`: volume mount de `firebase-credentials.json` removido.
+- Push notifications funcionan en: Chrome, Edge, Firefox (desktop y mobile
+  con PWA instalada). iOS Safari requiere PWA instalada (iOS 16.4+).
 - Proximas fases: 15 (WARP client para SSH al server).
