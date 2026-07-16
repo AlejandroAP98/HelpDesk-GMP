@@ -152,3 +152,20 @@ export function getPlatformInfo(): "ios" | "android" | "web" {
   }
   return "web";
 }
+
+export async function autoInitNativePush(): Promise<void> {
+  if (!isCapacitorNative()) return;
+  try {
+    const { initPush, getPushPermission, subscribeToNativePush } = await import("./capacitor/push");
+    await initPush({
+      onNotification: () => {},
+      onActionClick: () => {},
+    });
+    const perm = await getPushPermission();
+    if (perm === "granted") {
+      await subscribeToNativePush();
+    }
+  } catch (e) {
+    console.warn("Auto-init push error:", e);
+  }
+}
