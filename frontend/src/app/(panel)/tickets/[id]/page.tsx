@@ -23,6 +23,7 @@ import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
 import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Button } from "@/components/ui/Button";
+import { AdjuntosGallery } from "@/components/AdjuntosGallery";
 import BackIcon from "@/app/assets/icons/BackIcon";
 
 const elementoLabels: Record<ElementoInfraestructura, string> = {
@@ -202,19 +203,6 @@ export default function TicketDetallePage() {
       await cargar();
     } catch {
       setError("No se pudo agregar el comentario");
-    }
-  };
-
-  const subirAdjunto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    try {
-      for (const f of Array.from(e.target.files)) {
-        await adjuntoApi.subir(ticketId, f);
-      }
-      e.target.value = "";
-      await cargar();
-    } catch {
-      setError("No se pudo subir el adjunto");
     }
   };
 
@@ -547,38 +535,14 @@ export default function TicketDetallePage() {
           <section className="space-y-4">
             <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-4">
-              {!estaCerrado && (
-                <label className="block w-full">
-                  <input
-                    type="file"
-                    multiple
-                    onChange={subirAdjunto}
-                    className="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 transition-all cursor-pointer"
-                  />
-                </label>
-              )}
-              {adjuntos.length === 0 ? (
-                <p className="text-xs text-gray-400 py-3 text-center">No hay archivos adjuntos.</p>
-              ) : (
-                <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
-                  {adjuntos.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-2 px-3.5 py-3 text-xs hover:bg-gray-50/50 transition-colors">
-                      <span className="truncate text-gray-700 font-medium min-w-0" title={a.nombre_archivo}>
-                        {a.nombre_archivo}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-mono shrink-0">
-                        {a.tamano_bytes != null ? (a.tamano_bytes / 1024).toFixed(1) + " KB" : "0 KB"}
-                      </span>
-                      <button
-                        onClick={async () => { await adjuntoApi.eliminar(ticketId, a.id); await cargar(); }}
-                        className="text-[11px] font-semibold text-red-500 hover:text-red-600 transition-colors shrink-0"
-                      >
-                        Borrar
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <AdjuntosGallery
+                ticketId={ticketId}
+                adjuntos={adjuntos}
+                puedeSubir={!estaCerrado}
+                puedeBorrar={() => true}
+                onChanged={cargar}
+                onError={setError}
+              />
               {adjuntosPage < adjuntosTotalPages && (
                 <button
                   onClick={cargarMasAdjuntos}

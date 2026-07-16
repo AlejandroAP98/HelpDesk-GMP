@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     minio_secret_key: str = "helpdesk12345"
     minio_bucket: str = "adjuntos"
     minio_use_ssl: bool = False
+    # URL publica que usa el navegador para acceder a MinIO (signed URLs).
+    # En dev default `http://localhost:9000` (puerto expuesto en docker-compose.dev).
+    # En prod, apuntar a la URL externa (ej. `https://storage.tudominio.com` o ruta
+    # tras el proxy Caddy `/storage`, ej. `https://helpdesk.local`).
+    minio_public_endpoint: str = "http://localhost:9000"
+    # TTL en segundos para las URLs prefirmadas de los adjuntos.
+    minio_signed_url_ttl: int = 3600
 
     # --- Web Push (VAPID) ---
     vapid_public_key: str = ""

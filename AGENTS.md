@@ -235,3 +235,44 @@ Fase 14 (revisada): Notificaciones push unificadas via PWA + Web Push.
 - Push notifications funcionan en: Chrome, Edge, Firefox (desktop y mobile
   con PWA instalada). iOS Safari requiere PWA instalada (iOS 16.4+).
 - Proximas fases: 15 (WARP client para SSH al server).
+
+Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox.
+- Backend `adjunto_service.py`: whitelist de MIME `image/jpeg|image/png|image/webp`
+  + validacion de magic bytes (defensa contra Content-Type spoofing). Extension
+  del archivo tambien validada (.jpg/.jpeg/.png/.webp). Limite 10 MB mantenido.
+- Backend `core/storage.py`: nueva funcion `generate_signed_url(object_key, ttl)`
+  con `_rehost_to_public()` que reescribe el host de la URL prefirmada para que
+  el navegador pueda acceder a MinIO. Genera URLs GET temporales (default 1h).
+- Backend `core/config.py`: nuevas vars `minio_public_endpoint` (default
+  `http://localhost:9000` para dev) y `minio_signed_url_ttl` (default 3600s).
+- Backend `schemas/adjunto.py`: el campo `archivo_url` en `AdjuntoOut` ahora
+  SIEMPRE devuelve la signed URL generada (en listar/subir/attach_to_comentario).
+  En la DB se guarda el path estilo S3 (`{bucket}/{key}`) para que la URL real
+  siempre se compute en runtime.
+- Frontend `lib/imageUtils.ts` (nuevo): `optimizeImage(file)` redimensiona a
+  max 1920px en el lado mayor y re-comprime a WebP 80% usando Canvas API nativa
+  (sin dependencias). `isImageMime()`, `formatBytes()`, `ALLOWED_IMAGE_MIME/ACCEPT`.
+- Frontend `components/AdjuntosGallery.tsx` (nuevo): grid 2-3 columnas con
+  thumbnails (object-cover, lazy), hover overlay con nombre/tamano, boton borrar.
+  Lightbox modal con navegacion ← →, contador posicion, cerrar con ESC o click
+  fuera, max 90vw x 85vh. Spinner de progreso durante optimizacion/subida.
+  Mensajes de error especificos: tipo no valido, tamano excedido, fallo de red.
+- Frontend `app/(panel)/tickets/[id]/page.tsx`: la seccion de adjuntos ahora
+  usa `<AdjuntosGallery>`. Eliminado `subirAdjunto` inline (movido al componente).
+  Resto del archivo sin cambios.
+- Caddy: nuevo `handle /storage/*` en ambos bloques (`:80` y `helpdesk.local`)
+  que hace `uri strip_prefix /storage` + `reverse_proxy minio:9000`. En dev no
+  se usa (MinIO ya expone `9000:9000` directo al host).
+- `.env.example`: documentadas `MINIO_PUBLIC_ENDPOINT` (URL publica que ve el
+  navegador) y `MINIO_SIGNED_URL_TTL`.
+- Tests `tests/test_adjuntos.py` (nuevo): 5 tests con `s3_mock` que parchea
+  `get_s3` y `generate_signed_url`:
+  - `test_rechaza_pdf`: PDF rechazado con 409
+  - `test_rechaza_jpeg_con_extension_falsa`: extension .exe con MIME jpeg → 409
+  - `test_rechaza_jpeg_con_magic_bytes_invalidos`: contenido no-JPEG → 409
+  - `test_acepta_jpeg_valido`: JPEG con magic bytes correctos → 201
+  - `test_acepta_png_valido`: PNG valido → 201
+- Verificado: `ruff check` limpio en archivos modificados, `mypy` sin issues,
+  `tsc --noEmit` pasa, `eslint` sin warnings (uso de `<img>` directo justificado
+  por signed URLs dinamicas que no pueden pre-configurarse en `next/image`).
+- Proximas fases: 16 (WARP client para SSH al server).
