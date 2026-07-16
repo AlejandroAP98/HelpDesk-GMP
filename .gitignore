@@ -63,7 +63,6 @@ mobile/ios/DerivedData/
 mobile/ios/*.xcworkspace/xcuserdata/
 mobile/ios/*.xcodeproj/xcuserdata/
 mobile/ios/App/Podfile.lock
-frontend/src/lib/capacitor/
 
 # ---------- Firebase ----------
 firebase-credentials.json
