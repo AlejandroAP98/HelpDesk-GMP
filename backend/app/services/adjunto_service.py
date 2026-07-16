@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.storage import generate_signed_url, get_s3
+from app.core.storage import get_s3
 from app.models.adjunto import Adjunto
 from app.models.comentario import Comentario
 from app.models.enums import RolUsuario
@@ -44,13 +44,19 @@ def _validate_magic_bytes(data: bytes, declared_mime: str) -> None:
 
 
 def _to_out(adjunto: Adjunto) -> AdjuntoOut:
-    """Serializa un Adjunto con su `archivo_url` reemplazado por una signed URL."""
-    object_key = adjunto.archivo_url.split(f"{settings.minio_bucket}/", 1)[-1]
+    """Serializa un Adjunto con `archivo_url` apuntando al endpoint proxy del backend.
+    Es una ruta relativa, asi el navegador la resuelve contra el host actual
+    (LAN https://helpdesk.local o Cloudflare https://soporte.gmpredes.online)."""
     data = AdjuntoOut.model_validate(adjunto).model_dump()
-    data["archivo_url"] = generate_signed_url(
-        object_key, expiration_seconds=settings.minio_signed_url_ttl,
+    data["archivo_url"] = (
+        f"/api/tickets/{adjunto.ticket_id}/adjuntos/{adjunto.id}/archivo"
     )
     return AdjuntoOut.model_validate(data)
+
+
+def get_object_key(adjunto: Adjunto) -> str:
+    """Extrae el object_key (path dentro del bucket) desde `archivo_url` guardado."""
+    return adjunto.archivo_url.split(f"{settings.minio_bucket}/", 1)[-1]
 
 
 async def listar(
@@ -155,7 +161,7 @@ async def eliminar(
     if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
         raise PermisoDenegado("No puedes borrar adjuntos de tickets no asignados")
 
-    object_key = adjunto.archivo_url.split(f"{settings.minio_bucket}/", 1)[-1]
+    object_key = get_object_key(adjunto)
     try:
         get_s3().delete_object(Bucket=settings.minio_bucket, Key=object_key)
     except Exception:
@@ -189,3 +195,42 @@ async def attach_to_comentario(
     await db.commit()
     await db.refresh(adjunto)
     return _to_out(adjunto)
+
+
+async def stream_archivo(
+    ticket_id: UUID,
+    adjunto_id: UUID,
+    current: Usuario,
+    db: AsyncSession,
+    range_header: str | None = None,
+) -> dict:
+    """Obtiene el archivo de MinIO para streaming al cliente.
+    Valida acceso multi-tenant via `ticket_service.obtener`.
+    Si se pasa `range_header`, respeta el pedido de bytes parciales.
+    Retorna un dict con `body`, `content_type`, `content_length`, `content_range`, `status_code`."""
+    await ticket_service.obtener(ticket_id, current, db)
+    adjunto = (
+        await db.execute(select(Adjunto).where(Adjunto.id == adjunto_id))
+    ).scalar_one_or_none()
+    if adjunto is None or adjunto.ticket_id != ticket_id:
+        raise RecursoNoEncontrado("Adjunto no encontrado")
+
+    object_key = get_object_key(adjunto)
+    get_params: dict = {"Bucket": settings.minio_bucket, "Key": object_key}
+    if range_header:
+        get_params["Range"] = range_header
+
+    try:
+        obj = get_s3().get_object(**get_params)
+    except Exception as e:
+        if "NoSuchKey" in type(e).__name__ or "404" in str(e):
+            raise RecursoNoEncontrado("Archivo no encontrado en storage")
+        raise
+
+    return {
+        "body": obj["Body"],
+        "content_type": adjunto.tipo_mime or "application/octet-stream",
+        "content_length": obj.get("ContentLength"),
+        "content_range": obj.get("ContentRange"),
+        "status_code": 206 if range_header else 200,
+    }

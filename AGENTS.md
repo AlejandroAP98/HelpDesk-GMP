@@ -236,19 +236,26 @@ Fase 14 (revisada): Notificaciones push unificadas via PWA + Web Push.
   con PWA instalada). iOS Safari requiere PWA instalada (iOS 16.4+).
 - Proximas fases: 15 (WARP client para SSH al server).
 
-Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox.
+Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy auth.
 - Backend `adjunto_service.py`: whitelist de MIME `image/jpeg|image/png|image/webp`
-  + validacion de magic bytes (defensa contra Content-Type spoofing). Extension
-  del archivo tambien validada (.jpg/.jpeg/.png/.webp). Limite 10 MB mantenido.
-- Backend `core/storage.py`: nueva funcion `generate_signed_url(object_key, ttl)`
-  con `_rehost_to_public()` que reescribe el host de la URL prefirmada para que
-  el navegador pueda acceder a MinIO. Genera URLs GET temporales (default 1h).
-- Backend `core/config.py`: nuevas vars `minio_public_endpoint` (default
-  `http://localhost:9000` para dev) y `minio_signed_url_ttl` (default 3600s).
-- Backend `schemas/adjunto.py`: el campo `archivo_url` en `AdjuntoOut` ahora
-  SIEMPRE devuelve la signed URL generada (en listar/subir/attach_to_comentario).
-  En la DB se guarda el path estilo S3 (`{bucket}/{key}`) para que la URL real
-  siempre se compute en runtime.
+  + validacion de magic bytes (defensa contra Content-Type spoofing) + validacion
+  de extension (.jpg/.jpeg/.png/.webp). Limite 10 MB mantenido.
+- Backend `core/storage.py`: simplificado a `get_s3` + `ensure_bucket` (sin
+  signed URLs; el proxy por backend es la unica via de acceso).
+- Backend `routers/adjuntos.py`: nuevo endpoint `GET /api/tickets/{tid}/adjuntos/{adj_id}/archivo`
+  que valida sesion + tenant (cliente solo su ticket, agente asignado, admin todo)
+  y streama el binario de MinIO via `s3.get_object()`. Soporta header `Range`
+  para carga progresiva (responde 206). Headers: `Content-Type` desde la DB,
+  `Cache-Control: private, max-age=3600` (cache del navegador).
+- Backend `services/adjunto_service.py`: `_to_out()` ahora genera `archivo_url`
+  como **ruta RELATIVA** `/api/tickets/{tid}/adjuntos/{adj_id}/archivo`. El
+  navegador la resuelve contra `window.location.origin`, asi funciona
+  identico en LAN (https://helpdesk.local) y Cloudflare Tunnel
+  (https://soporte.gmpredes.online) sin config ni CORS. Tambien nueva
+  funcion `stream_archivo()` que hace `s3.get_object` (con Range opcional)
+  y devuelve dict con body/media_type/content_range.
+- Backend `core/config.py`: removidas `minio_public_endpoint` y
+  `minio_signed_url_ttl` (ya no se usan).
 - Frontend `lib/imageUtils.ts` (nuevo): `optimizeImage(file)` redimensiona a
   max 1920px en el lado mayor y re-comprime a WebP 80% usando Canvas API nativa
   (sin dependencias). `isImageMime()`, `formatBytes()`, `ALLOWED_IMAGE_MIME/ACCEPT`.
@@ -260,19 +267,17 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox.
 - Frontend `app/(panel)/tickets/[id]/page.tsx`: la seccion de adjuntos ahora
   usa `<AdjuntosGallery>`. Eliminado `subirAdjunto` inline (movido al componente).
   Resto del archivo sin cambios.
-- Caddy: nuevo `handle /storage/*` en ambos bloques (`:80` y `helpdesk.local`)
-  que hace `uri strip_prefix /storage` + `reverse_proxy minio:9000`. En dev no
-  se usa (MinIO ya expone `9000:9000` directo al host).
-- `.env.example`: documentadas `MINIO_PUBLIC_ENDPOINT` (URL publica que ve el
-  navegador) y `MINIO_SIGNED_URL_TTL`.
-- Tests `tests/test_adjuntos.py` (nuevo): 5 tests con `s3_mock` que parchea
-  `get_s3` y `generate_signed_url`:
-  - `test_rechaza_pdf`: PDF rechazado con 409
-  - `test_rechaza_jpeg_con_extension_falsa`: extension .exe con MIME jpeg → 409
-  - `test_rechaza_jpeg_con_magic_bytes_invalidos`: contenido no-JPEG → 409
-  - `test_acepta_jpeg_valido`: JPEG con magic bytes correctos → 201
-  - `test_acepta_png_valido`: PNG valido → 201
+- Caddy: ELIMINADO `handle /storage/*` (ya nadie accede a MinIO directo desde
+  el navegador; todo va por el proxy del backend con auth).
+- `.env.example`: removidas `MINIO_PUBLIC_ENDPOINT` y `MINIO_SIGNED_URL_TTL`.
+- Tests `tests/test_adjuntos.py` (nuevo, 11 tests): parchea `get_s3` con mock
+  que tiene `upload_fileobj`, `delete_object`, `get_object`. Cubre:
+  - Validacion de subida: `test_rechaza_pdf`, `test_rechaza_jpeg_con_extension_falsa`,
+    `test_rechaza_jpeg_con_magic_bytes_invalidos`, `test_acepta_jpeg_valido`,
+    `test_acepta_png_valido`, `test_listar_devuelve_ruta_relativa`
+  - Descarga con auth: `test_descarga_archivo_con_sesion`, `test_descarga_sin_sesion_401`,
+    `test_cliente_otra_empresa_403`, `test_stream_con_range_206`
 - Verificado: `ruff check` limpio en archivos modificados, `mypy` sin issues,
   `tsc --noEmit` pasa, `eslint` sin warnings (uso de `<img>` directo justificado
-  por signed URLs dinamicas que no pueden pre-configurarse en `next/image`).
+  por URL relativa dinamica que no puede pre-configurarse en `next/image`).
 - Proximas fases: 16 (WARP client para SSH al server).

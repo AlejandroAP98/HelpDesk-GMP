@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -44,6 +45,40 @@ async def subir(
         data=data,
         current=current,
         db=db,
+    )
+
+
+@router.get("/{adjunto_id}/archivo")
+async def descargar_archivo(
+    ticket_id: UUID,
+    adjunto_id: UUID,
+    range_header: Annotated[str | None, Header(alias="Range")] = None,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(get_current_user),
+) -> StreamingResponse:
+    """Sirve el binario de un adjunto con auth. La URL queda en
+    `archivo_url` del AdjuntoOut, asi el navegador la resuelve contra
+    el host actual (LAN o Cloudflare) sin CORS ni configuracion extra."""
+    result = await adjunto_service.stream_archivo(
+        ticket_id=ticket_id,
+        adjunto_id=adjunto_id,
+        current=current,
+        db=db,
+        range_header=range_header,
+    )
+    headers = {
+        "Cache-Control": "private, max-age=3600",
+        "Content-Disposition": f'inline; filename="{adjunto_id}"',
+    }
+    if result["content_length"] is not None:
+        headers["Content-Length"] = str(result["content_length"])
+    if result["content_range"]:
+        headers["Content-Range"] = result["content_range"]
+    return StreamingResponse(
+        result["body"],
+        media_type=result["content_type"],
+        status_code=result["status_code"],
+        headers=headers,
     )
 
 
