@@ -20,7 +20,11 @@ RUN npm install --legacy-peer-deps
 
 COPY frontend/ ./
 
+# Build frontend standalone (needed for cap sync, even though app loads from server.url)
 RUN npm run build
+
+# Ensure webDir exists (capacitor.config.json points to ../frontend/out)
+RUN mkdir -p /frontend/out && echo '<html><head><meta http-equiv="refresh" content="0;url=https://soporte.gmpredes.online"></head><body>Loading...</body></html>' > /frontend/out/index.html
 
 # Build the Capacitor app
 WORKDIR /mobile
@@ -30,9 +34,7 @@ RUN npm install --legacy-peer-deps
 
 COPY mobile/ ./
 
-# Copy built frontend to mobile/webDir
-RUN mkdir -p ../frontend/.next && cp -r /frontend/.next/standalone/* ../frontend/.next/
-RUN cp -r /frontend/public ../frontend/public || true
+# cap sync needs webDir to exist
 RUN npx cap sync android
 
 # Gradle build stage
