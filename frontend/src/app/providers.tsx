@@ -3,7 +3,6 @@
 import { ReactNode, useEffect } from "react";
 import UrgentToasts from "@/components/UrgentToasts";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { autoInitNativePush } from "@/lib/notifications";
 import { useAuthStore } from "@/store/authStore";
 import { useUrgentStore } from "@/store/urgentStore";
 import { useWsTicketStore, type WsTicketEvent } from "@/store/wsTicketStore";
@@ -101,22 +100,11 @@ function WebSocketListener() {
   return null;
 }
 
-function NativePushInit() {
-  const usuario = useAuthStore((s) => s.usuario);
-  useEffect(() => {
-    if (usuario) {
-      void autoInitNativePush();
-    }
-  }, [usuario]);
-  return null;
-}
-
 export default function Providers({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
       <WebSocketListener />
-      <NativePushInit />
       <UrgentToasts />
     </>
   );

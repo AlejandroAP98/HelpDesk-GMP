@@ -2,24 +2,14 @@
 
 import { pushApi } from "@/lib/endpoints";
 
-declare global {
-  interface Window {
-    Capacitor?: {
-      isNativePlatform: () => boolean;
-      getPlatform: () => string;
-      isPluginAvailable: (name: string) => boolean;
-    };
-  }
-}
-
 function isCapacitorNative(): boolean {
   if (typeof window === "undefined") return false;
-  return !!(window.Capacitor && window.Capacitor.isNativePlatform());
+  return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform());
 }
 
 function getCapacitorPlatform(): "ios" | "android" | null {
   if (!isCapacitorNative()) return null;
-  const p = window.Capacitor?.getPlatform();
+  const p = window.Capacitor?.getPlatform?.();
   if (p === "ios" || p === "android") return p;
   return null;
 }
@@ -48,19 +38,51 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   return navigator.serviceWorker.ready;
 }
 
+async function waitForCapacitor(maxMs = 5000): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (window.Capacitor && window.Capacitor.isNativePlatform?.()) return true;
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (window.Capacitor && window.Capacitor.isNativePlatform?.()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function subscribeNative(): Promise<boolean> {
-  const { initPush, subscribeToNativePush } = await import("./capacitor/push");
-  await initPush({});
-  const result = await subscribeToNativePush();
-  return result.ok;
+  console.log("[push] subscribeNative: intentando...");
+  try {
+    const { initPush, subscribeToNativePush } = await import("./capacitor/push");
+    await initPush({
+      onNotification: () => {},
+      onActionClick: () => {},
+    });
+    const result = await subscribeToNativePush();
+    console.log("[push] subscribeNative result:", result);
+    return result.ok;
+  } catch (e) {
+    console.error("[push] subscribeNative error:", e);
+    return false;
+  }
 }
 
 export async function subscribeToPush(): Promise<unknown | null> {
   if (isCapacitorNative()) {
+    console.log("[push] detectado Capacitor nativo, usando FCM");
     const ok = await subscribeNative();
     return ok ? { native: true } : null;
   }
 
+  const isNative = await waitForCapacitor(3000);
+  if (isNative) {
+    console.log("[push] Capacitor detectado tras espera, usando FCM");
+    const ok = await subscribeNative();
+    return ok ? { native: true } : null;
+  }
+
+  console.log("[push] no es nativo, usando Web Push VAPID");
   if (!isPushSupported()) return null;
   if (Notification.permission === "denied") return null;
   if (Notification.permission === "default") {
@@ -104,12 +126,16 @@ export async function subscribeToPush(): Promise<unknown | null> {
 }
 
 async function unsubscribeNative(): Promise<boolean> {
-  const { unsubscribeFromNativePush } = await import("./capacitor/push");
-  return unsubscribeFromNativePush();
+  try {
+    const { unsubscribeFromNativePush } = await import("./capacitor/push");
+    return unsubscribeFromNativePush();
+  } catch {
+    return false;
+  }
 }
 
 export async function unsubscribeFromPush(): Promise<boolean> {
-  if (isCapacitorNative()) {
+  if (isCapacitorNative() || (await waitForCapacitor(2000))) {
     return unsubscribeNative();
   }
   if (!isPushSupported()) return false;
@@ -129,7 +155,7 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 export async function isCurrentlySubscribed(): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
-  if (isCapacitorNative()) {
+  if (isCapacitorNative() || (await waitForCapacitor(3000))) {
     try {
       const { getPushPermission } = await import("./capacitor/push");
       const perm = await getPushPermission();
@@ -146,15 +172,26 @@ export async function isCurrentlySubscribed(): Promise<boolean> {
   return !!sub;
 }
 
-export function getPlatformInfo(): "ios" | "android" | "web" {
-  if (isCapacitorNative()) {
-    return getCapacitorPlatform() ?? "web";
+export async function getNativePermissionState(): Promise<"granted" | "denied" | "prompt" | "unsupported"> {
+  if (isCapacitorNative() || (await waitForCapacitor(3000))) {
+    try {
+      const { getPushPermission } = await import("./capacitor/push");
+      return await getPushPermission();
+    } catch {
+      return "unsupported";
+    }
   }
-  return "web";
+  return "unsupported";
 }
 
 export async function autoInitNativePush(): Promise<void> {
-  if (!isCapacitorNative()) return;
+  console.log("[push] autoInitNativePush: starting...");
+  const isNative = await waitForCapacitor(5000);
+  if (!isNative) {
+    console.log("[push] autoInitNativePush: no es nativo, saltando");
+    return;
+  }
+  console.log("[push] autoInitNativePush: Capacitor detectado, inicializando...");
   try {
     const { initPush, getPushPermission, subscribeToNativePush } = await import("./capacitor/push");
     await initPush({
@@ -162,10 +199,23 @@ export async function autoInitNativePush(): Promise<void> {
       onActionClick: () => {},
     });
     const perm = await getPushPermission();
+    console.log("[push] autoInitNativePush: perm状态=", perm);
     if (perm === "granted") {
       await subscribeToNativePush();
+      console.log("[push] autoInitNativePush: suscrito automaticamente");
     }
   } catch (e) {
-    console.warn("Auto-init push error:", e);
+    console.warn("[push] autoInitNativePush error:", e);
   }
+}
+
+export function getPlatformInfo(): "ios" | "android" | "web" {
+  if (isCapacitorNative()) {
+    return getCapacitorPlatform() ?? "web";
+  }
+  return "web";
+}
+
+export function isNotificationApiAvailable(): boolean {
+  return typeof window !== "undefined" && "Notification" in window;
 }

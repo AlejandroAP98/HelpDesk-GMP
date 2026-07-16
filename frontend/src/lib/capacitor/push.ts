@@ -108,20 +108,26 @@ export async function initPush(handler: NotificationHandler): Promise<void> {
  */
 export async function subscribeToNativePush(): Promise<SubscribeResult> {
   if (!isCapacitorPush()) {
+    console.warn('[capacitor/push] subscribeToNativePush: no es nativo o plugin no disponible');
     return { ok: false, error: 'No es plataforma nativa' };
   }
 
   try {
     let permStatus = await PushNotifications.checkPermissions();
+    console.log('[capacitor/push] permiso actual:', permStatus.receive);
     if (permStatus.receive === 'prompt') {
       permStatus = await PushNotifications.requestPermissions();
+      console.log('[capacitor/push] permiso tras request:', permStatus.receive);
     }
     if (permStatus.receive !== 'granted') {
       return { ok: false, error: 'Permiso denegado' };
     }
+    console.log('[capacitor/push] registrando para FCM...');
     await PushNotifications.register();
+    console.log('[capacitor/push] registro OK, esperando token...');
     return { ok: true };
   } catch (e) {
+    console.error('[capacitor/push] subscribeToNativePush error:', e);
     return { ok: false, error: String(e) };
   }
 }

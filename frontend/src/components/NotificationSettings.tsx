@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useNotificationPermission } from "@/hooks/useNotificationPermission";
+import { getPlatformInfo, isNotificationApiAvailable } from "@/lib/notifications";
 import { pushApi, type PushSubscriptionOut } from "@/lib/endpoints";
 import { useAuthStore } from "@/store/authStore";
 
@@ -86,42 +87,26 @@ export default function NotificationSettings() {
   const handleTest = async () => {
     setError(null);
     setSuccess(null);
+    const platform = getPlatformInfo();
+    const isNative = platform === "android" || platform === "ios";
     try {
-      if (typeof window === "undefined" || !("Notification" in window)) {
+      if (!isNative && !isNotificationApiAvailable()) {
         setError("Tu navegador no soporta notificaciones.");
         return;
       }
-      if (Notification.permission !== "granted") {
+      if (!isNative && Notification.permission !== "granted") {
         const perm = await Notification.requestPermission();
         if (perm !== "granted") {
           setError("Permiso de notificaciones no concedido. Habilitalo en el candado junto a la URL.");
           return;
         }
       }
-      let inAppOk = false;
-      try {
-        const n = new Notification("HelpDesk-GMP - Notificacion de prueba", {
-          body: "Notificacion in-app funcionando. Las push nativas (app cerrada) requieren PWA instalada en iOS.",
-          icon: "/icon-192.png?v2",
-          badge: "/icon-192.png?v2",
-          tag: "test-in-app",
-        });
-        n.onclick = () => {
-          try {
-            window.focus();
-          } catch {
-          }
-          n.close();
-        };
-        inAppOk = true;
-      } catch {
-      }
       if (state === "active" && subs.length > 0) {
         const result = await pushApi.sendTest();
         if (result.delivered > 0) {
           setSuccess(
             `Push enviado a ${result.delivered} dispositivo(s).` +
-              (inAppOk ? " Notificacion in-app mostrada tambien." : "")
+              (isNative ? " Revisa tu telefono/tablet." : " Notificacion in-app mostrada tambien.")
           );
         } else {
           setError(
@@ -130,14 +115,14 @@ export default function NotificationSettings() {
         }
       } else if (state === "active" && subs.length === 0) {
         setSuccess(
-          inAppOk
-            ? "Notificacion in-app funcionando. No hay dispositivos suscritos para push real. Volvé a activar para crear una suscripción."
-            : "No hay suscripciones push. Desactiva y vuelve a activar para crear una."
+          isNative
+            ? "No hay suscripciones push. Desactiva y vuelve a activar para crear una."
+            : "Notificacion in-app funcionando. No hay dispositivos suscritos para push real. Volvé a activar para crear una suscripción."
         );
       } else {
         setSuccess(
-          inAppOk
-            ? "Notificacion in-app funcionando. Activa las notificaciones push para recibir alertas con la app cerrada."
+          isNative
+            ? "Activa las notificaciones para recibir alertas con la app cerrada."
             : "Activa las notificaciones para recibir alertas."
         );
       }

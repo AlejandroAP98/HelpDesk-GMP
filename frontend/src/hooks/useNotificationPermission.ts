@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  autoInitNativePush,
+  getNativePermissionState,
   isCurrentlySubscribed,
   isPushSupported,
   subscribeToPush,
@@ -27,21 +29,36 @@ export function useNotificationPermission(): UseNotificationPermissionResult {
 
   const refresh = useCallback(async () => {
     if (!isPushSupported()) {
+      const nativePerm = await getNativePermissionState();
+      if (nativePerm !== "unsupported") {
+        setPermission(nativePerm as NotificationPermission);
+        if (nativePerm === "denied") {
+          setState("denied");
+          return;
+        }
+        const active = await isCurrentlySubscribed();
+        setState(active ? "active" : "inactive");
+        return;
+      }
       setState("unsupported");
       setPermission("unsupported");
       return;
     }
-    const perm = Notification.permission;
-    setPermission(perm);
-    if (perm === "denied") {
-      setState("denied");
-      return;
+
+    if (typeof Notification !== "undefined") {
+      const perm = Notification.permission;
+      setPermission(perm);
+      if (perm === "denied") {
+        setState("denied");
+        return;
+      }
     }
     const active = await isCurrentlySubscribed();
     setState(active ? "active" : "inactive");
   }, []);
 
   useEffect(() => {
+    void autoInitNativePush();
     void refresh();
   }, [refresh]);
 
