@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { adjuntoApi, type Adjunto } from "@/lib/endpoints";
+import { useAdjuntoBlob } from "@/hooks/useAdjuntoBlob";
 import {
   ALLOWED_IMAGE_ACCEPT,
   MAX_UPLOAD_BYTES,
@@ -18,6 +19,145 @@ type Props = {
   onChanged: () => void;
   onError: (msg: string) => void;
 };
+
+function AdjuntoThumb({
+  url,
+  nombre,
+  onClick,
+  onDelete,
+  size,
+}: {
+  url: string;
+  nombre: string;
+  size: number | null;
+  onClick: () => void;
+  onDelete?: () => void;
+}) {
+  const { url: blobUrl, loading, error } = useAdjuntoBlob(url);
+  return (
+    <div
+      className="group relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 cursor-zoom-in"
+      onClick={onClick}
+    >
+      {blobUrl ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={blobUrl}
+          alt={nombre}
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+        />
+      ) : loading ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <svg
+            className="w-5 h-5 animate-spin text-gray-300"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+            />
+          </svg>
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-[10px] text-red-400 text-center px-1">
+          {error ?? "Error"}
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute bottom-0 left-0 right-0 p-2">
+          <p
+            className="text-[10px] text-white font-medium truncate"
+            title={nombre}
+          >
+            {nombre}
+          </p>
+          <p className="text-[9px] text-gray-200 font-mono">
+            {formatBytes(size)}
+          </p>
+        </div>
+      </div>
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 flex items-center justify-center"
+          title="Borrar"
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LightboxImage({ url, alt }: { url: string; alt: string }) {
+  const { url: blobUrl, loading, error } = useAdjuntoBlob(url);
+  if (blobUrl) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={blobUrl}
+        alt={alt}
+        className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+      />
+    );
+  }
+  if (error) {
+    return (
+      <div className="text-red-300 text-sm bg-black/60 rounded-lg px-4 py-3">
+        {error}
+      </div>
+    );
+  }
+  return (
+    <div className="w-10 h-10">
+      <svg
+        className="w-10 h-10 animate-spin text-white/50"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="3"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+        />
+      </svg>
+    </div>
+  );
+}
 
 export function AdjuntosGallery({
   ticketId,
@@ -157,56 +297,14 @@ export function AdjuntosGallery({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {adjuntos.map((a, idx) => (
-            <div
+            <AdjuntoThumb
               key={a.id}
-              className="group relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 cursor-zoom-in"
+              url={a.archivo_url}
+              nombre={a.nombre_archivo}
+              size={a.tamano_bytes}
               onClick={() => setLightboxIndex(idx)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={a.archivo_url}
-                alt={a.nombre_archivo}
-                loading="lazy"
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <div className="absolute bottom-0 left-0 right-0 p-2">
-                  <p
-                    className="text-[10px] text-white font-medium truncate"
-                    title={a.nombre_archivo}
-                  >
-                    {a.nombre_archivo}
-                  </p>
-                  <p className="text-[9px] text-gray-200 font-mono">
-                    {formatBytes(a.tamano_bytes)}
-                  </p>
-                </div>
-              </div>
-              {puedeBorrar(a) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    borrar(a);
-                  }}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 flex items-center justify-center"
-                  title="Borrar"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
+              onDelete={puedeBorrar(a) ? () => borrar(a) : undefined}
+            />
           ))}
         </div>
       )}
@@ -293,11 +391,9 @@ export function AdjuntosGallery({
             className="max-w-[90vw] max-h-[85vh] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={adjuntos[lightboxIndex].archivo_url}
+            <LightboxImage
+              url={adjuntos[lightboxIndex].archivo_url}
               alt={adjuntos[lightboxIndex].nombre_archivo}
-              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
             <div className="mt-3 text-center">
               <p className="text-sm text-white font-medium">

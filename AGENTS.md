@@ -259,11 +259,17 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy aut
 - Frontend `lib/imageUtils.ts` (nuevo): `optimizeImage(file)` redimensiona a
   max 1920px en el lado mayor y re-comprime a WebP 80% usando Canvas API nativa
   (sin dependencias). `isImageMime()`, `formatBytes()`, `ALLOWED_IMAGE_MIME/ACCEPT`.
+- Frontend `lib/adjuntoBlob.ts` (nuevo): cache compartido de blob URLs en
+  memoria. `fetchAdjuntoBlob(url, token)` hace `fetch()` con Authorization,
+  convierte a Blob y crea `URL.createObjectURL`. Dedup de requests en vuelo
+  (`inflight` Map). `evictAdjuntoBlob()` libera memoria al borrar.
+- Frontend `hooks/useAdjuntoBlob.ts` (nuevo): hook que envuelve `fetchAdjuntoBlob`
+  y retorna `{ url, loading, error }`. Re-fetch automatico si cambia el token.
 - Frontend `components/AdjuntosGallery.tsx` (nuevo): grid 2-3 columnas con
-  thumbnails (object-cover, lazy), hover overlay con nombre/tamano, boton borrar.
-  Lightbox modal con navegacion ← →, contador posicion, cerrar con ESC o click
-  fuera, max 90vw x 85vh. Spinner de progreso durante optimizacion/subida.
-  Mensajes de error especificos: tipo no valido, tamano excedido, fallo de red.
+  thumbnails (object-cover, lazy, loading spinner), hover overlay con
+  nombre/tamano, boton borrar. Lightbox modal con navegacion ← →, contador
+  posicion, cerrar con ESC o click fuera, max 90vw x 85vh. Spinner de progreso
+  durante optimizacion/subida. Mensajes de error especificos.
 - Frontend `app/(panel)/tickets/[id]/page.tsx`: la seccion de adjuntos ahora
   usa `<AdjuntosGallery>`. Eliminado `subirAdjunto` inline (movido al componente).
   Resto del archivo sin cambios.
@@ -278,6 +284,9 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy aut
   - Descarga con auth: `test_descarga_archivo_con_sesion`, `test_descarga_sin_sesion_401`,
     `test_cliente_otra_empresa_403`, `test_stream_con_range_206`
 - Verificado: `ruff check` limpio en archivos modificados, `mypy` sin issues,
-  `tsc --noEmit` pasa, `eslint` sin warnings (uso de `<img>` directo justificado
-  por URL relativa dinamica que no puede pre-configurarse en `next/image`).
+  `tsc --noEmit` pasa, `eslint` sin warnings.
+- **Fix de imagenes con 401**: el `<img src>` no envia header `Authorization`,
+  por lo que el backend rechaza con 401. Solucion: `useAdjuntoBlob` hace
+  `fetch()` con Bearer, convierte a Blob y muestra via `URL.createObjectURL`.
+  Cache en memoria evita re-fetch al navegar thumbnails/lightbox.
 - Proximas fases: 16 (WARP client para SSH al server).
