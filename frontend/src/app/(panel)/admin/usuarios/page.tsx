@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
 import AddUserIcon from "@/app/assets/icons/AddUserIcon";
+import { extractApiError } from "@/lib/errors";
 
 const ROLES: { value: string; label: string }[] = [
   { value: "cliente", label: "Cliente" },
@@ -110,6 +111,7 @@ export default function UsuariosPage() {
   };
 
   const guardar = async () => {
+    if (guardando) return;
     if (!form.nombre.trim() || !form.email.trim()) return;
     if (!editando && !form.password) return;
     setGuardando(true);
@@ -135,22 +137,22 @@ export default function UsuariosPage() {
       setModalOpen(false);
       await cargar();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al guardar";
-      setError(msg);
+      setError(extractApiError(err, "Error al guardar"));
     } finally {
       setGuardando(false);
     }
   };
 
   const eliminar = async (id: string) => {
+    if (eliminandoId) return;
     if (!confirm("¿Eliminar este usuario?")) return;
     setEliminandoId(id);
     setError(null);
     try {
       await adminApi.eliminarUsuario(id);
       await cargar();
-    } catch {
-      setError("No se pudo eliminar el usuario");
+    } catch (err: unknown) {
+      setError(extractApiError(err, "No se pudo eliminar el usuario"));
     } finally {
       setEliminandoId(null);
     }
