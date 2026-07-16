@@ -316,7 +316,7 @@ export function AdjuntosGallery({
         >
           <button
             onClick={cerrarLightbox}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="absolute top-8 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
             title="Cerrar (Esc)"
           >
             <svg
