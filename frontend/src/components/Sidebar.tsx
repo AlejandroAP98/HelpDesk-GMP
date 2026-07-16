@@ -99,7 +99,12 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
 
         <nav className="flex-1 py-4 space-y-1 overflow-y-auto border-r border-brandCustom">
           {links.map((l) => {
-            const active = l.href === "/" ? pathname === "/" : pathname === l.href || pathname.startsWith(l.href + "/");
+            const active = l.href === "/"
+              ? pathname === "/"
+              : pathname === l.href || (
+                  pathname.startsWith(l.href + "/") &&
+                  !links.some((o) => o.href !== l.href && o.href === pathname)
+                );
             return (
               <Link
                 key={l.href}
