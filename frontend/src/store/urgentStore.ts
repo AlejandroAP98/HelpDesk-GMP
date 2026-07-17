@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type AlertKind = "urgent" | "assigned";
+export type AlertKind = "urgent" | "assigned" | "state_changed";
 
 export interface UrgentAlert {
   id: string;
@@ -12,6 +12,8 @@ export interface UrgentAlert {
   titulo: string;
   prioridad: string;
   estado: string;
+  estado_anterior?: string;
+  estado_nuevo?: string;
   createdAt: number;
 }
 

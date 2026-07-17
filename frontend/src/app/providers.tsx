@@ -35,10 +35,65 @@ function WebSocketListener() {
         ev.type === "ticket:created" ||
         ev.type === "ticket:updated" ||
         ev.type === "ticket:assigned" ||
-        ev.type === "ticket:commented"
+        ev.type === "ticket:commented" ||
+        ev.type === "ticket:state_changed"
       ) {
         dispatch(ev as unknown as WsTicketEvent);
-        if (ev.type === "ticket:assigned") {
+        if (ev.type === "ticket:state_changed") {
+          const sc = ev as unknown as {
+            ticket_id: string;
+            empresa_id: number;
+            titulo: string;
+            prioridad: string;
+            estado: string;
+            estado_anterior: string;
+            estado_nuevo: string;
+            cliente_id: string | null;
+          };
+          if (sc.cliente_id && usuario?.id && sc.cliente_id === usuario.id) {
+            addAlert({
+              kind: "state_changed",
+              ticket_id: sc.ticket_id,
+              empresa_id: sc.empresa_id,
+              titulo: sc.titulo,
+              prioridad: sc.prioridad,
+              estado: sc.estado,
+              estado_anterior: sc.estado_anterior,
+              estado_nuevo: sc.estado_nuevo,
+            });
+            if (typeof window !== "undefined" && "Notification" in window) {
+              const showNotif = () => {
+                try {
+                  const n = new Notification("Estado del ticket actualizado", {
+                    body: `${sc.titulo} - ${sc.estado_anterior} → ${sc.estado_nuevo}`,
+                    icon: "/icon-192.png?v4",
+                    badge: "/icon-192.png?v4",
+                    tag: `state_changed-${sc.ticket_id}`,
+                    data: { url: `/tickets/${sc.ticket_id}` },
+                  });
+                  n.onclick = () => {
+                    try {
+                      window.focus();
+                    } catch {
+                    }
+                    window.location.href = `/tickets/${sc.ticket_id}`;
+                    n.close();
+                  };
+                } catch {
+                }
+              };
+              if (Notification.permission === "granted") {
+                showNotif();
+              } else if (Notification.permission !== "denied") {
+                Notification.requestPermission()
+                  .then((perm) => {
+                    if (perm === "granted") showNotif();
+                  })
+                  .catch(() => undefined);
+              }
+            }
+          }
+        } else if (ev.type === "ticket:assigned") {
           const assigned = ev as unknown as {
             agente_id: string | null;
             ticket_id: string;

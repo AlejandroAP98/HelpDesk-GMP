@@ -140,6 +140,29 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
         _logger.warning("No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True)
 
 
+async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str) -> None:
+    from app.websockets.pubsub import publish_to_ticket, publish_broadcast
+
+    payload = _ticket_payload(ticket, "ticket:state_changed")
+    payload["estado_anterior"] = estado_anterior
+    payload["estado_nuevo"] = ticket.estado.value
+    try:
+        await publish_to_ticket(ticket.id, event=payload)
+        await publish_broadcast(event=payload)
+        _logger.info(
+            "Evento ticket:state_changed publicado para ticket %s: %s -> %s",
+            ticket.id,
+            estado_anterior,
+            ticket.estado.value,
+        )
+    except Exception:
+        _logger.warning(
+            "No se pudo publicar ticket:state_changed para ticket %s",
+            ticket.id,
+            exc_info=True,
+        )
+
+
 async def _publicar_asignacion(ticket: Ticket) -> None:
     """Publica evento ticket:assigned (dispara Web Push al agente asignado).
 
@@ -488,7 +511,7 @@ async def asignar(
         raise Conflicto(f"Ticket en estado {ticket.estado.value} no es asignable")
     if agente.empresa_id is not None and agente.empresa_id != ticket.empresa_id:
         raise Conflicto("El agente pertenece a otra empresa")
-
+    
     ticket.agente_id = agente.id
     ticket.estado = EstadoTicket.asignado
     ticket.modificado_por_id = current.id
@@ -497,6 +520,7 @@ async def asignar(
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
     await _publicar_asignacion(ticket)
+    await _publicar_cambio_estado(ticket, EstadoTicket.abierto)
     return ticket
 
 
@@ -551,6 +575,7 @@ async def cambiar_estado(
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
+    await _publicar_cambio_estado(ticket, estado_anterior.value)
     return ticket
 
 
@@ -584,4 +609,5 @@ async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
+    await _publicar_cambio_estado(ticket, EstadoTicket.cerrado.value)
     return ticket

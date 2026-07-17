@@ -30,7 +30,7 @@ function AlertCard({
   alert,
   onDismiss,
 }: {
-  alert: { id: string; kind: AlertKind; titulo: string; estado: string; ticket_id: string };
+  alert: { id: string; kind: AlertKind; titulo: string; estado: string; ticket_id: string; estado_anterior?: string; estado_nuevo?: string };
   onDismiss: () => void;
 }) {
   if (alert.kind === "assigned") {
@@ -84,6 +84,67 @@ function AlertCard({
       </div>
     );
   }
+
+  if (alert.kind === "state_changed") {
+    return (
+      <div
+        className="rounded-2xl bg-white border border-brandCustom p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        role="alert"
+        onClick={() => {
+          window.location.href = `/tickets/${alert.ticket_id}`;
+        }}
+      >
+        <div className={`absolute top-0 left-0 w-1 h-full rounded-l-2xl ${
+          alert.estado_nuevo === "asignado" ? "bg-violetCustom" :
+          alert.estado_nuevo === "resuelto" ? "bg-greenCustom" :
+          alert.estado_nuevo === "en_progreso" ? "bg-yellowCustom" :
+          alert.estado_nuevo === "cerrado" ? "bg-grayCustom" :
+          "bg-brandCustom" 
+        }`} />
+        <div className="flex items-start justify-between gap-2 pl-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <p className="font-bold text-emerald-700 uppercase tracking-wider text-[11px]">
+              Estado del ticket
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            className="text-gray-300 hover:text-gray-500 hover:bg-gray-100 w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all"
+            aria-label="Cerrar"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-3 pl-3">
+          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+            {alert.titulo}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 text-emerald-700 font-bold uppercase tracking-wider border border-emerald-100">
+              #{alert.ticket_id.slice(0, 8)}
+            </span>
+            {alert.estado_anterior && alert.estado_nuevo && (
+              <span className="text-[10px] text-gray-500 font-semibold">
+                {alert.estado_anterior} <span className="text-emerald-500">→</span> {alert.estado_nuevo}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="rounded-2xl bg-white border border-red-100 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden"
@@ -138,6 +199,8 @@ export default function UrgentToasts() {
     const latest = alerts[0];
     if (latest.kind === "assigned") {
       playAssignedBeep();
+    } else if (latest.kind === "state_changed") {
+      playBeep(770);
     } else {
       playBeep();
     }
