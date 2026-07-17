@@ -34,6 +34,8 @@ const config: Config = {
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'wifi-pulse': 'wifiPulse 2s ease-in-out infinite',
         'wifi-dot': 'wifiDot 2s ease-in-out infinite',
+        'flash-complete': 'flashComplete 500ms ease-out',
+        'flash-uncomplete': 'flashUncomplete 500ms ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -59,6 +61,14 @@ const config: Config = {
         wifiDot: {
           '0%, 100%': { opacity: '0.4', transform: 'scale(0.85)' },
           '50%': { opacity: '1', transform: 'scale(1.15)' },
+        },
+        flashComplete: {
+          '0%': { backgroundColor: 'rgba(96, 153, 62, 0.35)' },
+          '100%': { backgroundColor: 'rgba(96, 153, 62, 0)' },
+        },
+        flashUncomplete: {
+          '0%': { backgroundColor: 'rgba(80, 132, 132, 0.25)' },
+          '100%': { backgroundColor: 'rgba(80, 132, 132, 0)' },
         },
       },
       boxShadow: {

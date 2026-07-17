@@ -16,6 +16,7 @@ from app.routers import empresas as empresas_router
 from app.routers import push as push_router
 from app.routers import stats as stats_router
 from app.routers import subcategorias as subcategorias_router
+from app.routers import tarea_pendiente as tarea_pendiente_router
 from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
@@ -93,6 +94,7 @@ app.include_router(tickets_router.router)
 app.include_router(comentarios_router.router)
 app.include_router(adjuntos_router.router)
 app.include_router(stats_router.router)
+app.include_router(tarea_pendiente_router.router)
 app.include_router(push_router.router)
 app.include_router(ws_router.router)
 

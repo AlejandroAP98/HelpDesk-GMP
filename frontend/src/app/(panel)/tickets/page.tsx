@@ -215,12 +215,12 @@ export default function TicketsListPage() {
       </div>
       <div className="flex gap-4 sm:flex-row flex-col-reverse justify-between">
         <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
-          <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit">
+          <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-1 rounded-lg h-fit">
             {VISTAS.map((v) => (
             <button
               key={v.value}
               onClick={() => cambiarVista(v.value)}
-              className={`px-4 py-1.5 sm:text-sm text-xs font-medium rounded-md transition-all ${
+              className={`px-4 py-1.5 sm:text-sm text-xs font-medium rounded-md transition-all last:border-none border-grayCustom ${
                 vista === v.value
                   ? "bg-brandCustom text-white"
                   : "text-gray-500 hover:text-gray-700"

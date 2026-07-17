@@ -11,6 +11,7 @@ import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 import UsersIcon from "@/app/assets/icons/UsersIcon";
 import CategoryIcon from "@/app/assets/icons/CategoryIcon";
 import FactoryIcon from "@/app/assets/icons/FactoryIcon";
+import CheckSquareIcon from "@/app/assets/icons/CheckSquareIcon";
 import logo from "../app/assets/logo-white.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
@@ -22,10 +23,12 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
   agente: [
     { href: "/", label: "Inicio", icon: <HomeIcon/> },
     { href: "/tickets", label: "Tickets asignados", icon: <TicketIcon/> },
+    { href: "/tareas", label: "Tareas", icon: <CheckSquareIcon/> },
   ],
   administrador: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
     { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
+    { href: "/tareas", label: "Tareas", icon: <CheckSquareIcon/> },
     { href: "/admin/bandeja", label: "Bandeja abiertos", icon: <InboxIcon/> },
     {
       href: "/admin/empresas",

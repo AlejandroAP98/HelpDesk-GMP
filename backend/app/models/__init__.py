@@ -13,6 +13,7 @@ from app.models.comentario import Comentario
 from app.models.adjunto import Adjunto
 from app.models.historial_estado import HistorialEstado
 from app.models.push_subscription import PushSubscription
+from app.models.tarea_pendiente import TareaPendiente
 
 __all__ = [
     "EstadoTicket",
@@ -28,4 +29,5 @@ __all__ = [
     "Adjunto",
     "HistorialEstado",
     "PushSubscription",
+    "TareaPendiente",
 ]

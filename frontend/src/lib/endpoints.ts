@@ -311,6 +311,35 @@ export interface PushSubscribeInput {
   user_agent: string | null;
 }
 
+export interface TareaPendiente {
+  id: string;
+  usuario_id: string;
+  texto: string;
+  completada: boolean;
+  ticket_id: string | null;
+  ticket_titulo: string | null;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+}
+
+export const tareaApi = {
+  listar: async (params: Record<string, unknown> = {}) => {
+    const r = await api.get("/api/tareas", { params });
+    return r.data as Pagina<TareaPendiente>;
+  },
+  crear: async (data: { texto: string; ticket_id?: string | null }) => {
+    const r = await api.post("/api/tareas", data);
+    return r.data as TareaPendiente;
+  },
+  actualizar: async (id: string, data: { texto?: string; completada?: boolean }) => {
+    const r = await api.patch(`/api/tareas/${id}`, data);
+    return r.data as TareaPendiente;
+  },
+  eliminar: async (id: string) => {
+    await api.delete(`/api/tareas/${id}`);
+  },
+};
+
 export const pushApi = {
   getVapidKey: async () => {
     const r = await api.get("/api/push/vapid-public-key");
