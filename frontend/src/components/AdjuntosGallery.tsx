@@ -123,6 +123,8 @@ function LightboxImage({ url, alt }: { url: string; alt: string }) {
       <img
         src={blobUrl}
         alt={alt}
+        loading="lazy"
+        
         className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
       />
     );
@@ -316,7 +318,7 @@ export function AdjuntosGallery({
         >
           <button
             onClick={cerrarLightbox}
-            className="absolute top-8 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="absolute top-16 sm:top-8 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
             title="Cerrar (Esc)"
           >
             <svg
@@ -388,7 +390,7 @@ export function AdjuntosGallery({
           )}
 
           <div
-            className="max-w-[90vw] max-h-[85vh] flex flex-col items-center"
+            className="max-w-[90vw] max-h-[90vh] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
             <LightboxImage

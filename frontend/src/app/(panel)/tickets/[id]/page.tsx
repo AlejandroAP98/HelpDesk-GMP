@@ -534,7 +534,7 @@ export default function TicketDetallePage() {
 
           <section className="space-y-4">
             <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
-            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-4">
+            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               <AdjuntosGallery
                 ticketId={ticketId}
                 adjuntos={adjuntos}
