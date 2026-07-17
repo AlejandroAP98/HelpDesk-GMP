@@ -42,6 +42,29 @@ docker compose exec frontend npm run build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d --build
 ```
 
+### Backup y Restore
+
+```bash
+# Backup completo (PostgreSQL + MinIO + Redis + .env)
+./scripts/backup.sh
+
+# Restaurar backup
+./scripts/backup.sh --restore YYYYMMDD_HHMMSS
+
+# Cron de backup diario a las 3am:
+# 0 3 * * * /opt/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+```
+
+### Systemd (auto-restart en boot)
+
+```bash
+sudo cp deploy/helpdesk.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable helpdesk.service
+sudo systemctl start helpdesk.service
+sudo systemctl status helpdesk.service
+```
+
 ## Convenciones
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy async (asyncpg), Pydantic v2.
@@ -290,3 +313,32 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy aut
   `fetch()` con Bearer, convierte a Blob y muestra via `URL.createObjectURL`.
   Cache en memoria evita re-fetch al navegar thumbnails/lightbox.
 - Proximas fases: 16 (WARP client para SSH al server).
+
+Fase 16 completada: Notificacion de cambio de estado para clientes.
+- Backend `services/ticket_service.py`: nueva funcion `_publicar_cambio_estado()`
+  que emite evento `ticket:state_changed` con `estado_anterior` y `estado_nuevo`.
+  Se llama en `cambiar_estado()` y `reabrir()` ademas del `ticket:updated`
+  existente.
+- Frontend `store/urgentStore.ts`: `AlertKind` incluye `"state_changed"`.
+  `UrgentAlert` tiene campos opcionales `estado_anterior` y `estado_nuevo`.
+- Frontend `store/wsTicketStore.ts`: nueva interfaz `TicketStateChangedEvent`
+  con `estado_anterior`, `estado_nuevo`. Handler `onTicketStateChanged`.
+- Frontend `components/UrgentToasts.tsx`: tarjeta verde para `state_changed`
+  con icono de reciclaje, muestra `estado_anterior → estado_nuevo`, clickeable
+  al ticket. Beep a 770Hz (intermedio entre asignacion 660Hz y urgente 880Hz).
+- Frontend `app/providers.tsx`: handler `ticket:state_changed` que muestra toast
+  y `Notification` del browser cuando `cliente_id === usuario.id` (solo al dueño
+  del ticket).
+- Verificado: `ruff check` limpio, `tsc --noEmit` pasa, `eslint` sin warnings
+  nuevos.
+
+Fase 17 completada: Backup automatizado + systemd auto-restart.
+- `scripts/backup.sh`: backup completo de PostgreSQL (pg_dump), MinIO (tar)
+  y Redis (BGSAVE + dump.rdb). Soporta `--restore YYYYMMDD_HHMMSS`.
+  Limpieza automatica de backups mayores a 7 dias. Verifica espacio en disco.
+  Manifest JSON con metadata del backup.
+- `deploy/helpdesk.service`: unit systemd tipo `oneshot` con
+  `RemainAfterExit=yes`. `ExecStart` levanta el stack prod,
+  `ExecStop` lo detiene. `WantedBy=multi-user.target` para auto-restart
+  en boot. `StartLimitBurst=3` con `StartLimitIntervalSec=300`.
+- `AGENTS.md`: documentados comandos de backup, restore y systemd.
