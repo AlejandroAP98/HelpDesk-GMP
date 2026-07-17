@@ -23,12 +23,12 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
   agente: [
     { href: "/", label: "Inicio", icon: <HomeIcon/> },
     { href: "/tickets", label: "Tickets asignados", icon: <TicketIcon/> },
-    { href: "/tareas", label: "Tareas", icon: <CheckSquareIcon/> },
+    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
   ],
   administrador: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
     { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
-    { href: "/tareas", label: "Tareas", icon: <CheckSquareIcon/> },
+    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
     { href: "/admin/bandeja", label: "Bandeja abiertos", icon: <InboxIcon/> },
     {
       href: "/admin/empresas",

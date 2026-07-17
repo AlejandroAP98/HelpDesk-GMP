@@ -116,7 +116,7 @@ export default function TareasPage() {
             className="w-full resize-none p-2 min-h-20 max-h-64 text-sm text-gray-900 bg-gray-50/80 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brandCustom/20 focus:border-brandCustom/40 transition-all placeholder:text-gray-400"
             autoFocus
           />
-          <div className="flex flex-col sm:flex-row items-center mt-3 sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row items-start sm:items-center justify-start mt-3 sm:justify-between">
             <select
               value={ticketId}
               onChange={(e) => setTicketId(e.target.value)}
