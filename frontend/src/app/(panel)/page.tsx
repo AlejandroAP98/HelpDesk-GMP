@@ -252,7 +252,7 @@ export default function PanelHomePage() {
         )
         : (
           <div className="bg-cardCustom rounded-2xl min-h-[50vh]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6 p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6">
             {recientes.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
