@@ -7,7 +7,7 @@ import argparse
 import asyncio
 import sys
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from app.core.database import AsyncSessionLocal
 from app.models.empresa import Empresa
@@ -15,6 +15,7 @@ from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
 from app.models.categoria import Categoria
 from app.models.subcategoria import Subcategoria
+from app.models.matriz_prioridad import MatrizPrioridad
 from app.core.security import hash_password
 
 
@@ -194,6 +195,53 @@ async def run(reset: bool = False) -> None:
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
         await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
         await db.commit()
+
+        await _seed_matriz_prioridad(db)
+
+
+MATRIZ_DEMO: list[dict] = []
+
+
+def _build_matriz_demo() -> None:
+    if MATRIZ_DEMO:
+        return
+    _m = MATRIZ_DEMO.append
+    _m(("Soporte", "Caída total del servicio", {"torre": "urgente", "celda": "urgente", "mastil": "alta", "punto_venta": "alta"}))
+    _m(("Soporte", "Lentitud o intermitencia", {"torre": "alta", "celda": "alta", "mastil": "media", "punto_venta": "media"}))
+    _m(("Instalación", "Instalación o Cambio de Hardware", {"torre": "media", "mastil": "media", "punto_venta": "baja"}))
+    _m(("Instalación", "Cableado estructurado", {"punto_venta": "baja"}))
+    _m(("Instalación", "Configuración de equipos nuevos", {"torre": "media", "mastil": "media", "punto_venta": "baja"}))
+    _m(("Mantenimiento", "Actualización de Software", {"torre": "media", "celda": "media", "mastil": "baja", "punto_venta": "baja"}))
+    _m(("Mantenimiento", "Limpieza y Respaldo", {"torre": "baja", "celda": "baja", "mastil": "baja", "punto_venta": "baja"}))
+
+
+async def _seed_matriz_prioridad(db) -> None:
+    _build_matriz_demo()
+    existing = (await db.execute(select(func.count(MatrizPrioridad.id)))).scalar_one()
+    if existing > 0:
+        print(f"Matriz de prioridad ya tiene {existing} entradas, saltando seed")
+        return
+    cats = {c.nombre: c.id for c in (await db.execute(select(Categoria))).scalars().all()}
+    subs = {}
+    for s in (await db.execute(select(Subcategoria))).scalars().all():
+        subs.setdefault(s.categoria_id, {})[s.nombre] = s.id
+    count = 0
+    for cat_nombre, sub_nombre, mapa in MATRIZ_DEMO:
+        cat_id = cats.get(cat_nombre)
+        sub_id = subs.get(cat_id, {}).get(sub_nombre) if cat_id else None
+        if cat_id is None or sub_id is None:
+            print(f"  Saltando matriz: {cat_nombre} -> {sub_nombre} (no encontrada)")
+            continue
+        for elem, pri in mapa.items():
+            db.add(MatrizPrioridad(
+                categoria_id=cat_id,
+                subcategoria_id=sub_id,
+                elemento=elem,
+                prioridad=pri,
+            ))
+            count += 1
+    await db.commit()
+    print(f"Matriz de prioridad sembrada: {count} entradas")
 
 
 def main() -> None:

@@ -130,7 +130,7 @@ export default function PanelHomePage() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center">
+      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fadeIn">
         <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
         {
@@ -143,7 +143,7 @@ export default function PanelHomePage() {
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </div>
 
-      <section className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-900">Tickets recientes</h2>
           <Link href="/tickets" className="text-sm font-medium text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">

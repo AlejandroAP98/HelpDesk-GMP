@@ -11,6 +11,7 @@ interface TareaCardProps {
   onToggle: (id: string, completada: boolean) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, data: Partial<TareaPendiente>) => void;
+  style?: React.CSSProperties;
 }
 
 const SWIPE_DISTANCE = 170;
@@ -35,7 +36,7 @@ function tiempoRelativo(fecha: string): string {
   return `${semanas}sem`;
 }
 
-export default function TareaCard({ tarea, onToggle, onDelete, onUpdate }: TareaCardProps) {
+export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }: TareaCardProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -263,14 +264,13 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate }: Tarea
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      style={{ touchAction: "pan-y" }}
-      className={`relative rounded-xl border select-none ${
+      style={{ touchAction: "pan-y", ...style }}
+      className={`relative rounded-xl border select-none opacity-0 animate-fadeIn ${
         tarea.completada
           ? "bg-gray-50/60 border-gray-200/60"
           : "bg-white border-gray-200/80"
       } ${editing ? "" : "hover:border-brandCustom/25 hover:shadow-card-hover"}`}
     >
-      {/* Reveal: complete / uncomplete (right swipe) */}
       <div
         className="absolute inset-0 rounded-xl flex items-center justify-start pl-5 pointer-events-none overflow-hidden transition-colors duration-150"
         style={{
@@ -309,7 +309,6 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate }: Tarea
         </div>
       </div>
 
-      {/* Reveal: delete (left swipe) */}
       <div
         className="absolute inset-0 rounded-xl flex items-center justify-end pr-5 pointer-events-none overflow-hidden transition-colors duration-150"
         style={{
@@ -345,8 +344,6 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate }: Tarea
           </div>
         </div>
       </div>
-
-      {/* Foreground card content (the moving layer) */}
       <div
         ref={innerRef}
         className={`relative rounded-xl ${

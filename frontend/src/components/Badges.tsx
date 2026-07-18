@@ -29,10 +29,10 @@ export function EstadoBadge({ estado }: { estado: string }) {
   );
 }
 
-export function PrioridadBadge({ prioridad }: { prioridad: string }) {
+export function PrioridadBadge({ prioridad, estado= "" }: { prioridad: string, estado?: string  }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-lg sm:px-2.5 uppercase px-1 py-1 sm:text-[11px] text-[9px] font-semibold  ${prioridadStyles[prioridad] ?? ""}`}>
-      {prioridad === "urgente" && (
+      {prioridad === "urgente" && estado !== "cerrado" &&  (
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-redCustom animate-pulse" />
       )}
       {prioridadLabels[prioridad] ?? prioridad}

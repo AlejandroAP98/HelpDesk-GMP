@@ -17,19 +17,19 @@ import logo from "../app/assets/logo-white.svg";
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
   cliente: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
-    { href: "/tickets", label: "Mis tickets", icon: <TicketIcon/> },
-    { href: "/tickets/nuevo", label: "Crear ticket", icon: <NewTicketIcon/> },
+    { href: "/tickets", label: "Mis Tickets", icon: <TicketIcon/> },
+    { href: "/tickets/nuevo", label: "Crear Ticket", icon: <NewTicketIcon/> },
   ],
   agente: [
     { href: "/", label: "Inicio", icon: <HomeIcon/> },
-    { href: "/tickets", label: "Tickets asignados", icon: <TicketIcon/> },
+    { href: "/tickets", label: "Tickets Asignados", icon: <TicketIcon/> },
     { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
   ],
   administrador: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
+    { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon/> },
     { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
     { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
-    { href: "/admin/bandeja", label: "Bandeja abiertos", icon: <InboxIcon/> },
     {
       href: "/admin/empresas",
       label: "Empresas",

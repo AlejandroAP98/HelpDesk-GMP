@@ -1,7 +1,7 @@
 
 export function LoadingState() {
   return (
-    <div className="flex justify-center items-center  w-full h-[calc(90vh-250px)] top-16">
+    <div className="flex justify-center items-center  w-full h-[calc(90vh-200px)] top-16">
     <svg 
       xmlns="http://www.w3.org/2000/svg" 
       viewBox="-20 -20 120 160" 

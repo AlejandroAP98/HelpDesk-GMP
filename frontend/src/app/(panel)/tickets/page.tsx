@@ -6,7 +6,6 @@ import { ticketApi, type Ticket, type EstadoTicket, type PrioridadTicket, type V
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
 import { EstadoBadge, PrioridadBadge, TotalBadge } from "@/components/Badges";
-import { DataTable } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -196,7 +195,7 @@ export default function TicketsListPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm text-gray-500 flex flex-col gap-2">
           <h1 className="sm:text-2xl text-xl font-bold tracking-tight text-gray-900">Tickets</h1>
@@ -252,38 +251,64 @@ export default function TicketsListPage() {
       ) : tickets.length === 0 ? (
         <EmptyState message="No hay tickets para estos filtros." />
       ) : (
-        <DataTable
-          columns={[
-            {
-              key: "titulo",
-              header: "Titulo",
-              cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-gray-800 hover:text-brandCustom transition-colors lowercase">
-                  {t.titulo.substring(0, 20) + "..."}
-                </Link>
-              ),
-            },
-            {
-              key: "estado",
-              header: "Estado",
-              cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
-            },
-            {
-              key: "prioridad",
-              header: "Prioridad",
-              cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
-            },
-            {
-              key: "creado",
-              header: "Creado",
-              cell: (t: Ticket) => (
-                <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota",  day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
-              ),
-            },
-          ]}
-          data={tickets}
-          keyExtractor={(t: Ticket) => t.id}
-        />
+        <div className="bg-cardCustom rounded-2xl min-h-[70vh]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6 p-4">
+            {tickets.map((t: Ticket, index: number) => (
+              <div
+                key={t.id}
+                className={`group relative bg-white border border-grayCustom/30 
+                  rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
+                  animate-fadeIn opacity-0`}
+                style={{
+                  animationDelay: `${index * 40}ms`,
+                  animationFillMode: "forwards",
+                }}
+              >
+                <div className="flex items-center justify-between gap-2 bg-brandCustom p-2 rounded-t-xl">
+                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
+                    {t.empresa_nombre}
+                  </span>
+                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
+                    {t.elemento_afectado.replace("_", " ")}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2 px-4 pt-2">
+                  <Link
+                    href={`/tickets/${t.id}`}
+                    title={`Ver ticket: ${t.titulo}`} 
+                    className="font-medium text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm sm:text-base after:absolute after:inset-0"
+                  >
+                    {t.titulo}
+                  </Link>
+                  <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">#{t.id.split("-")[0]}</span>
+                </div>
+                <div className="flex flex-col text-start h-full w-full">
+                  <span className="px-4 text-gray-500 transition-colors line-clamp-2 text-xs">
+                    {t.descripcion}
+                  </span>
+                </div>
+                <div className="bg-grayCustom/5 px-2 py-2 border-t border-grayCustom/10 rounded-b-xl flex items-center justify-between gap-2 text-gray-400 sm:text-xs text-[10px]">
+                  <div className="flex items-center gap-2">
+                    <EstadoBadge estado={t.estado}/>
+                    <PrioridadBadge prioridad={t.prioridad} estado={t.estado}/>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-[10px]">
+                      {new Date(t.fecha_creacion).toLocaleString(undefined, {
+                        timeZone: "America/Bogota",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <Pagination

@@ -21,7 +21,7 @@ class Pagina(BaseModel, Generic[T]):
 
 class PaginacionParams(BaseModel):
     page: int = 1
-    size: int = 20
+    size: int = 15
 
     @property
     def offset(self) -> int:
@@ -32,9 +32,9 @@ class PaginacionParams(BaseModel):
         return self.size
 
 
-def paginacion(page: int = 1, size: int = 20) -> PaginacionParams:
+def paginacion(page: int = 1, size: int = 15) -> PaginacionParams:
     if page < 1:
         page = 1
-    if size < 1 or size > 100:
-        size = 20
+    if size < 1 or size > 90:
+        size = 15
     return PaginacionParams(page=page, size=size)

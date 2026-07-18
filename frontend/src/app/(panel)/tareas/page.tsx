@@ -25,6 +25,7 @@ export default function TareasPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [creando, setCreando] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   const cargarTareas = useCallback(async () => {
     setCargando(true);
@@ -47,6 +48,13 @@ export default function TareasPage() {
   useEffect(() => {
     cargarTareas();
   }, [cargarTareas]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (showForm) {
@@ -179,14 +187,26 @@ export default function TareasPage() {
           }
         />
       ) : (
-        <div className="space-y-2">
-          {tareas.map((tarea) => (
+        <div className="bg-cardCustom p-4 mt-2 rounded-2xl shadow-sm flex flex-col gap-2 min-h-[70vh]">
+          <div
+            className={`flex w-full justify-center items-center gap-1 text-gray-400 animate-pulse transition-all duration-700 ease-out ${
+              isVisible
+                ? 'opacity-100 max-h-12'
+                : 'opacity-0 max-h-0 overflow-hidden pointer-events-none m-0 p-0'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-move-left" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M13 12H3m3 3-3-3 3-3m11 3a2 2 0 1 1 4 0 2 2 0 0 1-4 0"/></svg>
+            <span className="text-gray-400 text-[10px] w-full flex justify-center">Puedes deslizar para editar, eliminar o marcar como completada</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-arrow-move-right" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M11 12h10m-3-3 3 3-3 3M7 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0"/></svg>
+          </div>
+          {tareas.map((tarea: TareaPendiente, index: number) => (
             <TareaCard
               key={tarea.id}
               tarea={tarea}
               onToggle={handleToggle}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
+              style={{ animationDelay: `${index * 40}ms`, animationFillMode: "forwards" }}
             />
           ))}
         </div>

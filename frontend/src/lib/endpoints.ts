@@ -89,6 +89,20 @@ export interface Subcategoria {
   descripcion: string | null;
 }
 
+export interface MatrizPrioridadEntry {
+  id: number;
+  categoria_id: number;
+  subcategoria_id: number;
+  elemento: ElementoInfraestructura;
+  prioridad: PrioridadTicket;
+}
+
+export interface MatrizPrioridadBulkItem {
+  subcategoria_id: number;
+  elemento: ElementoInfraestructura;
+  prioridad: PrioridadTicket;
+}
+
 export interface Stats {
   total: number;
   abiertos: number;
@@ -226,6 +240,17 @@ export const subcategoriaApi = {
   eliminar: async (id: number) => {
     const r = await api.delete(`/api/subcategorias/${id}`);
     return r.data;
+  },
+};
+
+export const matrizPrioridadApi = {
+  listarPorCategoria: async (categoriaId: number) => {
+    const r = await api.get(`/api/matriz-prioridad/por-categoria/${categoriaId}`);
+    return r.data as MatrizPrioridadEntry[];
+  },
+  sincronizarCategoria: async (categoriaId: number, items: MatrizPrioridadBulkItem[]) => {
+    const r = await api.put(`/api/matriz-prioridad/categoria/${categoriaId}`, { items });
+    return r.data as MatrizPrioridadEntry[];
   },
 };
 

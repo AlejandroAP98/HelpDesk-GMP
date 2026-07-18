@@ -14,6 +14,7 @@ from app.routers import categorias as categorias_router
 from app.routers import comentarios as comentarios_router
 from app.routers import empresas as empresas_router
 from app.routers import push as push_router
+from app.routers import matriz_prioridad as matriz_prioridad_router
 from app.routers import stats as stats_router
 from app.routers import subcategorias as subcategorias_router
 from app.routers import tarea_pendiente as tarea_pendiente_router
@@ -96,6 +97,7 @@ app.include_router(adjuntos_router.router)
 app.include_router(stats_router.router)
 app.include_router(tarea_pendiente_router.router)
 app.include_router(push_router.router)
+app.include_router(matriz_prioridad_router.router)
 app.include_router(ws_router.router)
 
 
