@@ -158,35 +158,35 @@ export default function PanelHomePage() {
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </div>
 
-      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-6">
+      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900">Tickets recientes</h2>
-          <div className="flex items-center gap-2">
+          <h2 className="text-base font-semibold text-gray-900">Tickets Recientes</h2>
+          <div className="flex items-center sm:gap-2 gap-1">
             <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
-            <button
-              onClick={() => cambiarModo("cards")}
-              title="Vista tarjetas"
-              className={`p-1.5 rounded-md transition-all ${
-                viewMode === "cards"
-                  ? "bg-brandCustom text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
-            </button>
-            <button
-              onClick={() => cambiarModo("table")}
-              title="Vista tabla"
-              className={`p-1.5 rounded-md transition-all ${
-                viewMode === "table"
-                  ? "bg-brandCustom text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-            </button>
+              <button
+                onClick={() => cambiarModo("cards")}
+                title="Vista tarjetas"
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "cards"
+                    ? "bg-brandCustom text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
+              </button>
+              <button
+                onClick={() => cambiarModo("table")}
+                title="Vista tabla"
+                className={`p-1.5 rounded-md transition-all ${
+                  viewMode === "table"
+                    ? "bg-brandCustom text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </button>
             </div>
-            <Link href="/tickets" className="text-sm font-medium text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">
+            <Link href="/tickets" className="text-xs text-nowrap sm:text-sm font-medium text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">
               Ver todos
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-chevron-right" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m9 6 6 6-6 6"/></svg>
             </Link>
