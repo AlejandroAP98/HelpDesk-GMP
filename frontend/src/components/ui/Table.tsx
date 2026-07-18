@@ -41,14 +41,18 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {data.map((row) => {
+          {data.map((row, i:number) => {
             const baseRowClass = rowClassName ? rowClassName(row) : "";
             const clickClass = onRowClick ? "cursor-pointer" : "";
 
             return (
               <tr
                 key={keyExtractor(row)}
-                className={`hover:bg-gray-100/50 transition-colors ${baseRowClass} ${clickClass}`}
+                className={`hover:bg-gray-100/50 animate-fadeIn opacity-0 transition-colors ${baseRowClass} ${clickClass}`}
+                style={{
+                  animationDelay: `${(i+1)* 20}ms`,
+                  animationFillMode: "forwards",
+                }}
                 onClick={() => {
                   if (onRowClick) {
                     const href = onRowClick(row);

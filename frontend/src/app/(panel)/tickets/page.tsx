@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { DataTable } from "@/components/ui/Table";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 
 
@@ -52,6 +53,14 @@ const ESTADOS_POR_VISTA: Record<VistaTicket, { value: string; label: string }[]>
   todos: ESTADOS,
 };
 
+type VistaMode = "cards" | "table";
+const VISTA_STORAGE_KEY = "tickets:viewMode";
+
+function getInitialVistaMode(): VistaMode {
+  if (typeof window === "undefined") return "cards";
+  return window.localStorage.getItem(VISTA_STORAGE_KEY) === "table" ? "table" : "cards";
+}
+
 export default function TicketsListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
@@ -61,6 +70,7 @@ export default function TicketsListPage() {
   const [prioridad, setPrioridad] = useState("todas");
   const [vista, setVista] = useState<VistaTicket>("activos");
   const [cargando, setCargando] = useState(true);
+  const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
 
   const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
@@ -194,6 +204,13 @@ export default function TicketsListPage() {
     setPage(1);
   };
 
+  const cambiarModo = (modo: VistaMode) => {
+    setViewMode(modo);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(VISTA_STORAGE_KEY, modo);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-4">
@@ -244,19 +261,111 @@ export default function TicketsListPage() {
             onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
             options={PRIORIDADES}
           />
+          <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
+            <button
+              onClick={() => cambiarModo("cards")}
+              title="Vista tarjetas"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "cards"
+                  ? "bg-brandCustom text-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
+            </button>
+            <button
+              onClick={() => cambiarModo("table")}
+              title="Vista tabla"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "table"
+                  ? "bg-brandCustom text-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+          </div>
         </div>
       </div>
       {cargando ? (
         <LoadingState />
       ) : tickets.length === 0 ? (
         <EmptyState message="No hay tickets para estos filtros." />
+      ) : viewMode === "table" ? (
+        <DataTable
+          columns={[
+            {
+              key: "ticket_number",
+              header: "# Ticket",
+              cell: (t: Ticket) => (
+                <Link
+                href={`/tickets/${t.id}`}
+                title={`Ver ticket: ${t.titulo}`}
+                className="font-medium text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
+                >
+                  #{t.id.split('-')[0].toUpperCase()}
+                </Link>
+              ),
+            },
+            {
+              key: "titulo",
+              header: "Titulo",
+              cell: (t: Ticket) => (
+                <Link
+                href={`/tickets/${t.id}`}
+                title={`Ver ticket: ${t.titulo}`}
+                className="font-medium text-gray-800 hover:text-brandCustom transition-colors lowercase"
+                >
+                  {t.titulo.length > 20 ? `${t.titulo.substring(0, 20)}...` : t.titulo}
+                </Link>
+              ),
+            },
+            {
+              key: "empresa_nombre",
+              header: "Empresa",
+              cell: (t: Ticket) => (
+                <span className="text-gray-500 sm:text-xs text-[10px]">
+                  {t.empresa_nombre}
+                </span>
+              ),
+            },
+            {
+              key: "estado",
+              header: "Estado",
+              cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
+            },
+            {
+              key: "prioridad",
+              header: "Prioridad",
+              cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} estado={t.estado} />,
+            },
+            {
+              key: "creado",
+              header: "Creado",
+              cell: (t: Ticket) => (
+                <span className="text-gray-400 sm:text-xs text-[10px]">
+                  {new Date(t.fecha_creacion).toLocaleString(undefined, {
+                    timeZone: "America/Bogota",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              ),
+            },
+          ]}
+          data={tickets}
+          keyExtractor={(t: Ticket) => t.id}
+        />
       ) : (
         <div className="bg-cardCustom rounded-2xl min-h-[70vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6 p-4">
             {tickets.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
-                className={`group relative bg-white border border-grayCustom/30 
+                className={`group relative bg-white border border-grayCustom/30
                   rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
                   animate-fadeIn opacity-0`}
                 style={{
@@ -275,7 +384,7 @@ export default function TicketsListPage() {
                 <div className="flex items-start justify-between gap-2 px-4 pt-2">
                   <Link
                     href={`/tickets/${t.id}`}
-                    title={`Ver ticket: ${t.titulo}`} 
+                    title={`Ver ticket: ${t.titulo}`}
                     className="font-medium text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm sm:text-base after:absolute after:inset-0"
                   >
                     {t.titulo}

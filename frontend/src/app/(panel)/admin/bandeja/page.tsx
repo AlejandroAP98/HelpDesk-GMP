@@ -164,6 +164,15 @@ export default function BandejaPage() {
           rowClassName={(t: Ticket) => t.prioridad === "urgente" ? "bg-red-50/30" : ""}
           columns={[
             {
+              key: "ticket_number",
+              header: "# Ticket",
+              cell: (t: Ticket) => (
+                <span className="text-gray-500 sm:text-xs text-[10px]">
+                  #{t.id.split('-')[0].toUpperCase()}
+                </span>
+              ),
+            },
+            {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
