@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +95,7 @@ async def listar_historial(
 def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
     return {
         "type": event_type,
+        "event_id": str(uuid4()),
         "ticket_id": str(ticket.id),
         "empresa_id": ticket.empresa_id,
         "titulo": ticket.titulo,

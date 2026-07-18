@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -23,6 +23,27 @@ from app.models.push_subscription import PushSubscription
 logger = logging.getLogger(__name__)
 
 _VAPID_KEY_CACHE: str | None = None
+
+MAX_SUBS_USUARIO = 5
+PURGA_DIAS_SIN_USO = 30
+
+
+def _select_subs_to_prune(subs: list[PushSubscription]) -> list[PushSubscription]:
+    """Elige suscripciones a purgar: mas de MAX_SUBS_USUARIO o viejas sin uso."""
+    to_delete: list[PushSubscription] = []
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=PURGA_DIAS_SIN_USO)
+    for s in subs:
+        if s.ultimo_envio_at is None and s.fecha_creacion < cutoff:
+            to_delete.append(s)
+    restantes = [s for s in subs if s not in to_delete]
+    if len(restantes) > MAX_SUBS_USUARIO:
+        restantes.sort(
+            key=lambda s: s.ultimo_envio_at or s.fecha_creacion,
+            reverse=True,
+        )
+        to_delete.extend(restantes[MAX_SUBS_USUARIO:])
+        restantes = restantes[:MAX_SUBS_USUARIO]
+    return to_delete
 
 
 def _get_vapid_key() -> str | None:
@@ -108,6 +129,19 @@ async def send_push_to_user(
     subs = await get_user_subscriptions(user_id, db)
     if not subs:
         return 0
+
+    to_prune = _select_subs_to_prune(subs)
+    if to_prune:
+        for s in to_prune:
+            await db.delete(s)
+            subs.remove(s)
+        if not subs:
+            try:
+                await db.commit()
+            except Exception:
+                await db.rollback()
+            return 0
+        logger.info("Purgadas %d suscripciones duplicadas/viejas para %s", len(to_prune), user_id)
 
     if not _is_vapid_configured():
         return 0

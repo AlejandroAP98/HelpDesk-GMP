@@ -141,6 +141,16 @@ async def pubsub_listener() -> None:
             elif target == "broadcast":
                 await manager.broadcast_all(event)
             try:
+                event_id = event.get("event_id")
+                if event_id:
+                    acquired = await redis_client.set(
+                        f"helpdesk:push_dispatched:{event_id}",
+                        "1",
+                        nx=True,
+                        ex=60,
+                    )
+                    if not acquired:
+                        continue
                 connected = manager.get_connected_user_ids()
                 await _dispatch_push(event, connected)
             except Exception:

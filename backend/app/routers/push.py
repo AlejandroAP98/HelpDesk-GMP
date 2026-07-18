@@ -18,7 +18,7 @@ from app.schemas.push import (
     PushUnsubscribeIn,
     PushVapidKeyOut,
 )
-from app.services.push_service import send_push_to_user
+from app.services.push_service import MAX_SUBS_USUARIO, send_push_to_user
 
 router = APIRouter(prefix="/api/push", tags=["push"])
 
@@ -72,6 +72,21 @@ async def subscribe(
                 PushSubscription.endpoint != data.endpoint,
             )
         )
+
+    existing_count = (
+        await db.execute(
+            select(PushSubscription).where(
+                PushSubscription.usuario_id == current.id
+            ).order_by(
+                PushSubscription.ultimo_envio_at.desc().nullslast(),
+                PushSubscription.fecha_creacion.desc(),
+            )
+        )
+    ).scalars().all()
+    if len(existing_count) >= MAX_SUBS_USUARIO:
+        for old in existing_count[MAX_SUBS_USUARIO - 1 :]:
+            if old.endpoint != data.endpoint:
+                await db.delete(old)
 
     existing = (
         await db.execute(

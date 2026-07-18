@@ -42,11 +42,13 @@ export async function subscribeToPush(): Promise<unknown | null> {
   if (existing) {
     try {
       await existing.unsubscribe();
-    } catch {
+    } catch (e) {
+      console.warn("[push] fallo unsubscribe local:", e);
     }
     try {
       await pushApi.unsubscribe(existing.endpoint);
-    } catch {
+    } catch (e) {
+      console.warn("[push] fallo unsubscribe backend (queda suscripcion vieja):", e);
     }
   }
   const newSub = await reg.pushManager.subscribe({
