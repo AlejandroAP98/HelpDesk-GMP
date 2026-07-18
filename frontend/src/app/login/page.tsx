@@ -50,6 +50,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Ingresa tu correo electrónico"
                 autoComplete="email"
+                autoFocus
               />
 
               <Input
@@ -60,6 +61,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="............"
                 autoComplete="current-password"
+
               />
             </div>
 
@@ -69,11 +71,6 @@ export default function LoginPage() {
               <Button type="submit" loading={loading} icon={<LoginIcon className="w-5 h-5" />} className="w-full py-3 flex items-center gap-2">
                 Ingresar al Panel
               </Button>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-3 text-center">
-              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Demo Access</p>
-              <p className="text-xs text-gray-500 font-mono">admin@helpdesk.com / Admin123456</p>
             </div>
           </Card>
         </form>
