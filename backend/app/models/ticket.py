@@ -1,4 +1,5 @@
 """Modelo Ticket: entidad central del helpdesk."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -17,9 +18,7 @@ if TYPE_CHECKING:
 class Ticket(Base):
     __tablename__ = "tickets"
 
-    id: Mapped[UUID] = mapped_column(
-        server_default=func.gen_random_uuid(), primary_key=True
-    )
+    id: Mapped[UUID] = mapped_column(server_default=func.gen_random_uuid(), primary_key=True)
     empresa_id: Mapped[int] = mapped_column(
         ForeignKey("empresas.id", ondelete="CASCADE"), nullable=False
     )
@@ -80,9 +79,13 @@ class Ticket(Base):
         server_default=func.current_timestamp(), nullable=False
     )
     fecha_actualizacion: Mapped[datetime] = mapped_column(
-        server_default=func.current_timestamp(), onupdate=func.current_timestamp(),
+        server_default=func.current_timestamp(),
+        onupdate=func.current_timestamp(),
         nullable=False,
     )
+    fecha_asignacion: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    fecha_primera_respuesta: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    fecha_resolucion: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
 
     __table_args__ = (
         Index("idx_tickets_empresa", "empresa_id"),

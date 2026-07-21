@@ -69,6 +69,9 @@ async def listar(
                 prioridad=t.prioridad,
                 fecha_creacion=t.fecha_creacion,
                 fecha_actualizacion=t.fecha_actualizacion,
+                fecha_asignacion=t.fecha_asignacion,
+                fecha_primera_respuesta=t.fecha_primera_respuesta,
+                fecha_resolucion=t.fecha_resolucion,
             )
             for t, emp_nombre in pagina.items
         ],

@@ -1,4 +1,5 @@
 """Schemas del dominio Ticket."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -69,6 +70,9 @@ class TicketOut(BaseModel):
     prioridad: PrioridadTicket
     fecha_creacion: DatetimeUTC
     fecha_actualizacion: DatetimeUTC
+    fecha_asignacion: DatetimeUTC | None = None
+    fecha_primera_respuesta: DatetimeUTC | None = None
+    fecha_resolucion: DatetimeUTC | None = None
 
 
 class TicketDetalle(TicketOut):

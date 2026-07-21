@@ -1,4 +1,5 @@
 """Servicio CRUD y maquina de estados de Tickets."""
+
 from __future__ import annotations
 
 from datetime import timezone
@@ -56,8 +57,11 @@ async def _registrar_historial(
 
 
 async def listar_historial(
-    ticket_id: UUID, current: Usuario, db: AsyncSession,
-    page: int = 1, size: int = 20,
+    ticket_id: UUID,
+    current: Usuario,
+    db: AsyncSession,
+    page: int = 1,
+    size: int = 20,
 ) -> Pagina[HistorialEstadoOut]:
     ticket = await obtener(ticket_id, current, db)
     p = paginacion(page, size)
@@ -71,11 +75,7 @@ async def listar_historial(
     )
     total = (await db.execute(count_base)).scalar_one()
     rows = (
-        await db.execute(
-            base.order_by(HistorialEstado.fecha.asc())
-            .offset(p.offset)
-            .limit(p.limit)
-        )
+        await db.execute(base.order_by(HistorialEstado.fecha.asc()).offset(p.offset).limit(p.limit))
     ).all()
     items = [
         HistorialEstadoOut(
@@ -138,7 +138,9 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
             ticket.empresa_id,
         )
     except Exception:
-        _logger.warning("No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True)
+        _logger.warning(
+            "No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True
+        )
 
 
 async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str) -> None:
@@ -196,7 +198,9 @@ async def _get_categoria(categoria_id: int, db: AsyncSession) -> Categoria:
     return cat
 
 
-async def _get_subcategoria(subcategoria_id: int, categoria_id: int, db: AsyncSession) -> Subcategoria:
+async def _get_subcategoria(
+    subcategoria_id: int, categoria_id: int, db: AsyncSession
+) -> Subcategoria:
     sub = (
         await db.execute(
             select(Subcategoria).where(
@@ -226,9 +230,7 @@ async def _get_agente(agente_id: UUID, db: AsyncSession) -> Usuario:
     return agente
 
 
-async def crear(
-    data: TicketCreate, current: Usuario, db: AsyncSession
-) -> Ticket:
+async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticket:
     """Cliente crea ticket; agente/admin pueden crear a nombre de cualquier empresa."""
     if current.rol == RolUsuario.cliente.value:
         if current.empresa_id is None:
@@ -332,9 +334,8 @@ async def listar(
     vista: VistaTicket | None = None,
 ) -> Pagina[tuple[Ticket, str | None]]:
     p = paginacion(page, size)
-    base = (
-        select(Ticket, Empresa.nombre.label("empresa_nombre"))
-        .outerjoin(Empresa, Ticket.empresa_id == Empresa.id)
+    base = select(Ticket, Empresa.nombre.label("empresa_nombre")).outerjoin(
+        Empresa, Ticket.empresa_id == Empresa.id
     )
     count_base = select(func.count(Ticket.id))
 
@@ -374,7 +375,7 @@ async def listar(
         (Ticket.prioridad == "alta", 2),
         (Ticket.prioridad == "media", 3),
         (Ticket.prioridad == "baja", 4),
-        else_=5
+        else_=5,
     )
 
     peso_estado = case(
@@ -383,17 +384,13 @@ async def listar(
         (Ticket.estado == "abierto", 3),
         (Ticket.estado == "resuelto", 4),
         (Ticket.estado == "cerrado", 5),
-        else_=6
+        else_=6,
     )
 
     total = (await db.execute(count_base)).scalar_one()
     rows = (
         await db.execute(
-            base.order_by(
-                peso_estado.asc(),
-                peso_prioridad.asc(),
-                Ticket.fecha_creacion.asc()
-            )
+            base.order_by(peso_estado.asc(), peso_prioridad.asc(), Ticket.fecha_creacion.asc())
             .offset(p.offset)
             .limit(p.limit)
         )
@@ -403,12 +400,8 @@ async def listar(
     return Pagina.of(items, total, p.page, p.size)
 
 
-async def obtener(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> Ticket:
-    ticket = (
-        await db.execute(select(Ticket).where(Ticket.id == ticket_id))
-    ).scalar_one_or_none()
+async def obtener(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket:
+    ticket = (await db.execute(select(Ticket).where(Ticket.id == ticket_id))).scalar_one_or_none()
     if ticket is None:
         raise RecursoNoEncontrado(f"Ticket {ticket_id} no existe")
     tf = tenant_filter(current)
@@ -417,9 +410,7 @@ async def obtener(
     return ticket
 
 
-async def obtener_detalle(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> TicketDetalle:
+async def obtener_detalle(ticket_id: UUID, current: Usuario, db: AsyncSession) -> TicketDetalle:
     ticket = await obtener(ticket_id, current, db)
     cliente_nombre: str | None = None
     agente_nombre: str | None = None
@@ -430,9 +421,7 @@ async def obtener_detalle(
     usuario_ids.discard(None)
     if usuario_ids:
         rows = (
-            await db.execute(
-                select(Usuario.id, Usuario.nombre).where(Usuario.id.in_(usuario_ids))
-            )
+            await db.execute(select(Usuario.id, Usuario.nombre).where(Usuario.id.in_(usuario_ids)))
         ).all()
         nombres = {uid: nombre for uid, nombre in rows}
         cliente_nombre = nombres.get(ticket.cliente_id)
@@ -445,9 +434,7 @@ async def obtener_detalle(
     ).scalar_one_or_none()
     subcategoria_nombre = sub
     emp = (
-        await db.execute(
-            select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
-        )
+        await db.execute(select(Empresa.nombre).where(Empresa.id == ticket.empresa_id))
     ).scalar_one_or_none()
     empresa_nombre = emp
     return TicketDetalle(
@@ -471,6 +458,9 @@ async def obtener_detalle(
         prioridad=ticket.prioridad,
         fecha_creacion=ticket.fecha_creacion,
         fecha_actualizacion=ticket.fecha_actualizacion,
+        fecha_asignacion=ticket.fecha_asignacion,
+        fecha_primera_respuesta=ticket.fecha_primera_respuesta,
+        fecha_resolucion=ticket.fecha_resolucion,
         cliente_nombre=cliente_nombre,
         agente_nombre=agente_nombre,
         modificado_por_nombre=modificado_por_nombre,
@@ -488,7 +478,17 @@ async def actualizar(
         raise PermisoDenegado("Solo el autor puede editar su ticket")
     if data.categoria_id is not None:
         await _get_categoria(data.categoria_id, db)
-    for field in ("titulo", "descripcion", "categoria_id", "prioridad", "ip_pcs", "ip_antena", "mascara_red", "puerta_enlace", "nombre_punto"):
+    for field in (
+        "titulo",
+        "descripcion",
+        "categoria_id",
+        "prioridad",
+        "ip_pcs",
+        "ip_antena",
+        "mascara_red",
+        "puerta_enlace",
+        "nombre_punto",
+    ):
         val = getattr(data, field)
         if val is not None:
             setattr(ticket, field, val)
@@ -512,11 +512,15 @@ async def asignar(
         raise Conflicto(f"Ticket en estado {ticket.estado.value} no es asignable")
     if agente.empresa_id is not None and agente.empresa_id != ticket.empresa_id:
         raise Conflicto("El agente pertenece a otra empresa")
-    
+
     ticket.agente_id = agente.id
     ticket.estado = EstadoTicket.asignado
     ticket.modificado_por_id = current.id
-    await _registrar_historial(ticket.id, current.id, EstadoTicket.abierto, EstadoTicket.asignado, db)
+    if ticket.fecha_asignacion is None:
+        ticket.fecha_asignacion = func.now()
+    await _registrar_historial(
+        ticket.id, current.id, EstadoTicket.abierto, EstadoTicket.asignado, db
+    )
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")
@@ -532,9 +536,7 @@ async def cambiar_estado(
     ticket = await obtener(ticket_id, current, db)
     nuevo = data.estado
     if not es_transicion_valida(ticket.estado, nuevo):
-        raise Conflicto(
-            f"Transicion invalida: {ticket.estado.value} -> {nuevo.value}"
-        )
+        raise Conflicto(f"Transicion invalida: {ticket.estado.value} -> {nuevo.value}")
 
     if nuevo == EstadoTicket.en_progreso:
         if current.rol == RolUsuario.cliente.value:
@@ -553,10 +555,7 @@ async def cambiar_estado(
             raise PermisoDenegado("Solo agentes/admins pueden resolver tickets")
         if ticket.agente_id is None:
             raise Conflicto("Ticket sin agente asignado")
-        if (
-            current.rol == RolUsuario.agente.value
-            and ticket.agente_id != current.id
-        ):
+        if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
             raise PermisoDenegado("Solo el agente asignado puede resolver el ticket")
 
     elif nuevo == EstadoTicket.cerrado:
@@ -572,6 +571,8 @@ async def cambiar_estado(
     estado_anterior = ticket.estado
     ticket.estado = nuevo
     ticket.modificado_por_id = current.id
+    if nuevo in (EstadoTicket.resuelto, EstadoTicket.cerrado) and ticket.fecha_resolucion is None:
+        ticket.fecha_resolucion = func.now()
     await _registrar_historial(ticket.id, current.id, estado_anterior, nuevo, db)
     await db.commit()
     await db.refresh(ticket)
@@ -605,8 +606,11 @@ async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
         raise Conflicto("Solo tickets cerrados pueden reabrirse")
     ticket.estado = EstadoTicket.abierto
     ticket.agente_id = None
+    ticket.fecha_resolucion = None
     ticket.modificado_por_id = current.id
-    await _registrar_historial(ticket.id, current.id, EstadoTicket.cerrado, EstadoTicket.abierto, db)
+    await _registrar_historial(
+        ticket.id, current.id, EstadoTicket.cerrado, EstadoTicket.abierto, db
+    )
     await db.commit()
     await db.refresh(ticket)
     await _publicar_evento_ticket(ticket, "ticket:updated")

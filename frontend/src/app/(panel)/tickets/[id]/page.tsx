@@ -33,6 +33,91 @@ const elementoLabels: Record<ElementoInfraestructura, string> = {
   punto_venta: "Punto de venta",
 };
 
+function formatDuration(ms: number): string {
+  const totalMin = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (remHours > 0) parts.push(`${remHours}h`);
+  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+  return parts.join(" ");
+}
+
+function parseTicketDate(d: string | null | undefined): Date | null {
+  if (!d) return null;
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+interface TimeLineItem {
+  label: string;
+  subtitle: string;
+  date: Date | null;
+  duration?: string;
+  color: string;
+  dotColor: string;
+  icon: React.ReactNode;
+}
+
+function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
+  const creacion = parseTicketDate(ticket.fecha_creacion);
+  const asignacion = parseTicketDate(ticket.fecha_asignacion);
+  const primeraResp = parseTicketDate(ticket.fecha_primera_respuesta);
+  const resolucion = parseTicketDate(ticket.fecha_resolucion);
+
+  const fmt = (d: Date) => d.toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  const items: TimeLineItem[] = [
+    {
+      label: "Ticket creado",
+      subtitle: creacion ? fmt(creacion) : "Pendiente",
+      date: creacion,
+      color: "bg-blue-500",
+      dotColor: "border-blue-500 text-blue-600 bg-blue-50",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-pencil-plus" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5 4 4M16 19h6m-3-3v6"/></svg>
+      ),
+    },
+    {
+      label: "Asignado a agente",
+      subtitle: asignacion ? fmt(asignacion) : "Sin asignar",
+      date: asignacion,
+      duration: creacion && asignacion ? formatDuration(asignacion.getTime() - creacion.getTime()) : undefined,
+      color: "bg-violet-500",
+      dotColor: asignacion ? "border-violet-500 text-violet-600 bg-violet-50" : "border-gray-300 text-gray-300 bg-gray-50",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+      ),
+    },
+    {
+      label: "Primera respuesta",
+      subtitle: primeraResp ? fmt(primeraResp) : "Sin respuesta",
+      date: primeraResp,
+      duration: creacion && primeraResp ? formatDuration(primeraResp.getTime() - creacion.getTime()) : undefined,
+      color: "bg-yellow-500",
+      dotColor: primeraResp ? "border-yellow-500 text-yellow-600 bg-yellow-50" : "border-gray-300 text-gray-300 bg-gray-50",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      ),
+    },
+    {
+      label: "Resuelto",
+      subtitle: resolucion ? fmt(resolucion) : "Sin resolver",
+      date: resolucion,
+      duration: creacion && resolucion ? formatDuration(resolucion.getTime() - creacion.getTime()) : undefined,
+      color: "bg-green-500",
+      dotColor: resolucion ? "border-green-500 text-green-600 bg-green-50" : "border-gray-300 text-gray-300 bg-gray-50",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      ),
+    },
+  ];
+  return items;
+}
+
 export default function TicketDetallePage() {
   const params = useParams();
   const router = useRouter();
@@ -535,7 +620,6 @@ export default function TicketDetallePage() {
           </section>
         </div>
         <div className="w-full lg:w-80 shrink-0 space-y-6">
-
           <section className="space-y-4">
             <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Adjuntos ({adjuntos.length})</h2>
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
@@ -558,6 +642,39 @@ export default function TicketDetallePage() {
             </div>
           </section>
           <section className="space-y-4">
+            <h2 className="text-sm sm:text-lg font-bold tracking-tight text-gray-900 mb-3">Tiempos</h2>
+            {(() => {
+              const timeline = getTicketTimeline(ticket);
+              const hasAnyDate = timeline.some((item) => item.date !== null);
+              if (!hasAnyDate) return null;
+              return (
+                <div className="relative border border-gray-100 shadow-card p-4 bg-cardCustom rounded-2xl">
+                  <div className="absolute left-[28px] top-[14px] bottom-[40px] w-0.5 bg-gray-200" />
+                  <div className="space-y-0">
+                    {timeline.map((item, idx) => (
+                      <div key={item.label} className="relative flex gap-3 opacity-0 animate-fadeIn" style={{ animationDelay: `${idx * 80}ms`, animationFillMode: "forwards" }}>
+                        <div className={`relative z-10 w-[28px] h-[28px] rounded-full border-2 flex items-center justify-center shrink-0 ${item.dotColor}`}>
+                          {item.icon}
+                        </div>
+                        <div className="flex-1 min-w-0 pb-2">
+                          <div className="flex items-center justify-between">
+                            <p className={`text-[11px] font-semibold ${item.date ? "text-gray-800" : "text-gray-400"}`}>{item.label}</p>
+                            {item.duration && (
+                              <span className="text-[10px] font-bold text-brandCustom bg-brandCustom/10 rounded-md px-1.5 py-0.5 shrink-0">
+                                {item.duration}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-[10px] mt-1 ${item.date ? "text-gray-500" : "text-gray-300"}`}>{item.subtitle}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+          <section className="space-y-4">
             <h2 className="text-md sm:text-lg font-bold tracking-tight text-gray-900">Historial de estados</h2>
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               {historial.length === 0 ? (
@@ -573,17 +690,17 @@ export default function TicketDetallePage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_anterior] ?? ""}`}>
+                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase border ${estadoStyles[h.estado_anterior] ?? ""}`}>
                               {h.estado_anterior.replace("_", " ")}
                             </span>
                             <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
-                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase border ${estadoStyles[h.estado_nuevo] ?? ""}`}>
+                            <span className={`inline-flex rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase border ${estadoStyles[h.estado_nuevo] ?? ""}`}>
                               {h.estado_nuevo.replace("_", " ")}
                             </span>
                           </div>
-                          <p className="text-[11px] text-gray-500 mt-1">
+                          <p className="text-[10px] text-gray-500 mt-1">
                             {h.usuario_nombre ?? "Usuario"} &middot; {new Date(h.fecha).toLocaleString(undefined, { timeZone: "America/Bogota" })}
                           </p>
                         </div>

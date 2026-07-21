@@ -12,6 +12,7 @@ import UsersIcon from "@/app/assets/icons/UsersIcon";
 import CategoryIcon from "@/app/assets/icons/CategoryIcon";
 import FactoryIcon from "@/app/assets/icons/FactoryIcon";
 import CheckSquareIcon from "@/app/assets/icons/CheckSquareIcon";
+import MetricsIcon from "@/app/assets/icons/MetricsIcon";
 import logo from "../app/assets/logo-white.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
@@ -47,6 +48,13 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
       label: "Categorías",
       icon: (
         <CategoryIcon/>
+      ),
+    },
+    {
+      href: "/metricas",
+      label: "Métricas",
+      icon: (
+        <MetricsIcon/>
       ),
     },
   ],

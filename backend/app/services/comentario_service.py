@@ -1,4 +1,5 @@
 """Servicio de comentarios: publicos y notas internas."""
+
 from __future__ import annotations
 
 from datetime import timezone
@@ -18,9 +19,7 @@ from app.utils.exceptions import Conflicto, PermisoDenegado
 from app.utils.pagination import Pagina, paginacion
 
 
-async def _resolve_ticket(
-    ticket_id: UUID, current: Usuario, db: AsyncSession
-) -> Ticket:
+async def _resolve_ticket(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket:
     return await ticket_service.obtener(ticket_id, current, db)
 
 
@@ -36,9 +35,7 @@ async def listar(
     p = paginacion(page, size)
 
     base = select(Comentario).where(Comentario.ticket_id == ticket_id)
-    count_base = select(func.count(Comentario.id)).where(
-        Comentario.ticket_id == ticket_id
-    )
+    count_base = select(func.count(Comentario.id)).where(Comentario.ticket_id == ticket_id)
 
     if current.rol == RolUsuario.cliente.value:
         base = base.where(Comentario.es_nota_interna == False)  # noqa: E712
@@ -46,12 +43,14 @@ async def listar(
 
     total = (await db.execute(count_base)).scalar_one()
     comentarios = (
-        await db.execute(
-            base.order_by(Comentario.fecha_creacion.asc())
-            .offset(p.offset)
-            .limit(p.limit)
+        (
+            await db.execute(
+                base.order_by(Comentario.fecha_creacion.asc()).offset(p.offset).limit(p.limit)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     out: list[ComentarioOut] = []
     for c in comentarios:
@@ -92,8 +91,14 @@ async def crear(
     await db.commit()
     await db.refresh(comentario)
 
+    if current.rol != RolUsuario.cliente.value and ticket.fecha_primera_respuesta is None:
+        ticket.fecha_primera_respuesta = func.now()
+        await db.commit()
+        await db.refresh(ticket)
+
     try:
         from app.websockets.pubsub import publish_to_ticket, publish_broadcast
+
         event = {
             "type": "ticket:commented",
             "ticket_id": str(ticket_id),
@@ -108,6 +113,7 @@ async def crear(
         await publish_broadcast(event=event)
     except Exception:
         import logging
+
         logging.getLogger(__name__).warning(
             "No se pudo publicar ticket:commented para ticket %s", ticket_id, exc_info=True
         )

@@ -28,6 +28,9 @@ export interface Ticket {
   prioridad: PrioridadTicket;
   fecha_creacion: string;
   fecha_actualizacion: string;
+  fecha_asignacion?: string | null;
+  fecha_primera_respuesta?: string | null;
+  fecha_resolucion?: string | null;
   subcategoria_nombre?: string | null;
 }
 
@@ -111,6 +114,51 @@ export interface Stats {
   resueltos: number;
   cerrados: number;
   urgentes: number;
+}
+
+export interface MetricasTiempos {
+  mttr_horas: number | null;
+  tiempo_primera_respuesta_minutos: number | null;
+  tickets_resueltos_analizados: number;
+  tickets_con_primera_respuesta: number;
+}
+
+export interface ConteoPorEstado {
+  estado: string;
+  cantidad: number;
+}
+
+export interface ConteoPorPrioridad {
+  prioridad: string;
+  cantidad: number;
+}
+
+export interface VolumenPorEmpresa {
+  empresa_id: number;
+  empresa_nombre: string | null;
+  cantidad: number;
+}
+
+export interface MetricasVolumen {
+  por_estado: ConteoPorEstado[];
+  por_prioridad: ConteoPorPrioridad[];
+  top_empresas: VolumenPorEmpresa[];
+}
+
+export interface DesgloseElemento {
+  elemento: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface TopUbicacion {
+  nombre_punto: string;
+  cantidad: number;
+}
+
+export interface MetricasInfraestructura {
+  por_elemento: DesgloseElemento[];
+  top_ubicaciones: TopUbicacion[];
 }
 
 export const authApi = {
@@ -387,5 +435,20 @@ export const pushApi = {
   sendTest: async () => {
     const r = await api.post("/api/push/test");
     return r.data as { delivered: number };
+  },
+};
+
+export const metricasApi = {
+  tiempos: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/tiempos", { params });
+    return r.data as MetricasTiempos;
+  },
+  volumen: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/volumen", { params });
+    return r.data as MetricasVolumen;
+  },
+  infraestructura: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/infraestructura", { params });
+    return r.data as MetricasInfraestructura;
   },
 };
