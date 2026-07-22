@@ -9,14 +9,14 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import TareaCard from "@/components/TareaCard";
 import AddCheckSquareIcon from "@/app/assets/icons/AddCheckSquareIcon";
 
-type FiltroTab = "todas" | "pendientes" | "completadas";
+type FiltroTab = "pendientes" | "completadas" | "todas";
 
 export default function TareasPage() {
   const [tareas, setTareas] = useState<TareaPendiente[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
-  const [filtro, setFiltro] = useState<FiltroTab>("todas");
+  const [filtro, setFiltro] = useState<FiltroTab>("pendientes");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,7 +150,7 @@ export default function TareasPage() {
       )}
 
       <div className="flex w-full border-b border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit text-nowrap mb-1">
-        {(["todas", "pendientes", "completadas"] as FiltroTab[]).map((tab) => (
+        {(["pendientes", "completadas","todas"] as FiltroTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => { setFiltro(tab); setPage(1); }}
@@ -160,9 +160,9 @@ export default function TareasPage() {
                 : "text-grayCustom hover:text-gray-700"
             }`}
           >
-            {tab === "todas" && `Todas`}
             {tab === "pendientes" && `Pendientes`}
             {tab === "completadas" && `Completadas`}
+            {tab === "todas" && `Todas`}
           </button>
         ))}
       </div>
