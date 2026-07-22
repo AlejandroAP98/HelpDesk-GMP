@@ -18,7 +18,7 @@ function playBeep(frequency = 880) {
     osc.start();
     osc.stop(ctx.currentTime + 0.5);
   } catch {
-    // ignore autoplay block
+    console.error("Error al reproducir el sonido");
   }
 }
 

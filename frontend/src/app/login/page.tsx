@@ -54,7 +54,7 @@ export default function LoginPage() {
               />
 
               <Input
-                label="Contrasena"
+                label="Contraseña"
                 type="password"
                 required
                 value={password}

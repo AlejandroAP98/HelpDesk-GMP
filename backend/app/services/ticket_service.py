@@ -92,12 +92,13 @@ async def listar_historial(
     return Pagina.of(items, total, p.page, p.size)
 
 
-def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
+def _ticket_payload(ticket: Ticket, event_type: str, empresa_nombre: str | None = None) -> dict[str, object]:
     return {
         "type": event_type,
         "event_id": str(uuid4()),
         "ticket_id": str(ticket.id),
         "empresa_id": ticket.empresa_id,
+        "empresa_nombre": empresa_nombre,
         "titulo": ticket.titulo,
         "prioridad": ticket.prioridad.value,
         "estado": ticket.estado.value,
@@ -107,27 +108,31 @@ def _ticket_payload(ticket: Ticket, event_type: str) -> dict[str, object]:
     }
 
 
-async def _publicar_urgente_si_corresponde(ticket: Ticket) -> None:
+async def _publicar_urgente_si_corresponde(ticket: Ticket, empresa_nombre: str | None = None) -> None:
     from app.websockets.pubsub import publish_to_roles
 
     if ticket.prioridad != PrioridadTicket.urgente:
         return
-    payload = _ticket_payload(ticket, "ticket:urgent_created")
+    payload = _ticket_payload(ticket, "ticket:urgent_created", empresa_nombre)
     payload["prioridad"] = ticket.prioridad.value
     payload["estado"] = ticket.estado.value
     try:
         await publish_to_roles(
-            roles=[RolUsuario.agente.value, RolUsuario.administrador.value],
+            roles=[
+                RolUsuario.agente.value,
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
             event=payload,
         )
     except Exception:
         _logger.warning("No se pudo publicar evento urgente", exc_info=True)
 
 
-async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
+async def _publicar_evento_ticket(ticket: Ticket, event_type: str, empresa_nombre: str | None = None) -> None:
     from app.websockets.pubsub import publish_to_ticket, publish_broadcast
 
-    payload = _ticket_payload(ticket, event_type)
+    payload = _ticket_payload(ticket, event_type, empresa_nombre)
     try:
         await publish_to_ticket(ticket.id, event=payload)
         await publish_broadcast(event=payload)
@@ -143,10 +148,10 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str) -> None:
         )
 
 
-async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str) -> None:
+async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str, empresa_nombre: str | None = None) -> None:
     from app.websockets.pubsub import publish_to_ticket, publish_broadcast
 
-    payload = _ticket_payload(ticket, "ticket:state_changed")
+    payload = _ticket_payload(ticket, "ticket:state_changed", empresa_nombre)
     payload["estado_anterior"] = estado_anterior
     payload["estado_nuevo"] = ticket.estado.value
     try:
@@ -166,23 +171,27 @@ async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str) -> None:
         )
 
 
-async def _publicar_asignacion(ticket: Ticket) -> None:
+async def _publicar_asignacion(ticket: Ticket, empresa_nombre: str | None = None) -> None:
     """Publica evento ticket:assigned (dispara Web Push al agente asignado).
 
     Se publica a:
     - El room del ticket (para quien tenga el detalle abierto)
-    - El rol agente+administrador (para que el agente asignado lo reciba
+    - El rol agente+mesa_ayuda+administrador (para que el agente asignado lo reciba
       aunque este viendo la lista, no el detalle)
     """
     from app.websockets.pubsub import publish_to_ticket, publish_to_roles
 
     if ticket.agente_id is None:
         return
-    payload = _ticket_payload(ticket, "ticket:assigned")
+    payload = _ticket_payload(ticket, "ticket:assigned", empresa_nombre)
     try:
         await publish_to_ticket(ticket.id, event=payload)
         await publish_to_roles(
-            roles=[RolUsuario.agente.value, RolUsuario.administrador.value],
+            roles=[
+                RolUsuario.agente.value,
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
             event=payload,
         )
     except Exception:
@@ -217,11 +226,20 @@ async def _get_subcategoria(
 
 
 async def _get_agente(agente_id: UUID, db: AsyncSession) -> Usuario:
+    """Resuelve un usuario que puede recibir tickets asignados.
+
+    Roles validos: agente, mesa_ayuda, administrador. (mesa_ayuda y administrador
+    pueden recibir self-assign para resolver ellos mismos sin pasar por un agente.)
+    """
     agente = (
         await db.execute(
             select(Usuario).where(
                 Usuario.id == agente_id,
-                Usuario.rol.in_([RolUsuario.agente, RolUsuario.administrador]),
+                Usuario.rol.in_([
+                    RolUsuario.agente,
+                    RolUsuario.mesa_ayuda,
+                    RolUsuario.administrador,
+                ]),
             )
         )
     ).scalar_one_or_none()
@@ -267,8 +285,11 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     db.add(ticket)
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_urgente_si_corresponde(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:created")
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
+    await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     return ticket
 
 
@@ -316,8 +337,11 @@ async def crear_admin(
     db.add(ticket)
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_urgente_si_corresponde(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:created")
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
+    await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     return ticket
 
 
@@ -495,19 +519,20 @@ async def actualizar(
     ticket.modificado_por_id = current.id
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:updated")
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
     return ticket
 
 
-async def asignar(
-    ticket_id: UUID, data: AsignacionRequest, current: Usuario, db: AsyncSession
+async def _asignar_a(
+    ticket: Ticket,
+    agente: Usuario,
+    current: Usuario,
+    db: AsyncSession,
 ) -> Ticket:
-    """Admin asigna agente a un ticket abierto. Transicion abierto -> asignado."""
-    if current.rol != RolUsuario.administrador.value:
-        raise PermisoDenegado("Solo administradores pueden asignar tickets")
-    ticket = await obtener(ticket_id, current, db)
-    agente = await _get_agente(data.agente_id, db)
-
+    """Core de la transicion abierto -> asignado. Usado por asignar() y asignarme()."""
     if ticket.estado != EstadoTicket.abierto:
         raise Conflicto(f"Ticket en estado {ticket.estado.value} no es asignable")
     if agente.empresa_id is not None and agente.empresa_id != ticket.empresa_id:
@@ -523,10 +548,46 @@ async def asignar(
     )
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:updated")
-    await _publicar_asignacion(ticket)
-    await _publicar_cambio_estado(ticket, EstadoTicket.abierto)
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    await _publicar_asignacion(ticket, empresa_nombre)
+    await _publicar_cambio_estado(ticket, EstadoTicket.abierto, empresa_nombre)
     return ticket
+
+
+async def asignar(
+    ticket_id: UUID, data: AsignacionRequest, current: Usuario, db: AsyncSession
+) -> Ticket:
+    """Admin o mesa de ayuda asigna agente a un ticket abierto. Transicion abierto -> asignado."""
+    if current.rol not in (
+        RolUsuario.administrador.value,
+        RolUsuario.mesa_ayuda.value,
+    ):
+        raise PermisoDenegado("Solo administradores o mesa de ayuda pueden asignar tickets")
+    ticket = await obtener(ticket_id, current, db)
+    agente = await _get_agente(data.agente_id, db)
+    return await _asignar_a(ticket, agente, current, db)
+
+
+async def asignarme(
+    ticket_id: UUID, current: Usuario, db: AsyncSession
+) -> Ticket:
+    """Admin o mesa de ayuda se autoasigna un ticket abierto.
+
+    Util cuando mesa de ayuda/admin resuelven ellos mismos sin pasar por un agente.
+    Transicion abierto -> asignado. El usuario actual queda como agente_id.
+    """
+    if current.rol not in (
+        RolUsuario.administrador.value,
+        RolUsuario.mesa_ayuda.value,
+    ):
+        raise PermisoDenegado(
+            "Solo administradores o mesa de ayuda pueden autoasignarse tickets"
+        )
+    ticket = await obtener(ticket_id, current, db)
+    return await _asignar_a(ticket, agente=current, current=current, db=db)
 
 
 async def cambiar_estado(
@@ -543,11 +604,7 @@ async def cambiar_estado(
             raise PermisoDenegado("Solo agentes/admins pueden progresar un ticket")
         if ticket.agente_id is None:
             raise Conflicto("Ticket sin agente asignado")
-        if (
-            current.rol == RolUsuario.agente.value
-            and ticket.agente_id != current.id
-            and current.rol != RolUsuario.administrador.value
-        ):
+        if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
             raise PermisoDenegado("Solo el agente asignado puede progresar el ticket")
 
     elif nuevo == EstadoTicket.resuelto:
@@ -559,7 +616,10 @@ async def cambiar_estado(
             raise PermisoDenegado("Solo el agente asignado puede resolver el ticket")
 
     elif nuevo == EstadoTicket.cerrado:
-        if current.rol == RolUsuario.administrador.value:
+        if current.rol in (
+            RolUsuario.administrador.value,
+            RolUsuario.mesa_ayuda.value,
+        ):
             pass
         elif current.rol == RolUsuario.cliente.value and ticket.cliente_id == current.id:
             pass
@@ -576,8 +636,11 @@ async def cambiar_estado(
     await _registrar_historial(ticket.id, current.id, estado_anterior, nuevo, db)
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:updated")
-    await _publicar_cambio_estado(ticket, estado_anterior.value)
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    await _publicar_cambio_estado(ticket, estado_anterior.value, empresa_nombre)
     return ticket
 
 
@@ -593,7 +656,10 @@ async def cambiar_prioridad(
     ticket.modificado_por_id = current.id
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:updated")
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
     return ticket
 
 
@@ -613,6 +679,9 @@ async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
     )
     await db.commit()
     await db.refresh(ticket)
-    await _publicar_evento_ticket(ticket, "ticket:updated")
-    await _publicar_cambio_estado(ticket, EstadoTicket.cerrado.value)
+    empresa_nombre = (await db.execute(
+        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
+    )).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    await _publicar_cambio_estado(ticket, EstadoTicket.cerrado, empresa_nombre)
     return ticket

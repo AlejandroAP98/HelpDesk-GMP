@@ -12,6 +12,7 @@ from app.core.security import hash_password
 from app.models.categoria import Categoria
 from app.models.empresa import Empresa
 from app.models.enums import RolUsuario
+from app.models.subcategoria import Subcategoria
 from app.models.usuario import Usuario
 
 
@@ -29,6 +30,21 @@ async def seed_categoria(db: AsyncSession, nombre: str = "Hardware", descripcion
     await db.commit()
     await db.refresh(cat)
     return cat
+
+
+async def seed_subcategoria(
+    db: AsyncSession,
+    categoria_id: int,
+    nombre: str = "Subcategoria",
+    descripcion: str | None = "",
+) -> Subcategoria:
+    sub = Subcategoria(
+        categoria_id=categoria_id, nombre=nombre, descripcion=descripcion
+    )
+    db.add(sub)
+    await db.commit()
+    await db.refresh(sub)
+    return sub
 
 
 async def seed_usuario(

@@ -18,7 +18,7 @@ Target soportados:
     - {"target": "broadcast", "event": ...}
 
 Eventos que disparan Web Push:
-    - ticket:urgent_created  -> push a roles agente+administrador
+    - ticket:urgent_created  -> push a roles agente+mesa_ayuda+administrador
     - ticket:assigned        -> push al usuario asignado (event["agente_id"])
 """
 from __future__ import annotations
@@ -81,7 +81,11 @@ async def _dispatch_push(event: dict[str, Any], connected: set[UUID]) -> None:
         return
 
     if etype == "ticket:urgent_created":
-        role_values = [RolUsuario.agente.value, RolUsuario.administrador.value]
+        role_values = [
+            RolUsuario.agente.value,
+            RolUsuario.mesa_ayuda.value,
+            RolUsuario.administrador.value,
+        ]
         user_ids = await _resolve_user_ids_by_roles(role_values)
         targets = [u for u in user_ids if u not in connected]
         if not targets:

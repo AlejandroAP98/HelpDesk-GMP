@@ -6,6 +6,7 @@ export interface TicketCreatedEvent {
   type: "ticket:created";
   ticket_id: string;
   empresa_id: number;
+  empresa_nombre: string | null;
   titulo: string;
   prioridad: string;
   estado: string;
@@ -18,6 +19,7 @@ export interface TicketUpdatedEvent {
   type: "ticket:updated";
   ticket_id: string;
   empresa_id: number;
+  empresa_nombre: string | null;
   titulo: string;
   prioridad: string;
   estado: string;
@@ -30,6 +32,7 @@ export interface TicketAssignedEvent {
   type: "ticket:assigned";
   ticket_id: string;
   empresa_id: number;
+  empresa_nombre: string | null;
   titulo: string;
   prioridad: string;
   estado: string;
@@ -53,6 +56,7 @@ export interface TicketStateChangedEvent {
   type: "ticket:state_changed";
   ticket_id: string;
   empresa_id: number;
+  empresa_nombre: string | null;
   titulo: string;
   prioridad: string;
   estado: string;

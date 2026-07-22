@@ -26,6 +26,13 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
     { href: "/tickets", label: "Tickets Asignados", icon: <TicketIcon/> },
     { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
   ],
+  mesa_ayuda: [
+    { href: "/", label: "Inicio", icon: <HomeIcon /> },
+    { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon /> },
+    { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
+    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon /> },
+    { href: "/metricas", label: "Métricas", icon: <MetricsIcon /> },
+  ],
   administrador: [
     { href: "/", label: "Inicio", icon: <HomeIcon /> },
     { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon/> },
@@ -73,7 +80,6 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
   const logout = useAuthStore((s) => s.logout);
   const rol = usuario?.rol ?? "cliente";
   const links = NAV[rol] ?? [];
-
   const handleLogout = () => {
     logout();
     router.push("/login");
@@ -142,7 +148,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
             <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
             <div className="mt-3 flex items-center justify-between">
               <span className="inline-block rounded-lg bg-brandCustom px-2.5 py-1 uppercase tracking-wider text-[10px] font-bold text-white">
-                {rol}
+                {rol.replace("_", " ")}
               </span>
             </div>
             <Button

@@ -18,12 +18,14 @@ import { extractApiError } from "@/lib/errors";
 const ROLES: { value: string; label: string }[] = [
   { value: "cliente", label: "Cliente" },
   { value: "agente", label: "Agente" },
+  { value: "mesa_ayuda", label: "Mesa de Ayuda" },
   { value: "administrador", label: "Administrador" },
 ];
 
 const ROL_COLORS: Record<string, string> = {
   cliente: "bg-blueCustom/10 text-blueCustom",
   agente: "bg-greenCustom/10 text-greenCustom",
+  mesa_ayuda: "bg-violetCustom/10 text-violetCustom",
   administrador: "bg-yellowCustom/10 text-yellowCustom",
 };
 
@@ -212,7 +214,7 @@ export default function UsuariosPage() {
                 header: "Rol",
                 cell: (u: Usuario) => (
                   <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-semibold ${ROL_COLORS[u.rol] ?? "bg-gray-100 text-gray-600"}`}>
-                    {u.rol}
+                    {u.rol.replace("_", " ")}
                   </span>
                 ),
               },

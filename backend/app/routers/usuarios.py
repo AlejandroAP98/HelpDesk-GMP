@@ -1,6 +1,6 @@
 """Endpoints CRUD de Usuarios (admin).
 
-- GET: listar y obtener (solo admin).
+- GET: listar y obtener (admin o mesa de ayuda, solo lectura).
 - PATCH: actualizar (solo admin).
 - DELETE: eliminar (solo admin).
 La creacion de usuarios se hace via /api/auth/register (cliente) o
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_mesa_ayuda
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
 from app.schemas.usuario import Mensaje, UsuarioOut, UsuarioUpdateByAdmin
@@ -30,7 +30,7 @@ async def listar(
     rol: RolUsuario | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(require_admin),
+    _: Usuario = Depends(require_mesa_ayuda),
 ) -> Pagina[UsuarioOut]:
     return await usuario_service.listar(
         page=page, size=size, rol=rol, empresa_id=empresa_id, db=db
@@ -41,7 +41,7 @@ async def listar(
 async def obtener(
     usuario_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(require_admin),
+    _: Usuario = Depends(require_mesa_ayuda),
 ) -> UsuarioOut:
     usuario = await usuario_service.obtener(usuario_id, db)
     return UsuarioOut.model_validate(usuario)

@@ -6,6 +6,7 @@ from tests.helpers import (
     login_token,
     seed_categoria,
     seed_empresa,
+    seed_subcategoria,
     seed_usuario,
 )
 
@@ -14,8 +15,16 @@ async def _crear_ticket(client, tok):  # type: ignore[no-untyped-def]
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={"titulo": "T", "descripcion": "D", "categoria_id": 1, "prioridad": "media"},
+        json={
+            "titulo": "T",
+            "descripcion": "D",
+            "categoria_id": 1,
+            "subcategoria_id": 1,
+            "elemento_afectado": "punto_venta",
+            "prioridad": "media",
+        },
     )
+    assert r.status_code == 201, r.text
     return r.json()["id"]
 
 
@@ -24,6 +33,7 @@ async def test_comentario_publico_visible_cliente(client, db_session):  # type: 
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
     await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_a = await login_token(client, "a@test.com", "Password12345")
     tid = await _crear_ticket(client, tok_c)
@@ -46,6 +56,7 @@ async def test_nota_interna_oculta_a_cliente(client, db_session):  # type: ignor
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
     await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_a = await login_token(client, "a@test.com", "Password12345")
     tid = await _crear_ticket(client, tok_c)
@@ -78,6 +89,7 @@ async def test_cliente_no_puede_crear_nota_interna_403(client, db_session):  # t
     await seed_empresa(db_session, pk=1)
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
     tok = await login_token(client, "c@test.com", "Password12345")
     tid = await _crear_ticket(client, tok)
 
@@ -96,18 +108,60 @@ async def test_admin_lista_todas_las_empresas(client, db_session):  # type: igno
     await seed_usuario(db_session, email="c2@test.com", password="P12345678", rol="cliente", empresa_id=2)
     await seed_usuario(db_session, email="adm@test.com", password="Password12345", rol="administrador")
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
 
     await client.post(
         "/api/tickets",
         headers=auth_header(await login_token(client, "c1@test.com", "P12345678")),
-        json={"titulo": "T1", "descripcion": "D", "categoria_id": 1, "prioridad": "media"},
+        json={
+            "titulo": "T1",
+            "descripcion": "D",
+            "categoria_id": 1,
+            "subcategoria_id": 1,
+            "elemento_afectado": "punto_venta",
+            "prioridad": "media",
+        },
     )
     await client.post(
         "/api/tickets",
         headers=auth_header(await login_token(client, "c2@test.com", "P12345678")),
-        json={"titulo": "T2", "descripcion": "D", "categoria_id": 1, "prioridad": "media"},
+        json={
+            "titulo": "T2",
+            "descripcion": "D",
+            "categoria_id": 1,
+            "subcategoria_id": 1,
+            "elemento_afectado": "punto_venta",
+            "prioridad": "media",
+        },
     )
     tok_adm = await login_token(client, "adm@test.com", "Password12345")
     r = await client.get("/api/tickets", headers=auth_header(tok_adm))
     assert r.status_code == 200
     assert r.json()["total"] == 2
+
+
+async def test_mesa_ayuda_puede_crear_nota_interna(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
+    await seed_usuario(db_session, email="m@test.com", password="Password12345", rol="mesa_ayuda")
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
+    tok_c = await login_token(client, "c@test.com", "Password12345")
+    tok_m = await login_token(client, "m@test.com", "Password12345")
+    tid = await _crear_ticket(client, tok_c)
+
+    r = await client.post(
+        f"/api/tickets/{tid}/comentarios",
+        headers=auth_header(tok_m),
+        json={"contenido": "nota interna de mesa", "es_nota_interna": True},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["es_nota_interna"] is True
+
+    r = await client.get(f"/api/tickets/{tid}/comentarios", headers=auth_header(tok_m))
+    assert r.status_code == 200
+    assert len(r.json()["items"]) == 1
+
+    r = await client.get(f"/api/tickets/{tid}/comentarios", headers=auth_header(tok_c))
+    assert r.status_code == 200
+    assert len(r.json()["items"]) == 0

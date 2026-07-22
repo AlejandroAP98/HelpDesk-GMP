@@ -249,6 +249,10 @@ export const ticketApi = {
     const r = await api.post(`/api/tickets/${id}/asignar`, { agente_id });
     return r.data as Ticket;
   },
+  asignarme: async (id: string) => {
+    const r = await api.post(`/api/tickets/${id}/asignarme`);
+    return r.data as Ticket;
+  },
   cambiarEstado: async (id: string, estado: EstadoTicket) => {
     const r = await api.patch(`/api/tickets/${id}/estado`, { estado });
     return r.data as Ticket;

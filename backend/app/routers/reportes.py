@@ -6,6 +6,7 @@ import csv
 import io
 from datetime import date, datetime, time
 from typing import AsyncIterator
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
@@ -23,6 +24,18 @@ from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 
 router = APIRouter(prefix="/api/reportes", tags=["reportes"])
+
+UTC = ZoneInfo("UTC")
+BOGOTA = ZoneInfo("America/Bogota")
+
+
+def _a_bogota(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(BOGOTA)
+
 
 CSV_HEADER = [
     "id",
@@ -58,7 +71,8 @@ async def _cargar_historial(
     historial_map: dict[str, list[str]] = {}
     for row in result_hist.scalars().all():
         key = str(row.ticket_id)
-        entry = f"{row.estado_anterior.value}->{row.estado_nuevo.value} ({row.fecha.strftime('%Y-%m-%d %H:%M')})"
+        fecha_col = _a_bogota(row.fecha)
+        entry = f"{row.estado_anterior.value}->{row.estado_nuevo.value} ({fecha_col.strftime('%Y-%m-%d %H:%M')})" if fecha_col else ""
         historial_map.setdefault(key, []).append(entry)
     return {k: ", ".join(v) for k, v in historial_map.items()}
 
@@ -109,6 +123,11 @@ async def _generar_csv(
                 delta = ticket.fecha_resolucion - ticket.fecha_creacion
                 tiempo_horas = round(delta.total_seconds() / 3600, 2)
 
+            fc = _a_bogota(ticket.fecha_creacion)
+            fa = _a_bogota(ticket.fecha_asignacion)
+            fpr = _a_bogota(ticket.fecha_primera_respuesta)
+            fr = _a_bogota(ticket.fecha_resolucion)
+
             writer.writerow(
                 [
                     str(ticket.id),
@@ -120,12 +139,10 @@ async def _generar_csv(
                     ticket.descripcion,
                     agente_nombre,
                     ticket.estado.value,
-                    ticket.fecha_creacion.isoformat() if ticket.fecha_creacion else "",
-                    ticket.fecha_asignacion.isoformat() if ticket.fecha_asignacion else "",
-                    ticket.fecha_primera_respuesta.isoformat()
-                    if ticket.fecha_primera_respuesta
-                    else "",
-                    ticket.fecha_resolucion.isoformat() if ticket.fecha_resolucion else "",
+                    fc.isoformat() if fc else "",
+                    fa.isoformat() if fa else "",
+                    fpr.isoformat() if fpr else "",
+                    fr.isoformat() if fr else "",
                     tiempo_horas if tiempo_horas is not None else "",
                     historiales.get(str(ticket.id), ""),
                 ]
@@ -154,9 +171,11 @@ async def exportar_tickets_csv(
         filtros.append(Ticket.empresa_id == empresa_id)
 
     if fecha_inicio is not None:
-        filtros.append(Ticket.fecha_creacion >= datetime.combine(fecha_inicio, time.min))
+        bogota_start = datetime.combine(fecha_inicio, time.min, tzinfo=BOGOTA)
+        filtros.append(Ticket.fecha_creacion >= bogota_start.astimezone(UTC).replace(tzinfo=None))
     if fecha_fin is not None:
-        filtros.append(Ticket.fecha_creacion <= datetime.combine(fecha_fin, time.max))
+        bogota_end = datetime.combine(fecha_fin, time.max, tzinfo=BOGOTA)
+        filtros.append(Ticket.fecha_creacion <= bogota_end.astimezone(UTC).replace(tzinfo=None))
     if estado is not None:
         filtros.append(Ticket.estado == estado)
     if prioridad is not None:

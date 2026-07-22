@@ -102,12 +102,14 @@ export default function TicketsListPage() {
   useEffect(() => {
     setOnTicketCreated((ev) => {
       if (usuario?.rol === "cliente" && empresaId != null && ev.empresa_id !== empresaId) return;
+      if (usuario?.rol === "agente" && ev.agente_id !== usuario.id) return;
       setTickets((prev) => {
         const existe = prev.some((t) => t.id === ev.ticket_id);
         if (existe) return prev;
         const nuevo: Ticket = {
           id: ev.ticket_id,
           empresa_id: ev.empresa_id,
+          empresa_nombre: ev.empresa_nombre,
           titulo: ev.titulo,
           descripcion: "",
           categoria_id: 0,
@@ -168,6 +170,7 @@ export default function TicketsListPage() {
         const nuevo: Ticket = {
           id: ev.ticket_id,
           empresa_id: ev.empresa_id,
+          empresa_nombre: ev.empresa_nombre,
           titulo: ev.titulo,
           descripcion: "",
           categoria_id: 0,

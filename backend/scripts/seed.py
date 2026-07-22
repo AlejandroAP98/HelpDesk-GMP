@@ -43,6 +43,15 @@ AGENTES_DEMO = [
         "empresa_id": None,
     },
 ]
+MESA_AYUDA_DEMO = [
+    {
+        "nombre": "Mesa de Ayuda Demo",
+        "email": "mesa@helpdesk.com",
+        "password": "Mesa123456",
+        "rol": RolUsuario.mesa_ayuda,
+        "empresa_id": None,
+    },
+]
 CLIENTES_DEMO = [
     {
         "nombre": "Cliente Demo 1",
@@ -92,7 +101,12 @@ async def run(reset: bool = False) -> None:
     async with AsyncSessionLocal() as db:
         if reset:
             from sqlalchemy import delete
-            emails_to_delete = [ADMIN_DEMO["email"]] + [a["email"] for a in AGENTES_DEMO] + [c["email"] for c in CLIENTES_DEMO]
+            emails_to_delete = (
+                [ADMIN_DEMO["email"]]
+                + [a["email"] for a in AGENTES_DEMO]
+                + [c["email"] for c in CLIENTES_DEMO]
+                + [m["email"] for m in MESA_AYUDA_DEMO]
+            )
             await db.execute(delete(Usuario).where(Usuario.email.in_(emails_to_delete)))
             await db.execute(delete(Subcategoria))
             await db.execute(delete(Categoria))
@@ -140,7 +154,7 @@ async def run(reset: bool = False) -> None:
 
         print(" DEBUG: despues de admin", flush=True)
 
-        for demo_user in AGENTES_DEMO + CLIENTES_DEMO:
+        for demo_user in AGENTES_DEMO + MESA_AYUDA_DEMO + CLIENTES_DEMO:
             print(f" DEBUG: procesando {demo_user['email']}", flush=True)
             user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
             if user_db is None:

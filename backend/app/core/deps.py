@@ -64,15 +64,20 @@ def require_roles(*roles: RolUsuario):
 
 
 require_admin = require_roles(RolUsuario.administrador)
-require_agente = require_roles(RolUsuario.agente, RolUsuario.administrador)
-require_cliente = require_roles(RolUsuario.cliente, RolUsuario.agente, RolUsuario.administrador)
+require_agente = require_roles(RolUsuario.agente, RolUsuario.administrador, RolUsuario.mesa_ayuda)
+require_mesa_ayuda = require_roles(
+    RolUsuario.mesa_ayuda, RolUsuario.administrador
+)
+require_cliente = require_roles(
+    RolUsuario.cliente, RolUsuario.agente, RolUsuario.mesa_ayuda, RolUsuario.administrador
+)
 
 
 def tenant_filter(usuario: Usuario) -> dict:
     """Devuelve filtros para queries multi-tenant.
 
     - cliente: solo ve recursos de su propia empresa.
-    - agente/admin: ve recursos de cualquier empresa (sin filtro).
+    - agente/mesa_ayuda/admin: ve recursos de cualquier empresa (sin filtro).
     """
     if usuario.rol == RolUsuario.cliente.value and usuario.empresa_id is not None:
         return {"empresa_id": usuario.empresa_id}

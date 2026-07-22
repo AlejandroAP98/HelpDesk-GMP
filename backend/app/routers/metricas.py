@@ -10,7 +10,7 @@ from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_mesa_ayuda
 from app.models.empresa import Empresa
 from app.models.enums import EstadoTicket
 from app.models.historial_estado import HistorialEstado
@@ -44,7 +44,7 @@ async def tiempos(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasTiempos:
     filtros: list = []
     if fecha_inicio is not None:
@@ -92,7 +92,7 @@ async def volumen(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasVolumen:
     filtros: list = []
     if fecha_inicio is not None:
@@ -164,7 +164,7 @@ async def infraestructura(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasInfraestructura:
     filtros: list = []
     if fecha_inicio is not None:
@@ -234,7 +234,7 @@ async def rendimiento_agente(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasRendimiento:
     filtros = _filtros_base(fecha_inicio, fecha_fin, empresa_id)
 
@@ -272,7 +272,7 @@ async def tiempo_por_agente(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasTiempoPorAgente:
     filtros = _filtros_base(fecha_inicio, fecha_fin, empresa_id)
 
@@ -318,7 +318,7 @@ async def reaperturas(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasReaperturas:
     filtros: list = []
     if fecha_inicio is not None:
@@ -450,7 +450,7 @@ async def metricas_sla(
     fecha_fin: date | None = Query(None),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_mesa_ayuda),
 ) -> MetricasSLA:
     if fecha_inicio is None:
         hoy = date.today()

@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type Rol = "cliente" | "agente" | "administrador";
+export type Rol = "cliente" | "agente" | "mesa_ayuda" | "administrador";
 
 export interface Usuario {
   id: string;

@@ -9,6 +9,7 @@ from enum import Enum
 class RolUsuario(str, Enum):
     cliente = "cliente"
     agente = "agente"
+    mesa_ayuda = "mesa_ayuda"
     administrador = "administrador"
 
 

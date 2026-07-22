@@ -224,3 +224,42 @@ async def test_register_cliente_sin_empresa_409(client, db_session):  # type: ig
     )
     assert r.status_code == 409
     assert "empresa_id" in r.json()["detail"]
+
+
+async def test_admin_puede_crear_usuario_mesa_ayuda_201(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_usuario(
+        db_session,
+        nombre="Admin",
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    token = await login_token(client, "admin@test.com", "Password12345")
+    r = await client.post(
+        "/api/auth/register/agente",
+        headers=auth_header(token),
+        json={
+            "nombre": "Mesa de Ayuda",
+            "email": "mesa@test.com",
+            "password": "Password12345",
+            "rol": "mesa_ayuda",
+        },
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["rol"] == "mesa_ayuda"
+
+
+async def test_login_mesa_ayuda_ok(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_usuario(
+        db_session,
+        nombre="Mesa",
+        email="mesa@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    r = await client.post(
+        "/api/auth/login",
+        json={"email": "mesa@test.com", "password": "Password12345"},
+    )
+    assert r.status_code == 200
+    assert r.json()["usuario"]["rol"] == "mesa_ayuda"

@@ -59,15 +59,17 @@ export default function MetricasPage() {
   const [tiempoAgente, setTiempoAgente] = useState<MetricasTiempoPorAgente | null>(null);
   const [reaperturas, setReaperturas] = useState<MetricasReaperturas | null>(null);
   const [sla, setSla] = useState<MetricasSLA | null>(null);
+  
+  const hayFiltros = fechaInicio || fechaFin;
 
   useEffect(() => {
-    if (usuario && usuario.rol !== "administrador") {
+    if (usuario && usuario.rol !== "administrador" && usuario.rol !== "mesa_ayuda") {
       router.replace("/");
     }
   }, [usuario, router]);
 
   useEffect(() => {
-    if (usuario?.rol !== "administrador") return;
+    if (usuario?.rol !== "administrador" && usuario?.rol !== "mesa_ayuda") return;
     (async () => {
       setCargando(true);
       try {
@@ -98,7 +100,7 @@ export default function MetricasPage() {
     })();
   }, [usuario?.rol, fechaInicio, fechaFin]);
 
-  if (usuario?.rol !== "administrador") return null;
+  if (usuario?.rol !== "administrador" && usuario?.rol !== "mesa_ayuda") return null;
   if (cargando) return <LoadingState />;
 
   const maxEstado = Math.max(1, ...(volumen?.por_estado.map((e) => e.cantidad) ?? [1]));
@@ -106,6 +108,11 @@ export default function MetricasPage() {
   const maxEmpresa = Math.max(1, ...(volumen?.top_empresas.map((e) => e.cantidad) ?? [1]));
   const maxElemento = Math.max(1, ...(infra?.por_elemento.map((e) => e.cantidad) ?? [1]));
   const maxUbicacion = Math.max(1, ...(infra?.top_ubicaciones.map((u) => u.cantidad) ?? [1]));
+
+  const limpiarFiltros = () => {
+    setFechaInicio("");
+    setFechaFin("");
+  };
 
   return (
     <div className="space-y-6">
@@ -138,6 +145,14 @@ export default function MetricasPage() {
               className="rounded-xl border border-gray-200 text-gray-700 text-xs px-3 py-2 focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all"
             />
           </div>
+            {hayFiltros && (
+              <button
+                onClick={limpiarFiltros}
+                className="text-xs self-end text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
+              >
+                Limpiar filtros
+              </button>
+            )}
         </div>
       </div>
       
@@ -150,14 +165,14 @@ export default function MetricasPage() {
               label="Tiempo Medio de Resolución"
               value={tiempos?.mttr_horas != null ? `${tiempos.mttr_horas}h` : "—"}
               icon={
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-alarm-average" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M5 13a7 7 0 1 0 14 0 7 7 0 0 0-14 0m2-9L4.25 6M17 4l2.75 2"/><path d="M8 13h1l2 3 2-6 2 3h1"/></svg>}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-alarm-average" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M5 13a7 7 0 1 0 14 0 7 7 0 0 0-14 0m2-9L4.25 6M17 4l2.75 2"/><path d="M8 13h1l2 3 2-6 2 3h1"/></svg>}
               className="bg-brandCustom"
             />
             <StatsCard
               label="Primera Respuesta"
               value={tiempos?.tiempo_primera_respuesta_minutos != null ? `${tiempos.tiempo_primera_respuesta_minutos}min` : "—"}
               icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-reply" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/><path d="m11 8-3 3 3 3m5-3H8"/></svg>}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-reply" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/><path d="m11 8-3 3 3 3m5-3H8"/></svg>}
               className="bg-yellowCustom"
             />
             <StatsCard
@@ -172,7 +187,7 @@ export default function MetricasPage() {
               label="Con Primera respuesta"
               value={tiempos?.tickets_con_primera_respuesta ?? 0}
               icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>}
               className="bg-violetCustom"
             />
           </div>
@@ -335,6 +350,8 @@ export default function MetricasPage() {
                     <p className="text-xl font-bold text-grayCustom mt-1">{a.cerrados}</p>
                   </div>
                 </div>
+                <span className="text-[10px] font-semibold text-gray-400 tracking-normal mt-3">Tiempo Medio de resolución: </span>
+                <span className="text-xs font-semibold text-gray-500 tracking-normal mt-3">{tiempoAgente?.por_agente?.find((x) => x.agente_id === a.agente_id)?.mttr_horas}h</span>
               </div>
             ))}
           </div>

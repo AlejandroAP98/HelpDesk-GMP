@@ -78,7 +78,7 @@ function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
       color: "bg-blue-500",
       dotColor: "border-blue-500 text-blue-600 bg-blue-50",
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" className="icon icon-tabler icons-tabler-outline icon-tabler-pencil-plus" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5 4 4M16 19h6m-3-3v6"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-pencil-plus" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5 4 4M16 19h6m-3-3v6"/></svg>
       ),
     },
     {
@@ -318,6 +318,15 @@ export default function TicketDetallePage() {
     }
   };
 
+  const asignarme = async () => {
+    try {
+      await ticketApi.asignarme(ticketId);
+      await cargar();
+    } catch {
+      setError("No se pudo autoasignar el ticket");
+    }
+  };
+
   const setPrioridad = async (p: PrioridadTicket) => {
     try {
       await ticketApi.cambiarPrioridad(ticketId, p);
@@ -341,12 +350,18 @@ export default function TicketDetallePage() {
   const esCliente = usuario?.rol === "cliente";
   const esAgente = usuario?.rol === "agente";
   const esAdmin = usuario?.rol === "administrador";
+  const esMesaAyuda = usuario?.rol === "mesa_ayuda";
   const esAgenteAsignado = ticket?.agente_id === usuario?.id;
-  const puedeProgresar = (esAgente && esAgenteAsignado) || esAdmin;
-  const puedeResolver = (esAgente && esAgenteAsignado) || esAdmin;
+  const esMesaAyudaAsignado = ticket?.agente_id === usuario?.id;
+  const puedeProgresar = (esAgente && esAgenteAsignado) || esAdmin || (esMesaAyuda && esMesaAyudaAsignado);
+  const puedeResolver = (esAgente && esAgenteAsignado) || esAdmin || (esMesaAyuda && esMesaAyudaAsignado);
   const puedeCerrar =
-    (esCliente && ticket.cliente_id === usuario?.id) || (esAgente && esAgenteAsignado) || esAdmin;
+    (esCliente && ticket.cliente_id === usuario?.id) ||
+    (esAgente && esAgenteAsignado) ||
+    esAdmin ||
+    (esMesaAyuda && esMesaAyudaAsignado);
   const puedeReabrir = esAdmin;
+  const puedeAutoasignar = (esAdmin || esMesaAyuda) && ticket.estado === "abierto";
   const estaCerrado = ticket.estado === "cerrado";
   return (
     <div className="space-y-1">
@@ -365,10 +380,6 @@ export default function TicketDetallePage() {
           <div className="bg-white rounded-2xl shadow-card">
             <dl className="flex sm:flex-row flex-col items-center justify-between  gap-2 w-full mb-2 sm:mb-4 bg-brandCustom rounded-t-2xl sm:px-6 px-4 py-2">
              <div className="flex sm:justify-start w-full justify-between sm:gap-10 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
-                <div>
-                  <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">ID</dt>
-                  <dd className="font-regular text-white uppercase text-[11px]">#{ticket.id.split("-")[0]}</dd>
-                </div>
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Empresa</dt>
                   <dd className="font-regular text-white text-[11px]">{ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
@@ -395,6 +406,7 @@ export default function TicketDetallePage() {
             </dl>
             <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-2">
               <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0 " >
+                <span className="font-bold text-grayCustom tracking-wide font-mono uppercase text-[11px]">#{ticket.id.split("-")[0]}</span>
                 <EstadoBadge estado={ticket.estado} />
                 <PrioridadBadge prioridad={ticket.prioridad} />
               </div>
@@ -469,7 +481,7 @@ export default function TicketDetallePage() {
             {!estaCerrado &&  (
               <div className="flex justify-between px-4 py-2 mt-4 rounded-b-2xl bg-grayCustom/5">
                 <div className="w-full flex-col justify-between">
-                  {((!esCliente && (ticket.estado !== "abierto")) || (esCliente && ticket.estado === "resuelto")) && (
+                  {((esMesaAyudaAsignado || esAdmin) || (esCliente && ticket.estado === "resuelto") || (esAgente && esAgenteAsignado) || (esMesaAyuda && ticket.estado === "abierto"))  && (
                     <label className="sm:text-xs text-[10px] font-semibold text-gray-500 tracking-wider mb-2 block pl-1">Acciones:</label>
                   )}
                   {puedeProgresar && ticket.estado === "asignado" && (
@@ -479,6 +491,14 @@ export default function TicketDetallePage() {
                   >
                     Iniciar trabajo
                   </button>
+                  )}
+                  {puedeAutoasignar && (
+                    <button
+                      onClick={asignarme}
+                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
+                    >
+                      Asignarme
+                    </button>
                   )}
                   {puedeResolver && ticket.estado === "en_progreso" && (
                     <button
@@ -494,14 +514,6 @@ export default function TicketDetallePage() {
                       className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
                     >
                       Cerrar ticket
-                    </button>
-                  )}
-                  {puedeReabrir && !estaCerrado && ticket.estado === "cerrado" && (
-                    <button
-                      onClick={reabrir}
-                      className="self-end rounded-xl bg-brandCustom hover:bg-brandCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-medium text-white active:scale-[0.98] transition-all"
-                    >
-                      Reabrir
                     </button>
                   )}
                 </div>
@@ -526,7 +538,7 @@ export default function TicketDetallePage() {
                 <label className="text-xs font-semibold text-gray-500 tracking-wider mb-2 block pl-1">Acciones:</label>
                 <button
                   onClick={reabrir}
-                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 px-4 py-2.5 text-xs font-medium text-white active:scale-[0.98] transition-all"
+                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-medium text-white active:scale-[0.98] transition-all"
                 >
                   Reabrir ticket
                 </button>

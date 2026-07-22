@@ -122,7 +122,7 @@ export default function PanelHomePage() {
   }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
   useEffect(() => {
-    if (usuario?.rol === "administrador" || usuario?.rol === "agente") {
+    if (usuario?.rol === "administrador" || usuario?.rol === "agente" || usuario?.rol === "mesa_ayuda") {
       empresaApi.listar({ size: 100 }).then((r) => setEmpresas(r.items)).catch(() => {});
     }
   }, [usuario?.rol]);
@@ -138,7 +138,7 @@ export default function PanelHomePage() {
       if (prioridad) params.prioridad = prioridad;
       await reportesApi.descargarCSV(params);
     } catch {
-      /* ignore */
+      console.error("Error al descargar el reporte");
     } finally {
       setDescargando(false);
     }
@@ -173,6 +173,7 @@ export default function PanelHomePage() {
           <p className="text-sm text-gray-500 mt-1">
             {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte"}
             {usuario?.rol === "agente" && "Revisa y resuelve tus tickets asignados"}
+            {usuario?.rol === "mesa_ayuda" && "Supervisa, asigna y mide el rendimiento del equipo"}
             {usuario?.rol === "administrador" && "Panel de administracion y control global"}
           </p>
         </div>
@@ -261,7 +262,7 @@ export default function PanelHomePage() {
             {hayFiltros && (
               <button
                 onClick={limpiarFiltros}
-                className="text-xs text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
+                className="text-xs self-end text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
               >
                 Limpiar filtros
               </button>
