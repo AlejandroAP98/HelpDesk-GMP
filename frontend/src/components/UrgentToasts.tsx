@@ -148,7 +148,7 @@ function AlertCard({
   if (alert.kind === "commented") {
     return (
       <div
-        className="rounded-2xl bg-white border border-teal-100 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        className="rounded-2xl bg-white border border-orange-200 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
         role="alert"
         onClick={() => {
           window.location.href = `/tickets/${alert.ticket_id}`;
@@ -157,7 +157,7 @@ function AlertCard({
         <div className="absolute top-0 left-0 w-1 h-full bg-accentCustom rounded-l-2xl" />
         <div className="flex items-start justify-between gap-2 pl-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>
             </div>
             <p className="font-bold text-accentCustom uppercase tracking-wider text-[11px]">
@@ -183,7 +183,7 @@ function AlertCard({
             {alert.comentario_usuario} comentó en el ticket
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-accentCustom text-accentCustom font-bold uppercase tracking-wider border border-accentCustom">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-accentCustom text-white font-bold uppercase tracking-wider border border-accentCustom">
               #{alert.ticket_id.slice(0, 8)}
             </span>
           </div>
