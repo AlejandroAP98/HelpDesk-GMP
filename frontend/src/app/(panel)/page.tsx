@@ -199,10 +199,10 @@ export default function PanelHomePage() {
       </section>
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">
         <h2 className="text-base font-bold tracking-tight text-gray-900">
-          Reportes
+          Reporte de tickets
         </h2>
         <div className=" flex justify-between gap-2 w-full">
-          <div className="xl:flex xl:justify-between grid md:grid-cols-3 grid-cols-2 gap-3">
+          <div className="flex flex-wrap justify-between gap-3">
             <div className="flex flex-col">
               <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">Fecha inicio</label>
               <input
@@ -267,18 +267,18 @@ export default function PanelHomePage() {
               </button>
             )}
           </div>
-            <Button
-              onClick={handleDescargar}
-              loading={descargando}
-              variant="secondary"
-              disabled={descargando}
-              className=" self-end w-fit h-fit !bg-greenCustom !text-white hover:!bg-greenCustom/80"
-              icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M7 16.5a1.5 1.5 0 0 0-3 0v3a1.5 1.5 0 0 0 3 0m3 .75c0 .414.336.75.75.75H12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75 2 6 2-6"/></svg> }
-            >
-              Descargar
-            </Button>
         </div>
+          <Button
+            onClick={handleDescargar}
+            loading={descargando}
+            variant="secondary"
+            disabled={descargando}
+            className=" self-end w-fit h-fit !bg-greenCustom !text-white hover:!bg-greenCustom/80"
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M7 16.5a1.5 1.5 0 0 0-3 0v3a1.5 1.5 0 0 0 3 0m3 .75c0 .414.336.75.75.75H12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75 2 6 2-6"/></svg> }
+          >
+            Descargar
+          </Button>
       </section>
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
         <div className="flex items-center justify-between mb-4">

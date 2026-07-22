@@ -391,41 +391,41 @@ async def _calcular_sla_empresa(
     if empresa_id is not None:
         filtros.append(Ticket.empresa_id == empresa_id)
 
-    stmt_total = select(
-        Ticket.empresa_id,
-        Empresa.nombre.label("empresa_nombre"),
-        func.count(Ticket.id).label("total"),
-        func.sum(
-            func.cast(
-                (Ticket.fecha_primera_respuesta.isnot(None))
-                & (
-                    func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
-                    <= SLA_FRT_HORAS * 3600
-                )
-                & (
-                    (Ticket.fecha_resolucion.is_(None))
-                    | (
-                        Ticket.fecha_resolucion.isnot(None)
-                        & (
-                            func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
-                            <= SLA_MTTR_HORAS * 3600
-                        )
+    stmt_total = (
+        select(
+            Ticket.empresa_id,
+            Empresa.nombre.label("empresa_nombre"),
+            func.count(Ticket.id).label("total"),
+            func.sum(
+                func.cast(
+                    (Ticket.fecha_primera_respuesta.isnot(None))
+                    & (
+                        func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
+                        <= SLA_FRT_HORAS * 3600
                     )
-                ),
-                Integer,
-            )
-        ).label("en_sla"),
-        func.avg(
-            func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion) / 3600.0
-        ).label("frt_horas"),
-        func.avg(
-            func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
-        ).label("mttr_horas"),
+                    & (
+                        (Ticket.fecha_resolucion.is_(None))
+                        | (
+                            Ticket.fecha_resolucion.isnot(None)
+                            & (
+                                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+                                <= SLA_MTTR_HORAS * 3600
+                            )
+                        )
+                    ),
+                    Integer,
+                )
+            ).label("en_sla"),
+            func.avg(
+                func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion) / 3600.0
+            ).label("frt_horas"),
+            func.avg(
+                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
+            ).label("mttr_horas"),
+        )
+        .join(Empresa, Ticket.empresa_id == Empresa.id)
+        .where(*filtros)
     )
-    if empresa_id is not None:
-        stmt_total = stmt_total.where(*filtros)
-    else:
-        stmt_total = stmt_total.where(*filtros)
 
     stmt_grupo = stmt_total.group_by(Ticket.empresa_id, Empresa.nombre).order_by(
         func.count(Ticket.id).desc()
