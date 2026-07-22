@@ -9,12 +9,12 @@ const AnimatedWifiIcon = () => {
       <style>{`
         .onda {
           fill: none;
-          stroke: black;
+          stroke: #508484;
           stroke-width: 8;
           stroke-linecap: round;
         }
         .punto {
-          fill: black;
+          fill: #508484;
         }
 
         .w1 { animation: wave1 1.5s infinite; }
@@ -53,7 +53,7 @@ const AnimatedWifiIcon = () => {
         fontFamily="Arial, sans-serif" 
         fontSize="24" 
         fontWeight="bold" 
-        fill="#333"
+        fill="#508484"
       >
         GMP Redes
       </text>

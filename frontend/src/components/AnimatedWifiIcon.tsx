@@ -9,7 +9,7 @@ export default function AnimatedWifiIcon() {
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="text-brand-500"
+        className="text-[#508484]"
       >
         <path
           d="M2 8.5C5.5 5 9.5 3 12 3s6.5 2 10 5.5"
@@ -40,7 +40,7 @@ export default function AnimatedWifiIcon() {
           className="animate-wifi-dot"
         />
       </svg>
-      <span className="text-sm font-medium text-gray-400 animate-pulse">Cargando...</span>
+      <span className="text-sm font-medium text-[#508484] animate-pulse">Cargando...</span>
     </div>
   );
 }

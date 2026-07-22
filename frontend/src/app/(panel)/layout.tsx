@@ -11,7 +11,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-bgCustom">
+      <div className="flex min-h-screen">
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
