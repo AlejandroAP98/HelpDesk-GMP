@@ -161,6 +161,62 @@ export interface MetricasInfraestructura {
   top_ubicaciones: TopUbicacion[];
 }
 
+export interface RendimientoAgente {
+  agente_id: string;
+  agente_nombre: string | null;
+  asignados: number;
+  resueltos: number;
+  cerrados: number;
+}
+
+export interface MetricasRendimiento {
+  por_agente: RendimientoAgente[];
+}
+
+export interface TiempoResolucionAgente {
+  agente_id: string;
+  agente_nombre: string | null;
+  mttr_horas: number | null;
+  tickets_analizados: number;
+}
+
+export interface MetricasTiempoPorAgente {
+  por_agente: TiempoResolucionAgente[];
+}
+
+export interface ReaperturaItem {
+  ticket_id: string;
+  titulo: string;
+  agente_nombre: string | null;
+  fecha_reapertura: string;
+  veces_reabierto: number;
+}
+
+export interface MetricasReaperturas {
+  total_reaperturas: number;
+  tickets: ReaperturaItem[];
+}
+
+export interface SLAItem {
+  empresa_id: number;
+  empresa_nombre: string | null;
+  total_tickets: number;
+  tickets_en_sla: number;
+  porcentaje_sla: number;
+  frt_horas: number | null;
+  mttr_horas: number | null;
+  total_tickets_mes_anterior: number | null;
+  porcentaje_sla_mes_anterior: number | null;
+  frt_horas_mes_anterior: number | null;
+  mttr_horas_mes_anterior: number | null;
+}
+
+export interface MetricasSLA {
+  sla_objetivo_frt_horas: number;
+  sla_objetivo_mttr_horas: number;
+  por_empresa: SLAItem[];
+}
+
 export const authApi = {
   login: async (email: string, password: string) => {
     const r = await api.post("/api/auth/login", { email, password });
@@ -438,6 +494,26 @@ export const pushApi = {
   },
 };
 
+export const reportesApi = {
+  descargarCSV: async (params: Record<string, string> = {}) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "";
+    const token = (await import("@/store/authStore")).useAuthStore.getState().token;
+    const query = new URLSearchParams(params).toString();
+    const url = `${base}/api/reportes/tickets/csv${query ? `?${query}` : ""}`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) throw new Error("Error al descargar reporte");
+    const blob = await r.blob();
+    const disposition = r.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?(.+?)"?$/);
+    const filename = match?.[1] || "reporte_tickets.csv";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+};
+
 export const metricasApi = {
   tiempos: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/tiempos", { params });
@@ -450,5 +526,21 @@ export const metricasApi = {
   infraestructura: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/infraestructura", { params });
     return r.data as MetricasInfraestructura;
+  },
+  rendimientoAgente: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/rendimiento-agente", { params });
+    return r.data as MetricasRendimiento;
+  },
+  tiempoPorAgente: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/tiempo-por-agente", { params });
+    return r.data as MetricasTiempoPorAgente;
+  },
+  reaperturas: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/reaperturas", { params });
+    return r.data as MetricasReaperturas;
+  },
+  sla: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/sla", { params });
+    return r.data as MetricasSLA;
   },
 };

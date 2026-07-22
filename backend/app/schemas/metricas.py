@@ -52,3 +52,59 @@ class TopUbicacion(BaseModel):
 class MetricasInfraestructura(BaseModel):
     por_elemento: list[DesgloseElemento]
     top_ubicaciones: list[TopUbicacion]
+
+
+class RendimientoAgente(BaseModel):
+    agente_id: str
+    agente_nombre: str | None = None
+    asignados: int
+    resueltos: int
+    cerrados: int
+
+
+class MetricasRendimiento(BaseModel):
+    por_agente: list[RendimientoAgente]
+
+
+class TiempoResolucionAgente(BaseModel):
+    agente_id: str
+    agente_nombre: str | None = None
+    mttr_horas: float | None = None
+    tickets_analizados: int
+
+
+class MetricasTiempoPorAgente(BaseModel):
+    por_agente: list[TiempoResolucionAgente]
+
+
+class ReaperturaItem(BaseModel):
+    ticket_id: str
+    titulo: str
+    agente_nombre: str | None = None
+    fecha_reapertura: str
+    veces_reabierto: int
+
+
+class MetricasReaperturas(BaseModel):
+    total_reaperturas: int
+    tickets: list[ReaperturaItem]
+
+
+class SLAItem(BaseModel):
+    empresa_id: int
+    empresa_nombre: str | None = None
+    total_tickets: int
+    tickets_en_sla: int
+    porcentaje_sla: float
+    frt_horas: float | None = None
+    mttr_horas: float | None = None
+    total_tickets_mes_anterior: int | None = None
+    porcentaje_sla_mes_anterior: float | None = None
+    frt_horas_mes_anterior: float | None = None
+    mttr_horas_mes_anterior: float | None = None
+
+
+class MetricasSLA(BaseModel):
+    sla_objetivo_frt_horas: float
+    sla_objetivo_mttr_horas: float
+    por_empresa: list[SLAItem]

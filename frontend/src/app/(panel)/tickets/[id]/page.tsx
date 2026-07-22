@@ -352,7 +352,7 @@ export default function TicketDetallePage() {
     <div className="space-y-1">
       <button
         onClick={() => router.back()}
-        className="inline-flex items-center text-xs font-medium border-gray-300 border border-1  rounded-lg px-1.5 py-1.5 cursor-pointer text-gray-500 hover:text-gray-800 transition-colors"
+        className="inline-flex items-center text-xs font-medium cursor-pointer text-gray-500 hover:text-gray-800 transition-colors"
       >
         <BackIcon className="w-4 h-4" />
         Volver

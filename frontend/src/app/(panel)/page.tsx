@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { ticketApi, statsApi, type Ticket, type PrioridadTicket, type EstadoTicket, type Stats } from "@/lib/endpoints";
+import { ticketApi, statsApi, reportesApi, empresaApi, type Ticket, type PrioridadTicket, type EstadoTicket, type Stats, type Empresa } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
 import { StatsCard } from "@/components/ui/StatsCard";
@@ -11,6 +11,7 @@ import { DataTable } from "@/components/ui/Table";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import NewTicketIcon from "../assets/icons/NewTicketIcon";
 import TicketIcon from "../assets/icons/TicketIcon";
 import TicketOpenedIcon from "../assets/icons/TicketOpenedIcon";
@@ -33,14 +34,21 @@ export default function PanelHomePage() {
   const [recientes, setRecientes] = useState<Ticket[]>([]);
   const [cargando, setCargando] = useState(true);
   const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0, en_progreso: 0, asignados: 0 });
- const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
+  const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
+  const [fechaInicio, setFechaInicio] = useState("");
+  const [fechaFin, setFechaFin] = useState("");
+  const [filtroEmpresaId, setFiltroEmpresaId] = useState("");
+  const [estado, setEstado] = useState("");
+  const [prioridad, setPrioridad] = useState("");
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [descargando, setDescargando] = useState(false);
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       try {
         const [ultimos, statsData] = await Promise.all([
-          ticketApi.listar({ size: 10 }),
+          ticketApi.listar({ size: 5 }),
           statsApi.obtener(),
         ]);
         setRecientes(ultimos.items);
@@ -113,6 +121,39 @@ export default function PanelHomePage() {
     };
   }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
+  useEffect(() => {
+    if (usuario?.rol === "administrador" || usuario?.rol === "agente") {
+      empresaApi.listar({ size: 100 }).then((r) => setEmpresas(r.items)).catch(() => {});
+    }
+  }, [usuario?.rol]);
+
+  const handleDescargar = async () => {
+    setDescargando(true);
+    try {
+      const params: Record<string, string> = {};
+      if (fechaInicio) params.fecha_inicio = fechaInicio;
+      if (fechaFin) params.fecha_fin = fechaFin;
+      if (filtroEmpresaId) params.empresa_id = filtroEmpresaId;
+      if (estado) params.estado = estado;
+      if (prioridad) params.prioridad = prioridad;
+      await reportesApi.descargarCSV(params);
+    } catch {
+      /* ignore */
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  const limpiarFiltros = () => {
+    setFechaInicio("");
+    setFechaFin("");
+    setFiltroEmpresaId("");
+    setEstado("");
+    setPrioridad("");
+  };
+
+  const hayFiltros = fechaInicio || fechaFin || filtroEmpresaId || estado || prioridad;
+
   const esCliente = usuario?.rol === "cliente";
   
   const cambiarModo = (modo: VistaMode) => {
@@ -139,13 +180,12 @@ export default function PanelHomePage() {
           <Link href="/tickets/nuevo">
             <Button>
               <NewTicketIcon />
-              Crear nuevo ticket
+              Nuevo ticket
             </Button>
           </Link>
         )}
       </div>
-
-      <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fadeIn">
+      <section className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fadeIn">
         <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
         {
@@ -156,9 +196,91 @@ export default function PanelHomePage() {
         <StatsCard label="En Progreso" value={stats.en_progreso} icon={<TicketProgressIcon />} className="animate-scale-in bg-yellowCustom" />
         <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />}  className="animate-scale-in bg-greenCustom" />
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
-      </div>
-
-      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-6">
+      </section>
+      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">
+        <h2 className="text-base font-bold tracking-tight text-gray-900">
+          Reportes
+        </h2>
+        <div className=" flex justify-between gap-2 w-full">
+          <div className="xl:flex xl:justify-between grid md:grid-cols-3 grid-cols-2 gap-3">
+            <div className="flex flex-col">
+              <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">Fecha inicio</label>
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="rounded-xl border border-gray-200 bg-white text-gray-700 text-xs px-3 py-2 focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">Fecha fin</label>
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                className="rounded-xl border border-gray-200 bg-white text-gray-700 text-xs px-3 py-2 focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all"
+              />
+            </div>
+            {!esCliente && (
+              <Select
+                label="Empresa"
+                value={filtroEmpresaId}
+                onChange={(e) => setFiltroEmpresaId(e.target.value)}
+                options={empresas.map((e) => ({ value: String(e.id), label: e.nombre }))}
+                placeholder="Todas"
+                className="w-full sm:w-44 !text-xs"
+              />
+            )}
+            <Select
+              label="Estado"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              options={[
+                { value: "abierto", label: "Abierto" },
+                { value: "asignado", label: "Asignado" },
+                { value: "en_progreso", label: "En Progreso" },
+                { value: "resuelto", label: "Resuelto" },
+                { value: "cerrado", label: "Cerrado" },
+              ]}
+              placeholder="Todos"
+              className="w-full sm:w-40 !text-xs"
+            />
+            <Select
+              label="Prioridad"
+              value={prioridad}
+              onChange={(e) => setPrioridad(e.target.value)}
+              options={[
+                { value: "urgente", label: "Urgente" },
+                { value: "alta", label: "Alta" },
+                { value: "media", label: "Media" },
+                { value: "baja", label: "Baja" },
+              ]}
+              placeholder="Todas"
+              className="w-full sm:w-36 !text-xs"
+            />
+            {hayFiltros && (
+              <button
+                onClick={limpiarFiltros}
+                className="text-xs text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+            <Button
+              onClick={handleDescargar}
+              loading={descargando}
+              variant="secondary"
+              disabled={descargando}
+              className=" self-end w-fit h-fit !bg-greenCustom !text-white hover:!bg-greenCustom/80"
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M7 16.5a1.5 1.5 0 0 0-3 0v3a1.5 1.5 0 0 0 3 0m3 .75c0 .414.336.75.75.75H12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75 2 6 2-6"/></svg> }
+            >
+              Descargar
+            </Button>
+        </div>
+      </section>
+      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-900">Tickets Recientes</h2>
           <div className="flex items-center sm:gap-2 gap-1">
@@ -251,12 +373,12 @@ export default function PanelHomePage() {
           />
         )
         : (
-          <div className="bg-cardCustom rounded-2xl min-h-[50vh]">
+          <div className="bg-cardCustom rounded-2xl min-h-[40vh]">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6">
             {recientes.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
-                className={`group relative bg-white border border-grayCustom/30
+                className={`group relative bg-white border border-brandCustom/60
                   rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
                   animate-fadeIn opacity-0`}
                 style={{

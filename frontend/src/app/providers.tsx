@@ -143,6 +143,20 @@ function WebSocketListener() {
               }
             }
           }
+        } else if (ev.type === "ticket:commented") {
+          const cm = ev as unknown as {
+            ticket_id: string;
+            usuario_id: string;
+            usuario_nombre: string;
+            es_nota_interna: boolean;
+          };
+          if (usuario?.id && cm.usuario_id !== usuario.id && !cm.es_nota_interna) {
+            addAlert({
+              kind: "commented",
+              ticket_id: cm.ticket_id,
+              comentario_usuario: cm.usuario_nombre,
+            });
+          }
         }
       }
     },

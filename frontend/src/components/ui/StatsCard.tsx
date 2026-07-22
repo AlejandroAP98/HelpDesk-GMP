@@ -14,7 +14,7 @@ export function StatsCard({ label, value, icon, className }: StatsCardProps) {
       <div className="flex items-center sm:gap-4 gap-2 px-2">
         <div className={`text-white`}>{icon}</div>
         <div className="min-w-0">
-          <p className={`text-xl md:text-2xl text-white font-bold tracking-tight mt-0.5`}>{value}</p>
+          <p className={`text-xl md:text-2xl text-white font-bold tracking-tight mt-0.5 animate-fade-in delay-300`}>{value}</p>
         </div>
       </div>
     </div>

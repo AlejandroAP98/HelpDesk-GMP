@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from dateutil.relativedelta import relativedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models.empresa import Empresa
+from app.models.enums import EstadoTicket
+from app.models.historial_estado import HistorialEstado
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.metricas import (
@@ -18,8 +21,16 @@ from app.schemas.metricas import (
     ConteoPorPrioridad,
     DesgloseElemento,
     MetricasInfraestructura,
+    MetricasReaperturas,
+    MetricasRendimiento,
+    MetricasSLA,
     MetricasTiempos,
+    MetricasTiempoPorAgente,
     MetricasVolumen,
+    ReaperturaItem,
+    RendimientoAgente,
+    SLAItem,
+    TiempoResolucionAgente,
     TopUbicacion,
     VolumenPorEmpresa,
 )
@@ -199,4 +210,310 @@ async def infraestructura(
     return MetricasInfraestructura(
         por_elemento=por_elemento,
         top_ubicaciones=top_ubicaciones,
+    )
+
+
+def _filtros_base(
+    fecha_inicio: date | None,
+    fecha_fin: date | None,
+    empresa_id: int | None,
+) -> list:
+    filtros: list = []
+    if fecha_inicio is not None:
+        filtros.append(Ticket.fecha_creacion >= datetime.combine(fecha_inicio, time.min))
+    if fecha_fin is not None:
+        filtros.append(Ticket.fecha_creacion <= datetime.combine(fecha_fin, time.max))
+    if empresa_id is not None:
+        filtros.append(Ticket.empresa_id == empresa_id)
+    return filtros
+
+
+@router.get("/rendimiento-agente", response_model=MetricasRendimiento)
+async def rendimiento_agente(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_admin),
+) -> MetricasRendimiento:
+    filtros = _filtros_base(fecha_inicio, fecha_fin, empresa_id)
+
+    stmt = (
+        select(
+            Usuario.id.label("agente_id"),
+            Usuario.nombre.label("agente_nombre"),
+            func.count(Ticket.id).label("asignados"),
+            func.sum(func.cast(Ticket.estado == EstadoTicket.resuelto, Integer)).label("resueltos"),
+            func.sum(func.cast(Ticket.estado == EstadoTicket.cerrado, Integer)).label("cerrados"),
+        )
+        .join(Ticket, Ticket.agente_id == Usuario.id)
+        .where(Usuario.rol == "agente", Ticket.agente_id.isnot(None), *filtros)
+        .group_by(Usuario.id, Usuario.nombre)
+        .order_by(func.count(Ticket.id).desc())
+    )
+    rows = (await db.execute(stmt)).all()
+    return MetricasRendimiento(
+        por_agente=[
+            RendimientoAgente(
+                agente_id=str(r.agente_id),
+                agente_nombre=r.agente_nombre,
+                asignados=r.asignados,
+                resueltos=r.resueltos or 0,
+                cerrados=r.cerrados or 0,
+            )
+            for r in rows
+        ]
+    )
+
+
+@router.get("/tiempo-por-agente", response_model=MetricasTiempoPorAgente)
+async def tiempo_por_agente(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_admin),
+) -> MetricasTiempoPorAgente:
+    filtros = _filtros_base(fecha_inicio, fecha_fin, empresa_id)
+
+    stmt = (
+        select(
+            Usuario.id.label("agente_id"),
+            Usuario.nombre.label("agente_nombre"),
+            func.avg(
+                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
+            ).label("mttr_horas"),
+            func.count(Ticket.id).label("tickets_analizados"),
+        )
+        .join(Ticket, Ticket.agente_id == Usuario.id)
+        .where(
+            Ticket.fecha_resolucion.isnot(None),
+            Ticket.agente_id.isnot(None),
+            *filtros,
+        )
+        .group_by(Usuario.id, Usuario.nombre)
+        .order_by(
+            func.avg(
+                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
+            )
+        )
+    )
+    rows = (await db.execute(stmt)).all()
+    return MetricasTiempoPorAgente(
+        por_agente=[
+            TiempoResolucionAgente(
+                agente_id=str(r.agente_id),
+                agente_nombre=r.agente_nombre,
+                mttr_horas=round(r.mttr_horas, 2) if r.mttr_horas is not None else None,
+                tickets_analizados=r.tickets_analizados,
+            )
+            for r in rows
+        ]
+    )
+
+
+@router.get("/reaperturas", response_model=MetricasReaperturas)
+async def reaperturas(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_admin),
+) -> MetricasReaperturas:
+    filtros: list = []
+    if fecha_inicio is not None:
+        filtros.append(HistorialEstado.fecha >= datetime.combine(fecha_inicio, time.min))
+    if fecha_fin is not None:
+        filtros.append(HistorialEstado.fecha <= datetime.combine(fecha_fin, time.max))
+    if empresa_id is not None:
+        filtros.append(Ticket.empresa_id == empresa_id)
+
+    stmt = (
+        select(
+            HistorialEstado.ticket_id,
+            Ticket.titulo,
+            Usuario.nombre.label("agente_nombre"),
+            HistorialEstado.fecha.label("fecha_reapertura"),
+        )
+        .join(Ticket, HistorialEstado.ticket_id == Ticket.id)
+        .outerjoin(Usuario, Ticket.agente_id == Usuario.id)
+        .where(
+            HistorialEstado.estado_anterior.in_([EstadoTicket.resuelto, EstadoTicket.cerrado]),
+            HistorialEstado.estado_nuevo == EstadoTicket.abierto,
+            *filtros,
+        )
+        .order_by(HistorialEstado.fecha.desc())
+    )
+
+    rows = (await db.execute(stmt)).all()
+
+    ticket_count: dict[str, int] = {}
+    for r in rows:
+        tid = str(r.ticket_id)
+        ticket_count[tid] = ticket_count.get(tid, 0) + 1
+
+    seen: set[str] = set()
+    tickets: list[ReaperturaItem] = []
+    for r in rows:
+        tid = str(r.ticket_id)
+        if tid not in seen:
+            seen.add(tid)
+            tickets.append(
+                ReaperturaItem(
+                    ticket_id=tid,
+                    titulo=r.titulo,
+                    agente_nombre=r.agente_nombre,
+                    fecha_reapertura=r.fecha_reapertura.strftime("%Y-%m-%d %H:%M"),
+                    veces_reabierto=ticket_count[tid],
+                )
+            )
+
+    return MetricasReaperturas(
+        total_reaperturas=len(rows),
+        tickets=tickets,
+    )
+
+
+SLA_FRT_HORAS: float = 4.0
+SLA_MTTR_HORAS: float = 24.0
+
+
+async def _calcular_sla_empresa(
+    db: AsyncSession,
+    fecha_inicio: datetime,
+    fecha_fin: datetime,
+    empresa_id: int | None = None,
+) -> dict:
+    filtros: list = [
+        Ticket.fecha_creacion >= fecha_inicio,
+        Ticket.fecha_creacion <= fecha_fin,
+    ]
+    if empresa_id is not None:
+        filtros.append(Ticket.empresa_id == empresa_id)
+
+    stmt_total = select(
+        Ticket.empresa_id,
+        Empresa.nombre.label("empresa_nombre"),
+        func.count(Ticket.id).label("total"),
+        func.sum(
+            func.cast(
+                (Ticket.fecha_primera_respuesta.isnot(None))
+                & (
+                    func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
+                    <= SLA_FRT_HORAS * 3600
+                )
+                & (
+                    (Ticket.fecha_resolucion.is_(None))
+                    | (
+                        Ticket.fecha_resolucion.isnot(None)
+                        & (
+                            func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+                            <= SLA_MTTR_HORAS * 3600
+                        )
+                    )
+                ),
+                Integer,
+            )
+        ).label("en_sla"),
+        func.avg(
+            func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion) / 3600.0
+        ).label("frt_horas"),
+        func.avg(
+            func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
+        ).label("mttr_horas"),
+    )
+    if empresa_id is not None:
+        stmt_total = stmt_total.where(*filtros)
+    else:
+        stmt_total = stmt_total.where(*filtros)
+
+    stmt_grupo = stmt_total.group_by(Ticket.empresa_id, Empresa.nombre).order_by(
+        func.count(Ticket.id).desc()
+    )
+
+    rows = (await db.execute(stmt_grupo)).all()
+    return {
+        r.empresa_id: {
+            "empresa_nombre": r.empresa_nombre,
+            "total": r.total,
+            "en_sla": r.en_sla or 0,
+            "frt_horas": round(r.frt_horas, 2) if r.frt_horas is not None else None,
+            "mttr_horas": round(r.mttr_horas, 2) if r.mttr_horas is not None else None,
+        }
+        for r in rows
+    }
+
+
+@router.get("/sla", response_model=MetricasSLA)
+async def metricas_sla(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_admin),
+) -> MetricasSLA:
+    if fecha_inicio is None:
+        hoy = date.today()
+        fecha_inicio = hoy.replace(day=1)
+    if fecha_fin is None:
+        fecha_fin = date.today()
+
+    fin_dt = datetime.combine(fecha_fin, time.max)
+    inicio_dt = datetime.combine(fecha_inicio, time.min)
+
+    mes_anterior_fin = inicio_dt - relativedelta(days=1)
+    mes_anterior_inicio = mes_anterior_fin.replace(day=1)
+
+    actual = await _calcular_sla_empresa(db, inicio_dt, fin_dt, empresa_id)
+    anterior = await _calcular_sla_empresa(db, mes_anterior_inicio, mes_anterior_fin, empresa_id)
+
+    por_empresa: list[SLAItem] = []
+    for eid, data in actual.items():
+        ant = anterior.get(eid)
+        total = data["total"]
+        en_sla = data["en_sla"]
+        pct = round((en_sla / total) * 100, 1) if total > 0 else 0.0
+
+        item = SLAItem(
+            empresa_id=eid,
+            empresa_nombre=data["empresa_nombre"],
+            total_tickets=total,
+            tickets_en_sla=en_sla,
+            porcentaje_sla=pct,
+            frt_horas=data["frt_horas"],
+            mttr_horas=data["mttr_horas"],
+            total_tickets_mes_anterior=ant["total"] if ant else None,
+            porcentaje_sla_mes_anterior=(
+                round((ant["en_sla"] / ant["total"]) * 100, 1) if ant and ant["total"] > 0 else None
+            ),
+            frt_horas_mes_anterior=ant["frt_horas"] if ant else None,
+            mttr_horas_mes_anterior=ant["mttr_horas"] if ant else None,
+        )
+        por_empresa.append(item)
+
+    for eid, data in anterior.items():
+        if eid not in actual:
+            ant_total = data["total"]
+            ant_en_sla = data["en_sla"]
+            ant_pct = round((ant_en_sla / ant_total) * 100, 1) if ant_total > 0 else 0.0
+            por_empresa.append(
+                SLAItem(
+                    empresa_id=eid,
+                    empresa_nombre=data["empresa_nombre"],
+                    total_tickets=0,
+                    tickets_en_sla=0,
+                    porcentaje_sla=0.0,
+                    frt_horas=None,
+                    mttr_horas=None,
+                    total_tickets_mes_anterior=ant_total,
+                    porcentaje_sla_mes_anterior=ant_pct,
+                    frt_horas_mes_anterior=data["frt_horas"],
+                    mttr_horas_mes_anterior=data["mttr_horas"],
+                )
+            )
+
+    return MetricasSLA(
+        sla_objetivo_frt_horas=SLA_FRT_HORAS,
+        sla_objetivo_mttr_horas=SLA_MTTR_HORAS,
+        por_empresa=por_empresa,
     )

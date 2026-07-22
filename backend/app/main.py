@@ -1,4 +1,5 @@
 """Entry point de la aplicacion FastAPI HelpDesk-GMP."""
+
 import asyncio
 from contextlib import asynccontextmanager
 import logging
@@ -16,6 +17,7 @@ from app.routers import empresas as empresas_router
 from app.routers import push as push_router
 from app.routers import matriz_prioridad as matriz_prioridad_router
 from app.routers import metricas as metricas_router
+from app.routers import reportes as reportes_router
 from app.routers import stats as stats_router
 from app.routers import subcategorias as subcategorias_router
 from app.routers import tarea_pendiente as tarea_pendiente_router
@@ -59,10 +61,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Iniciando HelpDesk-GMP backend (env=%s)", settings.app_env)
     from app.core.storage import ensure_bucket
+
     ensure_bucket()
     logger.info("Bucket MinIO verificado: %s", settings.minio_bucket)
 
     from app.websockets.pubsub import pubsub_listener
+
     listener_task = asyncio.create_task(pubsub_listener())
     logger.info("WS Pub/Sub listener arrancado")
 
@@ -100,6 +104,7 @@ app.include_router(tarea_pendiente_router.router)
 app.include_router(push_router.router)
 app.include_router(matriz_prioridad_router.router)
 app.include_router(metricas_router.router)
+app.include_router(reportes_router.router)
 app.include_router(ws_router.router)
 
 

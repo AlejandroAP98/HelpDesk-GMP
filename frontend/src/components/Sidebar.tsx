@@ -32,6 +32,13 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
     { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
     { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
     {
+      href: "/metricas",
+      label: "Métricas",
+      icon: (
+        <MetricsIcon/>
+      ),
+    },
+    {
       href: "/admin/empresas",
       label: "Empresas",
       icon: (
@@ -48,13 +55,6 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
       label: "Categorías",
       icon: (
         <CategoryIcon/>
-      ),
-    },
-    {
-      href: "/metricas",
-      label: "Métricas",
-      icon: (
-        <MetricsIcon/>
       ),
     },
   ],
@@ -89,7 +89,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-60 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-200 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-60 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -121,7 +121,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications }: SidebarP
                 key={l.href}
                 href={l.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5  text-sm font-medium transition-all duration-150 ${
+                className={`flex items-center gap-3 px-3 py-2.5  text-sm font-medium transition-all duration-200 ${
                   active
                     ? "bg-brandCustom text-white"
                     : "text-white hover:text-brandCustom hover:bg-bgCustom "

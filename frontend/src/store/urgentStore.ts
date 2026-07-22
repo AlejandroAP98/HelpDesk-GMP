@@ -2,18 +2,20 @@
 
 import { create } from "zustand";
 
-export type AlertKind = "urgent" | "assigned" | "state_changed";
+export type AlertKind = "urgent" | "assigned" | "state_changed" | "commented";
 
 export interface UrgentAlert {
   id: string;
   kind: AlertKind;
   ticket_id: string;
-  empresa_id: number;
-  titulo: string;
-  prioridad: string;
-  estado: string;
+  empresa_id?: number;
+  titulo?: string;
+  prioridad?: string;
+  estado?: string;
   estado_anterior?: string;
   estado_nuevo?: string;
+  comentario_usuario?: string;
+  es_nota_interna?: boolean;
   createdAt: number;
 }
 
