@@ -379,7 +379,7 @@ export default function PanelHomePage() {
             {recientes.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
-                className={`group relative bg-white border border-brandCustom/60
+                className={`group relative bg-white 
                   rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
                   animate-fadeIn opacity-0`}
                 style={{
