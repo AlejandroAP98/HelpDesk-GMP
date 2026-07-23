@@ -1,4 +1,4 @@
-"""Servicio de autenticacion: registro, login, refresh."""
+"""Servicio de autenticacion: registro, login, refresh, cambio de password."""
 from typing import Any
 
 from sqlalchemy import select
@@ -14,8 +14,8 @@ from app.core.security import (
 from app.models.empresa import Empresa
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
-from app.schemas.auth import LoginRequest, RegistroAgenteRequest, RegistroRequest
-from app.schemas.usuario import Token, UsuarioOut
+from app.schemas.auth import CambiarPasswordRequest, LoginRequest, RegistroAgenteRequest, RegistroRequest
+from app.schemas.usuario import Mensaje, Token, UsuarioOut
 from app.utils.exceptions import Conflicto, CredencialesInvalidas, RecursoNoEncontrado, TokenInvalido
 
 
@@ -116,3 +116,17 @@ async def refresh(refresh_token: str, db: AsyncSession) -> Token:
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
     return await _issue_tokens(usuario)
+
+
+async def cambiar_password(
+    data: CambiarPasswordRequest,
+    usuario: Usuario,
+    db: AsyncSession,
+) -> Mensaje:
+    if not verify_password(data.old_password, usuario.password_hash):
+        raise CredencialesInvalidas("La contrasena actual no es correcta")
+    if data.old_password == data.new_password:
+        raise Conflicto("La nueva contrasena debe ser diferente a la actual")
+    usuario.password_hash = hash_password(data.new_password)
+    await db.commit()
+    return Mensaje(detail="Contrasena actualizada correctamente")

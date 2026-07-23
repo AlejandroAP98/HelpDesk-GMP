@@ -27,4 +27,9 @@ class RegistroAgenteRequest(BaseModel):
     empresa_id: int | None = None
 
 
-__all__ = ["LoginRequest", "RegistroRequest", "RegistroAgenteRequest", "Token", "UsuarioOut"]
+class CambiarPasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+__all__ = ["LoginRequest", "RegistroRequest", "RegistroAgenteRequest", "CambiarPasswordRequest", "Token", "UsuarioOut"]

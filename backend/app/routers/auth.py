@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_admin
 from app.models.usuario import Usuario
 from app.schemas.auth import (
+    CambiarPasswordRequest,
     LoginRequest,
     RegistroAgenteRequest,
     RegistroRequest,
@@ -47,6 +48,15 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
 @router.get("/me", response_model=UsuarioOut)
 async def me(current: Annotated[Usuario, Depends(get_current_user)]) -> UsuarioOut:
     return UsuarioOut.model_validate(current)
+
+
+@router.post("/change-password", response_model=Mensaje)
+async def cambiar_password(
+    data: CambiarPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(get_current_user),
+) -> Mensaje:
+    return await auth_service.cambiar_password(data, current, db)
 
 
 @router.post("/logout", response_model=Mensaje)

@@ -5,6 +5,7 @@ import { authApi } from "@/lib/endpoints";
 import { useAuthStore } from "@/store/authStore";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import logo from "../assets/logo.svg";
@@ -53,15 +54,13 @@ export default function LoginPage() {
                 autoFocus
               />
 
-              <Input
+              <PasswordInput
                 label="Contraseña"
-                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="............"
                 autoComplete="current-password"
-
               />
             </div>
 
