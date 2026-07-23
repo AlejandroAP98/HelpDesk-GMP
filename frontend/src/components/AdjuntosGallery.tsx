@@ -122,7 +122,7 @@ function LightboxImage({ url, alt }: { url: string; alt: string }) {
       <img
         src={blobUrl}
         alt={alt}
-        className="max-w-full max-h-full w-full h-full object-contain"
+        className="max-w-full max-h-[80vh] object-contain"
       />
     );
   }
@@ -379,7 +379,7 @@ export function AdjuntosGallery({
           >
             <button
               onClick={cerrarLightbox}
-              className="self-end sm:absolute mb-2 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+              className="self-end w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
               title="Cerrar (Esc)"
             >
               <svg
