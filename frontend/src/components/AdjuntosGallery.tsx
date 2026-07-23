@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { adjuntoApi, type Adjunto } from "@/lib/endpoints";
 import { useAdjuntoBlob } from "@/hooks/useAdjuntoBlob";
 import {
@@ -119,13 +119,10 @@ function LightboxImage({ url, alt }: { url: string; alt: string }) {
   const { url: blobUrl, loading, error } = useAdjuntoBlob(url);
   if (blobUrl) {
     return (
-      /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={blobUrl}
         alt={alt}
-        loading="lazy"
-        
-        className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+        className="max-w-full max-h-full w-full h-full object-contain"
       />
     );
   }
@@ -178,6 +175,15 @@ export function AdjuntosGallery({
 
   useEffect(() => {
     if (lightboxIndex === null) return;
+    window.scrollTo(0, document.documentElement.scrollHeight / 2 - window.innerHeight / 2);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [lightboxIndex]);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") cerrarLightbox();
       else if (e.key === "ArrowRight" && lightboxIndex < adjuntos.length - 1) {
@@ -191,9 +197,8 @@ export function AdjuntosGallery({
   }, [lightboxIndex, adjuntos.length, cerrarLightbox]);
 
   useEffect(() => {
-    if (lightboxIndex !== null && lightboxIndex >= adjuntos.length) {
-      setLightboxIndex(adjuntos.length - 1);
-    }
+    if (lightboxIndex === null || lightboxIndex < adjuntos.length) return;
+    setLightboxIndex(adjuntos.length > 0 ? adjuntos.length - 1 : null);
   }, [adjuntos.length, lightboxIndex]);
 
   const handleFiles = async (files: FileList) => {
@@ -310,32 +315,11 @@ export function AdjuntosGallery({
           ))}
         </div>
       )}
-
       {lightboxIndex !== null && adjuntos[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed min-h-screen inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={cerrarLightbox}
         >
-          <button
-            onClick={cerrarLightbox}
-            className="absolute top-16 sm:top-8 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
-            title="Cerrar (Esc)"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-
           {adjuntos.length > 1 && (
             <>
               <button
@@ -393,6 +377,25 @@ export function AdjuntosGallery({
             className="max-w-[90vw] max-h-[90vh] flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              onClick={cerrarLightbox}
+              className="self-end sm:absolute mb-2 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors"
+              title="Cerrar (Esc)"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
             <LightboxImage
               url={adjuntos[lightboxIndex].archivo_url}
               alt={adjuntos[lightboxIndex].nombre_archivo}
