@@ -518,6 +518,33 @@ export const reportesApi = {
   },
 };
 
+export interface RespuestaRapida {
+  id: string;
+  usuario_id: string;
+  titulo: string;
+  contenido: string;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+}
+
+export const respuestaRapidaApi = {
+  listar: async () => {
+    const r = await api.get("/api/respuestas-rapidas");
+    return r.data as RespuestaRapida[];
+  },
+  crear: async (data: { titulo: string; contenido: string }) => {
+    const r = await api.post("/api/respuestas-rapidas", data);
+    return r.data as RespuestaRapida;
+  },
+  actualizar: async (id: string, data: { titulo?: string; contenido?: string }) => {
+    const r = await api.put(`/api/respuestas-rapidas/${id}`, data);
+    return r.data as RespuestaRapida;
+  },
+  eliminar: async (id: string) => {
+    await api.delete(`/api/respuestas-rapidas/${id}`);
+  },
+};
+
 export const metricasApi = {
   tiempos: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/tiempos", { params });

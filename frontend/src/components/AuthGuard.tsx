@@ -28,8 +28,8 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-sm text-gray-400">
-        Redirigiendo a login...
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingState />
       </div>
     );
   }

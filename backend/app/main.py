@@ -18,6 +18,7 @@ from app.routers import push as push_router
 from app.routers import matriz_prioridad as matriz_prioridad_router
 from app.routers import metricas as metricas_router
 from app.routers import reportes as reportes_router
+from app.routers import respuestas_rapidas as respuestas_rapidas_router
 from app.routers import stats as stats_router
 from app.routers import subcategorias as subcategorias_router
 from app.routers import tarea_pendiente as tarea_pendiente_router
@@ -105,6 +106,7 @@ app.include_router(push_router.router)
 app.include_router(matriz_prioridad_router.router)
 app.include_router(metricas_router.router)
 app.include_router(reportes_router.router)
+app.include_router(respuestas_rapidas_router.router)
 app.include_router(ws_router.router)
 
 

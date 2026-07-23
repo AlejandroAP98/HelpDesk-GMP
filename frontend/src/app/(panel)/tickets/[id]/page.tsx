@@ -24,6 +24,7 @@ import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { Button } from "@/components/ui/Button";
 import { AdjuntosGallery } from "@/components/AdjuntosGallery";
+import { QuickReplies } from "@/components/QuickReplies";
 import BackIcon from "@/app/assets/icons/BackIcon";
 
 const elementoLabels: Record<ElementoInfraestructura, string> = {
@@ -595,9 +596,11 @@ export default function TicketDetallePage() {
                 Cargar mas comentarios...
               </button>
             )}
-
             {!estaCerrado && (
               <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
+                {!esCliente && (
+                  <QuickReplies onInsert={(text) => setNuevoComentario((prev) => prev + text)} />
+                )}
                 <textarea
                   rows={3}
                   value={nuevoComentario}
