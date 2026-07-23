@@ -96,6 +96,39 @@ class ConnectionManager:
             logger.debug("broadcast_to_ticket %s: no se pudo enviar a %d destinos", ticket_id, len(conns))
         return n
 
+    async def broadcast_to_users(
+        self, user_ids: list[UUID], payload: dict[str, Any]
+    ) -> int:
+        """Envia a las conexiones cuyo usuario_id este en la lista dada.
+
+        Sirve para notificar eventos solo a los implicados (cliente/agente/admins)
+        en lugar de hacer un broadcast global.
+        """
+        if not user_ids:
+            return 0
+        target_ids: set[UUID] = {u for u in user_ids if isinstance(u, UUID)}
+        matched: list[UUID] = []
+        for cid, meta in self.meta.items():
+            uid_str = meta.get("usuario_id")
+            if not uid_str:
+                continue
+            try:
+                if UUID(uid_str) in target_ids:
+                    matched.append(cid)
+            except (TypeError, ValueError):
+                continue
+        n = 0
+        for cid in matched:
+            if await self.send_personal(cid, payload):
+                n += 1
+        if n == 0 and matched:
+            logger.debug(
+                "broadcast_to_users: no se pudo enviar a %d conexiones de %d usuarios",
+                len(matched),
+                len(target_ids),
+            )
+        return n
+
     async def broadcast_all(self, payload: dict[str, Any]) -> int:
         n = 0
         for cid in list(self.active.keys()):

@@ -15,6 +15,7 @@ Modelo:
 Target soportados:
     - {"target": "roles", "roles": ["agente","administrador"], "event": ...}
     - {"target": "ticket", "ticket_id": "...", "event": ...}
+    - {"target": "users", "user_ids": ["uuid",...], "event": ...}
     - {"target": "broadcast", "event": ...}
 
 Eventos que disparan Web Push:
@@ -63,6 +64,22 @@ async def publish_to_ticket(ticket_id: UUID, event: dict[str, Any]) -> None:
 
 async def publish_broadcast(event: dict[str, Any]) -> None:
     payload = {"target": "broadcast", "event": event}
+    await redis_client.publish(CHANNEL, json.dumps(payload))
+
+
+async def publish_to_users(user_ids: list[UUID], event: dict[str, Any]) -> None:
+    """Envia un evento solo a los usuarios cuyos IDs esten en la lista.
+
+    Se usa para notificar a los implicados en un ticket (cliente, agente, admins)
+    sin propagar a todos los conectados.
+    """
+    if not user_ids:
+        return
+    payload = {
+        "target": "users",
+        "user_ids": [str(u) for u in user_ids],
+        "event": event,
+    }
     await redis_client.publish(CHANNEL, json.dumps(payload))
 
 
@@ -142,6 +159,10 @@ async def pubsub_listener() -> None:
                 tid = data.get("ticket_id")
                 if tid:
                     await manager.broadcast_to_ticket(UUID(tid), event)
+            elif target == "users":
+                uids = data.get("user_ids", [])
+                if uids:
+                    await manager.broadcast_to_users([UUID(u) for u in uids], event)
             elif target == "broadcast":
                 await manager.broadcast_all(event)
             try:
