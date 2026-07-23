@@ -101,7 +101,7 @@ export function QuickReplies({ onInsert }: Props) {
         </button>
         {open && (
           <div className="flex justify-between">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-row-reverse gap-2">
               {items.map((rr) => (
               <div key={rr.id} className="group relative">
                 <button

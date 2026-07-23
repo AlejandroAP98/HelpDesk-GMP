@@ -560,7 +560,7 @@ export default function TicketDetallePage() {
                   key={c.id}
                   className={`rounded-2xl border px-4 py-2.5 transition-all opacity-0 animate-fadeIn ${c.es_nota_interna
                     ? "border-accentCustom/40 bg-accentCustom/10"
-                    : "border-gray-100 bg-cardCustom shadow-card"
+                    : (c.usuario_nombre ? (c.usuario_nombre === usuario?.nombre ? "border-gray-300 bg-gray-100 shadow-card" : "border-gray-300 bg-cardCustom shadow-card") : "border-gray-300 bg-cardCustom shadow-card")
                     }`}
                   style={{
                   animationDelay: `${index * 40}ms`,
