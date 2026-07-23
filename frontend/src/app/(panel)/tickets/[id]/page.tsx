@@ -181,7 +181,7 @@ export default function TicketDetallePage() {
       setComentariosPage(nextPage);
       setComentariosTotalPages(data.pages);
     } catch {
-      /* ignore */
+      console.error("No se pudo cargar mas comentarios");
     }
   };
 
@@ -194,7 +194,7 @@ export default function TicketDetallePage() {
       setAdjuntosPage(nextPage);
       setAdjuntosTotalPages(data.pages);
     } catch {
-      /* ignore */
+      console.error("No se pudo cargar mas adjuntos");
     }
   };
 
@@ -207,7 +207,7 @@ export default function TicketDetallePage() {
       setHistorialPage(nextPage);
       setHistorialTotalPages(data.pages);
     } catch {
-      /* ignore */
+      console.error("No se pudo cargar mas historial");
     }
   };
 
@@ -570,10 +570,10 @@ export default function TicketDetallePage() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs mb-2">
                     <div className="flex justify-between items-center sm:gap-4 gap-1 ">
                       <div className="flex justify-center items-center sm:gap-4 gap-1 ">
-                        <div className="w-7 h-7 rounded-full text-brandCustom bg-brandCustom/10 flex items-center justify-center">
+                        <div className={`w-7 h-7 rounded-full ${c.usuario_nombre !== usuario?.nombre  ? 'text-brandCustom bg-brandCustom/10' : 'text-grayCustom bg-grayCustom/10'} flex items-center justify-center`}>
                           <UserCommentsIcon />
                         </div>
-                        <span className="font-semibold text-gray-600 ">{c.usuario_nombre ?? "Usuario"}</span>
+                        <span className="font-semibold text-gray-600 ">{c.usuario_nombre ? (c.usuario_nombre === usuario?.nombre ? "Yo" : c.usuario_nombre) : "Usuario" }</span>
                       </div>
                       <span className="text-gray-400 sm:text-xs text-[10px] text-center">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
                     </div>
