@@ -16,6 +16,7 @@ from app.models.push_subscription import PushSubscription
 from app.models.tarea_pendiente import TareaPendiente
 from app.models.matriz_prioridad import MatrizPrioridad
 from app.models.respuesta_rapida import RespuestaRapida
+from app.models.punto_venta import PuntoVenta
 
 __all__ = [
     "EstadoTicket",
@@ -34,4 +35,5 @@ __all__ = [
     "TareaPendiente",
     "MatrizPrioridad",
     "RespuestaRapida",
+    "PuntoVenta",
 ]

@@ -25,6 +25,7 @@ from app.routers import tarea_pendiente as tarea_pendiente_router
 from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
+from app.routers import puntos_venta as puntos_venta_router
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -107,6 +108,7 @@ app.include_router(matriz_prioridad_router.router)
 app.include_router(metricas_router.router)
 app.include_router(reportes_router.router)
 app.include_router(respuestas_rapidas_router.router)
+app.include_router(puntos_venta_router.router)
 app.include_router(ws_router.router)
 
 

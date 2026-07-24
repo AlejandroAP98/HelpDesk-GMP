@@ -6,10 +6,13 @@ import {
   categoriaApi,
   subcategoriaApi,
   ticketApi,
+  puntoVentaApi,
   type Categoria,
   type Subcategoria,
   type ElementoInfraestructura,
+  type PuntoVenta,
 } from "@/lib/endpoints";
+import { useAuthStore } from "@/store/authStore";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -29,7 +32,6 @@ const CAMPOS_RED = [
   { key: "ip_antena", label: "IP Antena", placeholder: "Ej: 10.0.0.1" },
   { key: "mascara_red", label: "Máscara de red", placeholder: "Ej: 255.255.255.0" },
   { key: "puerta_enlace", label: "Puerta de enlace", placeholder: "Ej: 192.168.1.1" },
-  { key: "nombre_punto", label: "Nombre del punto", placeholder: "Ej: Sucursal Norte" },
 ] as const;
 
 type CampoRedKey = (typeof CAMPOS_RED)[number]["key"];
@@ -48,17 +50,18 @@ export default function NuevoTicketPage() {
     ip_antena: false,
     mascara_red: false,
     puerta_enlace: false,
-    nombre_punto: false,
   });
   const [valoresCampos, setValoresCampos] = useState<Record<CampoRedKey, string>>({
     ip_pcs: "",
     ip_antena: "",
     mascara_red: "",
     puerta_enlace: "",
-    nombre_punto: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [puntosVenta, setPuntosVenta] = useState<PuntoVenta[]>([]);
+  const [puntoVentaId, setPuntoVentaId] = useState<number | null>(null);
+  const usuario = useAuthStore((s) => s.usuario);
 
   useEffect(() => {
     categoriaApi.listar().then((r) => setCategorias(r.items)).catch(() => setCategorias([]));
@@ -76,6 +79,18 @@ export default function NuevoTicketPage() {
     setSubcategoriaId(null);
     setElemento(null);
   }, [categoriaId]);
+
+  useEffect(() => {
+    if (elemento === "punto_venta" && usuario?.empresa_id) {
+      puntoVentaApi
+        .listarPorEmpresa(usuario.empresa_id)
+        .then((r) => setPuntosVenta(r))
+        .catch(() => setPuntosVenta([]));
+    } else {
+      setPuntosVenta([]);
+    }
+    setPuntoVentaId(null);
+  }, [elemento, usuario?.empresa_id]);
 
   const toggleCampo = (key: CampoRedKey) => {
     setCamposActivos((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -105,6 +120,9 @@ export default function NuevoTicketPage() {
     setEnviando(true);
     setError(null);
     try {
+      const nombrePunto = elemento === "punto_venta" && puntoVentaId
+        ? puntosVenta.find((pv) => pv.id === puntoVentaId)?.nombre ?? null
+        : null;
       await ticketApi.crear({
         titulo,
         descripcion,
@@ -115,7 +133,7 @@ export default function NuevoTicketPage() {
         ip_antena: camposActivos.ip_antena ? valoresCampos.ip_antena || null : null,
         mascara_red: camposActivos.mascara_red ? valoresCampos.mascara_red || null : null,
         puerta_enlace: camposActivos.puerta_enlace ? valoresCampos.puerta_enlace || null : null,
-        nombre_punto: camposActivos.nombre_punto ? valoresCampos.nombre_punto || null : null,
+        nombre_punto: nombrePunto,
       });
       router.replace("/tickets");
     } catch {
@@ -157,6 +175,20 @@ export default function NuevoTicketPage() {
               options={ELEMENTOS.map((el) => ({ value: el.value, label: el.label }))}
             />
           </div>
+          {elemento === "punto_venta" && (
+            <div className="mt-2">
+              <Select
+                label="Punto de venta"
+                value={puntoVentaId ?? ""}
+                onChange={(e) => setPuntoVentaId(Number(e.target.value) || null)}
+                placeholder="Seleccione un punto de venta..."
+                options={puntosVenta.map((pv) => ({
+                  value: String(pv.id),
+                  label: pv.ciudad ? `${pv.nombre} (${pv.ciudad})` : pv.nombre,
+                }))}
+              />
+            </div>
+          )}
           <Input
             label="Titulo"
             type="text"

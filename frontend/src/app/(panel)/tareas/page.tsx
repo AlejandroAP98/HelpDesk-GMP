@@ -108,7 +108,7 @@ export default function TareasPage() {
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Mis Tareas</h1>
           <h2 className="text-gray-500 text-sm">Gestioná y organizá tus tareas diarias.</h2>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} icon={<AddCheckSquareIcon />} className="text-xs py-2.5 px-3 sm:text-base sm:px-3 text-nowrap">
+        <Button onClick={() => setShowForm(!showForm)} icon={<AddCheckSquareIcon />} className="text-nowrap">
           Nueva tarea
         </Button>
       </div>

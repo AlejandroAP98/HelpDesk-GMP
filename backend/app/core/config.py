@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:admin@helpdesk.local"
 
+    # --- Supabase REST (sincronizacion de sedes/puntos de venta) ---
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+
     # --- CORS ---
     cors_origins: list[str] = [
         "http://localhost:3000",

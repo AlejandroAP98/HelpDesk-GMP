@@ -18,6 +18,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/assets/icons/CopyInfoIcon.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/assets/icons/CopyInfoIcon.jsx", "src/app/assets/icons/AddSedeIcon.jsx", "src/app/assets/icons/SedesIcon.jsx"],
   "exclude": ["node_modules"]
 }

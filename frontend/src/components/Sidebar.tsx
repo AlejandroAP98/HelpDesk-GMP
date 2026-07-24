@@ -13,6 +13,7 @@ import CategoryIcon from "@/app/assets/icons/CategoryIcon";
 import FactoryIcon from "@/app/assets/icons/FactoryIcon";
 import CheckSquareIcon from "@/app/assets/icons/CheckSquareIcon";
 import MetricsIcon from "@/app/assets/icons/MetricsIcon";
+import SedesIcon from "@/app/assets/icons/SedesIcon";
 import logo from "../app/assets/logo-white.svg";
 
 const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
@@ -63,6 +64,11 @@ const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }
       icon: (
         <CategoryIcon/>
       ),
+    },
+    {
+      href: "/admin/puntos-venta",
+      label: "Puntos de Venta",
+      icon: <SedesIcon/>,
     },
   ],
 };

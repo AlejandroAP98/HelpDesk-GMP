@@ -169,7 +169,7 @@ export default function UsuariosPage() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Usuarios</h1>
           <p className="text-sm text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
         </div>
-        <Button onClick={abrirCrear} className="text-xs py-2.5 px-3 sm:text-base sm:px-3 text-nowrap" icon={<AddUserIcon />}>Nuevo usuario</Button>
+        <Button onClick={abrirCrear} className="text-nowrap" icon={<AddUserIcon />}>Nuevo usuario</Button>
       </div>
 
       <div className="flex flex-wrap gap-3">

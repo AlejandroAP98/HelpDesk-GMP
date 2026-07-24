@@ -1,4 +1,7 @@
-"""Seed inicial: 1 empresa demo + 1 admin.
+"""Seed inicial: usuarios demo + categorias + matriz de prioridad.
+
+Las empresas se crean desde Supabase con sync_sedes_supabase o manualmente.
+Este seed crea usuarios de prueba y categorias base.
 
 Uso (dentro del contenedor backend):
     python -m scripts.seed [--reset]
@@ -10,7 +13,6 @@ import sys
 from sqlalchemy import func, select, text
 
 from app.core.database import AsyncSessionLocal
-from app.models.empresa import Empresa
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
 from app.models.categoria import Categoria
@@ -19,7 +21,6 @@ from app.models.matriz_prioridad import MatrizPrioridad
 from app.core.security import hash_password
 
 
-EMPRESA_DEMO = {"id": 1, "nombre": "Empresa Demo S.A."}
 ADMIN_DEMO = {
     "nombre": "Admin Inicial",
     "email": "admin@helpdesk.com",
@@ -99,20 +100,6 @@ CATEGORIAS_DEMO = [
 
 async def run(reset: bool = False) -> None:
     async with AsyncSessionLocal() as db:
-        if reset:
-            from sqlalchemy import delete
-            emails_to_delete = (
-                [ADMIN_DEMO["email"]]
-                + [a["email"] for a in AGENTES_DEMO]
-                + [c["email"] for c in CLIENTES_DEMO]
-                + [m["email"] for m in MESA_AYUDA_DEMO]
-            )
-            await db.execute(delete(Usuario).where(Usuario.email.in_(emails_to_delete)))
-            await db.execute(delete(Subcategoria))
-            await db.execute(delete(Categoria))
-            await db.execute(delete(Empresa).where(Empresa.id == EMPRESA_DEMO["id"]))
-            await db.commit()
-
         nombres_validos = {c["nombre"] for c in CATEGORIAS_DEMO}
         all_cats = (await db.execute(select(Categoria))).scalars().all()
         for cat in all_cats:
@@ -125,15 +112,6 @@ async def run(reset: bool = False) -> None:
                 await db.execute(text("DELETE FROM categorias WHERE id = :cid"), {"cid": cat.id})
                 print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
         await db.commit()
-
-        empresa = (await db.execute(select(Empresa).where(Empresa.id == EMPRESA_DEMO["id"]))).scalar_one_or_none()
-        if empresa is None:
-            empresa = Empresa(id=EMPRESA_DEMO["id"], nombre=EMPRESA_DEMO["nombre"])
-            db.add(empresa)
-            await db.flush()
-            print(f"Empresa creada: id={empresa.id} nombre={empresa.nombre!r}")
-        else:
-            print(f"Empresa ya existe: id={empresa.id} nombre={empresa.nombre!r}")
 
         admin = (await db.execute(select(Usuario).where(Usuario.email == ADMIN_DEMO["email"]))).scalar_one_or_none()
         if admin is None:
@@ -152,10 +130,7 @@ async def run(reset: bool = False) -> None:
         else:
             print(f"Admin ya existe: id={admin.id} email={admin.email!r}")
 
-        print(" DEBUG: despues de admin", flush=True)
-
         for demo_user in AGENTES_DEMO + MESA_AYUDA_DEMO + CLIENTES_DEMO:
-            print(f" DEBUG: procesando {demo_user['email']}", flush=True)
             user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
             if user_db is None:
                 user_db = Usuario(
@@ -260,7 +235,7 @@ async def _seed_matriz_prioridad(db) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed inicial HelpDesk-GMP")
-    parser.add_argument("--reset", action="store_true", help="Borra empresa+admin demo antes de insertar")
+    parser.add_argument("--reset", action="store_true", help="Borra usuarios y categorias antes de insertar")
     args = parser.parse_args()
     try:
         asyncio.run(run(reset=args.reset))

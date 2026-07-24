@@ -307,7 +307,7 @@ export default function CategoriasPage() {
             Gestiona categorías, subcategorías y matriz de prioridad
           </p>
         </div>
-        <Button onClick={abrirCrearCat} className="text-xs py-2.5 px-3 sm:text-base sm:px-3 text-nowrap" icon={<AddCagoryIcon />}>Nueva categoría</Button>
+        <Button onClick={abrirCrearCat} className="text-nowrap" icon={<AddCagoryIcon />}>Nueva categoría</Button>
       </div>
 
       {error && <ErrorMessage message={error} />}

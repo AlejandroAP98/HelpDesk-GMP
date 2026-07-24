@@ -473,6 +473,40 @@ export const tareaApi = {
   },
 };
 
+export interface PuntoVenta {
+  id: number;
+  empresa_id: number;
+  empresa_nombre?: string | null;
+  nombre: string;
+  direccion: string | null;
+  ciudad: string | null;
+  activo: boolean;
+}
+
+export const puntoVentaApi = {
+  listar: async (params: Record<string, unknown> = {}) => {
+    const r = await api.get("/api/puntos-venta", { params });
+    return r.data as Pagina<PuntoVenta>;
+  },
+  listarPorEmpresa: async (empresaId: number) => {
+    const r = await api.get(`/api/puntos-venta/por-empresa/${empresaId}`, {
+      params: { solo_activos: true },
+    });
+    return r.data as PuntoVenta[];
+  },
+  crear: async (data: { empresa_id: number; nombre: string; direccion?: string; ciudad?: string }) => {
+    const r = await api.post("/api/puntos-venta", data);
+    return r.data as PuntoVenta;
+  },
+  actualizar: async (id: number, data: { nombre?: string; direccion?: string; ciudad?: string; activo?: boolean }) => {
+    const r = await api.patch(`/api/puntos-venta/${id}`, data);
+    return r.data as PuntoVenta;
+  },
+  eliminar: async (id: number) => {
+    await api.delete(`/api/puntos-venta/${id}`);
+  },
+};
+
 export const pushApi = {
   getVapidKey: async () => {
     const r = await api.get("/api/push/vapid-public-key");

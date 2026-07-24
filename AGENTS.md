@@ -55,6 +55,18 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod u
 # 0 3 * * * /opt/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
 ```
 
+### Sincronizacion de sedes (Supabase -> HelpDesk)
+
+```bash
+# Sincroniza sedes desde Supabase (GMP) a la tabla puntos_venta
+docker compose exec backend python -m scripts.sync_sedes_supabase
+
+# Preview sin aplicar cambios
+docker compose exec backend python -m scripts.sync_sedes_supabase --dry-run
+```
+
+Requiere `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el `.env` del backend HelpDesk.
+
 ### Systemd (auto-restart en boot)
 
 ```bash

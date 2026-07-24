@@ -95,7 +95,7 @@ export default function EmpresasPage() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Empresas</h1>
           <p className="text-sm text-gray-500 mt-1">Gestiona las empresas del sistema</p>
         </div>
-        <Button onClick={abrirCrear} className="text-xs py-2.5 px-3 sm:text-base sm:px-3 text-nowrap" icon={<AddFactoryIcon />}>Nueva empresa</Button>
+        <Button onClick={abrirCrear} className=" text-nowrap" icon={<AddFactoryIcon />}>Nueva empresa</Button>
       </div>
 
       {error && <ErrorMessage message={error} />}
