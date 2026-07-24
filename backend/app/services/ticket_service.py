@@ -175,6 +175,32 @@ async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str, empresa_
         )
 
 
+async def _publicar_nuevo_ticket(ticket: Ticket, empresa_nombre: str | None = None) -> None:
+    """Publica evento ticket:new a mesa de ayuda + administrador.
+
+    Estos roles monitorean y asignan tickets constantemente, por lo que
+    reciben una alerta visual por cada nuevo ticket creado (sin importar prioridad).
+    El evento ticket:urgent_created sigue disparandose aparte para urgentes
+    con beep rojo diferenciado.
+    """
+    from app.websockets.pubsub import publish_to_roles
+
+    payload = _ticket_payload(ticket, "ticket:new", empresa_nombre)
+    payload["cliente_nombre"] = None
+    try:
+        await publish_to_roles(
+            roles=[
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
+            event=payload,
+        )
+    except Exception:
+        _logger.warning(
+            "No se pudo publicar ticket:new para ticket %s", ticket.id, exc_info=True
+        )
+
+
 async def _publicar_asignacion(ticket: Ticket, empresa_nombre: str | None = None) -> None:
     """Publica evento ticket:assigned (dispara Web Push al agente asignado).
 
@@ -294,6 +320,7 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     )).scalar_one_or_none()
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
+    await _publicar_nuevo_ticket(ticket, empresa_nombre)
     return ticket
 
 
@@ -346,6 +373,7 @@ async def crear_admin(
     )).scalar_one_or_none()
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
+    await _publicar_nuevo_ticket(ticket, empresa_nombre)
     return ticket
 
 

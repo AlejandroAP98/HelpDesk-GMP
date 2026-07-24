@@ -20,6 +20,7 @@ Target soportados:
 
 Eventos que disparan Web Push:
     - ticket:urgent_created  -> push a roles agente+mesa_ayuda+administrador
+    - ticket:new             -> push a roles mesa_ayuda+administrador
     - ticket:assigned        -> push al usuario asignado (event["agente_id"])
 """
 from __future__ import annotations
@@ -116,6 +117,25 @@ async def _dispatch_push(event: dict[str, Any], connected: set[UUID]) -> None:
         delivered = await send_push_to_users(targets, title, body, url, data=event)
         if delivered:
             logger.info("Push urgente enviado a %d usuarios", delivered)
+
+    elif etype == "ticket:new":
+        role_values = [
+            RolUsuario.mesa_ayuda.value,
+            RolUsuario.administrador.value,
+        ]
+        user_ids = await _resolve_user_ids_by_roles(role_values)
+        targets = [u for u in user_ids if u not in connected]
+        if not targets:
+            return
+        title = "Nuevo ticket"
+        body = (
+            f"{event.get('titulo', '')}\n"
+            f"Prioridad: {event.get('prioridad', '')} - {event.get('empresa_nombre') or ''}"
+        )
+        url = f"/tickets/{event.get('ticket_id', '')}"
+        delivered = await send_push_to_users(targets, title, body, url, data=event)
+        if delivered:
+            logger.info("Push nuevo ticket enviado a %d usuarios", delivered)
 
     elif etype == "ticket:assigned":
         agente_id = event.get("agente_id")

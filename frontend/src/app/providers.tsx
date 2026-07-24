@@ -23,7 +23,58 @@ function WebSocketListener() {
     url: wsUrl,
     token,
     onEvent: (ev) => {
-      if (ev.type === "ticket:urgent_created") {
+      if (ev.type === "ticket:new") {
+        const nt = ev as unknown as {
+          ticket_id: string;
+          empresa_id: number;
+          empresa_nombre: string | null;
+          titulo: string;
+          prioridad: string;
+          estado: string;
+        };
+        if (usuario?.rol === "mesa_ayuda" || usuario?.rol === "administrador") {
+          addAlert({
+            kind: "new_ticket",
+            ticket_id: nt.ticket_id,
+            empresa_id: nt.empresa_id,
+            empresa_nombre: nt.empresa_nombre ?? undefined,
+            titulo: nt.titulo,
+            prioridad: nt.prioridad,
+            estado: nt.estado,
+          });
+          if (typeof window !== "undefined" && "Notification" in window) {
+            const showNotif = () => {
+              try {
+                const n = new Notification("Nuevo ticket", {
+                  body: `${nt.titulo}\n${nt.empresa_nombre ?? ""} - ${nt.prioridad}`,
+                  icon: "/icon-192.png?v4",
+                  badge: "/icon-192.png?v4",
+                  tag: `new-${nt.ticket_id}`,
+                  data: { url: `/tickets/${nt.ticket_id}` },
+                });
+                n.onclick = () => {
+                  try {
+                    window.focus();
+                  } catch {
+                  }
+                  window.location.href = `/tickets/${nt.ticket_id}`;
+                  n.close();
+                };
+              } catch {
+              }
+            };
+            if (Notification.permission === "granted") {
+              showNotif();
+            } else if (Notification.permission !== "denied") {
+              Notification.requestPermission()
+                .then((perm) => {
+                  if (perm === "granted") showNotif();
+                })
+                .catch(() => undefined);
+            }
+          }
+        }
+      } else if (ev.type === "ticket:urgent_created") {
         addAlert({
           ticket_id: (ev as { ticket_id: string }).ticket_id,
           empresa_id: (ev as { empresa_id: number }).empresa_id,
