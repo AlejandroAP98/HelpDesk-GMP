@@ -178,12 +178,12 @@ export default function PanelHomePage() {
           </p>
         </div>
         {!esCliente && (
-        <Link href="https://app.gmpredes.online/" target="_blank" rel="noopener noreferrer" className="self-end justify-end hidden sm:block">
+        <a href="https://app.gmpredes.online/" rel="noopener noreferrer" className="self-end justify-end hidden sm:block">
           <Button className="bg-gradient-to-r from-accentCustom text-nowrap to-red-600 hover:from-red-700 hover:to-red-700 !font-regular !sm:text-base !text-[12px] !self-end ">
             Reportes GMP
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-external-link" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1 9-9m-5 0h5v5"/></svg>
           </Button>
-        </Link>
+        </a>
         )}
         {esCliente && (
         <Link href="/tickets/nuevo">
