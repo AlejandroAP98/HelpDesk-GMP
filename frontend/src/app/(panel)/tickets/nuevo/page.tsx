@@ -16,6 +16,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
@@ -174,21 +175,25 @@ export default function NuevoTicketPage() {
               disabled={!subcategoriaId}
               options={ELEMENTOS.map((el) => ({ value: el.value, label: el.label }))}
             />
-          </div>
-          {elemento === "punto_venta" && (
-            <div className="mt-2">
-              <Select
-                label="Punto de venta"
-                value={puntoVentaId ?? ""}
-                onChange={(e) => setPuntoVentaId(Number(e.target.value) || null)}
-                placeholder="Seleccione un punto de venta..."
-                options={puntosVenta.map((pv) => ({
-                  value: String(pv.id),
-                  label: pv.ciudad ? `${pv.nombre} (${pv.ciudad})` : pv.nombre,
-                }))}
-              />
-            </div>
-          )}
+            {elemento === "punto_venta" && (
+              <div className="flex flex-col gap-1">
+                <span className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">
+                  Punto de venta
+                </span>
+                <SearchableSelect
+                  value={puntoVentaId}
+                  onChange={(v) => setPuntoVentaId(Number(v) || null)}
+                  placeholder="Buscar punto de venta..."
+                  emptyMessage="No se encontraron puntos de venta"
+                  options={puntosVenta.map((pv) => ({
+                    value: String(pv.id),
+                    label: pv.nombre,
+                    sublabel: pv.ciudad ?? undefined,
+                  }))}
+                />
+              </div>
+            )}
+          </div>  
           <Input
             label="Titulo"
             type="text"

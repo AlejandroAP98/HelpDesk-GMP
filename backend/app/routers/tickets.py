@@ -1,6 +1,7 @@
 """Endpoints REST de Tickets."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -50,6 +51,8 @@ async def listar(
     agente_id: UUID | None = Query(None),
     cliente_id: UUID | None = Query(None),
     vista: VistaTicket | None = Query(None),
+    fecha_inicio: date | None = Query(None, description="Filtrar tickets creados desde esta fecha (YYYY-MM-DD)"),
+    fecha_fin: date | None = Query(None, description="Filtrar tickets creados hasta esta fecha (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[TicketOut]:
@@ -57,6 +60,7 @@ async def listar(
         current=current, db=db, page=page, size=size, estado=estado,
         prioridad=prioridad, empresa_id=empresa_id,
         agente_id=agente_id, cliente_id=cliente_id, vista=vista,
+        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
     )
     return Pagina.of(
         [

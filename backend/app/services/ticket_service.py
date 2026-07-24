@@ -388,7 +388,11 @@ async def listar(
     agente_id: UUID | None = None,
     cliente_id: UUID | None = None,
     vista: VistaTicket | None = None,
+    fecha_inicio: "date | None" = None,
+    fecha_fin: "date | None" = None,
 ) -> Pagina[tuple[Ticket, str | None]]:
+    from datetime import datetime, time, timezone
+
     p = paginacion(page, size)
     base = select(Ticket, Empresa.nombre.label("empresa_nombre")).outerjoin(
         Empresa, Ticket.empresa_id == Empresa.id
@@ -425,6 +429,15 @@ async def listar(
     if cliente_id is not None:
         base = base.where(Ticket.cliente_id == cliente_id)
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
+
+    if fecha_inicio is not None:
+        dt_inicio = datetime.combine(fecha_inicio, time.min, tzinfo=timezone.utc)
+        base = base.where(Ticket.fecha_creacion >= dt_inicio)
+        count_base = count_base.where(Ticket.fecha_creacion >= dt_inicio)
+    if fecha_fin is not None:
+        dt_fin = datetime.combine(fecha_fin, time.max, tzinfo=timezone.utc)
+        base = base.where(Ticket.fecha_creacion <= dt_fin)
+        count_base = count_base.where(Ticket.fecha_creacion <= dt_fin)
 
     peso_prioridad = case(
         (Ticket.prioridad == "urgente", 1),
