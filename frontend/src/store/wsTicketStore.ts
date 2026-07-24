@@ -10,6 +10,10 @@ export interface TicketCreatedEvent {
   titulo: string;
   prioridad: string;
   estado: string;
+  categoria_id?: number;
+  subcategoria_id?: number;
+  elemento_afectado?: string;
+  nombre_punto?: string | null;
   cliente_id: string | null;
   agente_id: string | null;
   fecha_actualizacion: string;

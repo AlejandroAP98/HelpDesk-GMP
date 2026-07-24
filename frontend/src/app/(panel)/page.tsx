@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { ticketApi, statsApi, reportesApi, empresaApi, type Ticket, type PrioridadTicket, type EstadoTicket, type Stats, type Empresa } from "@/lib/endpoints";
+import { ticketApi, statsApi, reportesApi, empresaApi, type Ticket, type PrioridadTicket, type EstadoTicket, type ElementoInfraestructura, type Stats, type Empresa } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
 import { StatsCard } from "@/components/ui/StatsCard";
@@ -73,9 +73,13 @@ export default function PanelHomePage() {
         const nuevo: Ticket = {
           id: ev.ticket_id,
           empresa_id: ev.empresa_id,
+          empresa_nombre: ev.empresa_nombre ?? null,
           titulo: ev.titulo,
           descripcion: "",
-          categoria_id: 0,
+          categoria_id: ev.categoria_id ?? 0,
+          subcategoria_id: ev.subcategoria_id ?? 0,
+          elemento_afectado: (ev.elemento_afectado as ElementoInfraestructura) ?? "torre",
+          nombre_punto: ev.nombre_punto ?? null,
           prioridad: ev.prioridad as PrioridadTicket,
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",
@@ -84,13 +88,10 @@ export default function PanelHomePage() {
           modificado_por_nombre: null,
           fecha_creacion: ev.fecha_actualizacion,
           fecha_actualizacion: ev.fecha_actualizacion,
-          subcategoria_id: 0,
-          elemento_afectado: "torre",
           ip_pcs: null,
           ip_antena: null,
           mascara_red: null,
           puerta_enlace: null,
-          nombre_punto: null,
         };
         return [nuevo, ...prev].slice(0, 5);
       });
