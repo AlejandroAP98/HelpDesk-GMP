@@ -216,14 +216,14 @@ export default function TicketsListPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-sm text-gray-500 flex flex-col gap-2">
-          <h1 className="sm:text-2xl text-xl font-bold tracking-tight text-gray-900">Tickets</h1>
-          <h2 className="sm:text-sm text-xs  text-gray-500">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </h2>
+      <div className="flex gap-2 w-full justify-between">
+        <div className="flex flex-col">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
+          <p className="text-sm text-gray-500 mt-1">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </p>
         </div>
         <Link href="/tickets/nuevo">
           <Button
-            className="sm:py-2 py-1 text-xs sm:text-sm w-fit text-nowrap"
+            className="text-nowrap"
             variant="primary"
             disabled={cargando}
             icon={<NewTicketIcon />}
