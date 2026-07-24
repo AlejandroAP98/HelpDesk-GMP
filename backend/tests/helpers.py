@@ -11,7 +11,8 @@ from httpx import AsyncClient
 from app.core.security import hash_password
 from app.models.categoria import Categoria
 from app.models.empresa import Empresa
-from app.models.enums import RolUsuario
+from app.models.enums import PrioridadTicket, RolUsuario
+from app.models.matriz_prioridad import MatrizPrioridad
 from app.models.subcategoria import Subcategoria
 from app.models.usuario import Usuario
 
@@ -84,3 +85,27 @@ async def get_usuario_by_email(db: AsyncSession, email: str) -> Usuario:
     return (
         await db.execute(select(Usuario).where(Usuario.email == email))
     ).scalar_one()
+
+
+async def seed_matriz_prioridad(
+    db: AsyncSession,
+    *,
+    categoria_id: int,
+    subcategoria_id: int,
+    elemento: str,
+    prioridad: PrioridadTicket | str,
+) -> MatrizPrioridad:
+    """Inserta una entrada en matriz_prioridad. Crea un mapeo explicito para que
+    `calcular_prioridad()` retorne la prioridad solicitada en lugar del fallback 'media'."""
+    if isinstance(prioridad, PrioridadTicket):
+        prioridad = prioridad.value
+    m = MatrizPrioridad(
+        categoria_id=categoria_id,
+        subcategoria_id=subcategoria_id,
+        elemento=elemento,
+        prioridad=prioridad,
+    )
+    db.add(m)
+    await db.commit()
+    await db.refresh(m)
+    return m

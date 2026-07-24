@@ -11,6 +11,7 @@ from tests.helpers import (
     login_token,
     seed_categoria,
     seed_empresa,
+    seed_subcategoria,
     seed_usuario,
 )
 
@@ -22,22 +23,39 @@ PDF_MAGIC = b"%PDF-1.4\n"
 
 def _fake_s3(body: bytes = b"fake-image-bytes") -> MagicMock:
     mock = MagicMock()
-    mock.upload_fileobj = MagicMock(return_value=None)
+    stored: dict[str, bytes] = {}
+
+    def _upload(Fileobj=None, **_kwargs):  # type: ignore[no-untyped-def]
+        if Fileobj is not None:
+            data = Fileobj.read() if hasattr(Fileobj, "read") else Fileobj
+            stored[_kwargs.get("Key", "")] = bytes(data)
+
+    mock.upload_fileobj = MagicMock(side_effect=_upload)
     mock.delete_object = MagicMock(return_value=None)
-    get_obj = MagicMock(return_value={
-        "Body": BytesIO(body),
-        "ContentLength": len(body),
-        "ContentRange": None,
-    })
-    mock.get_object = get_obj
+
+    def _get(Bucket=None, Key=None, Range=None, **_kwargs):  # type: ignore[no-untyped-def]
+        data = stored.get(Key or "", body)
+        total = len(data)
+        if Range:
+            _range, end = Range.replace("bytes=", "").split("-")
+            start = int(_range)
+            end = int(end) if end else total - 1
+            data = data[start : end + 1]
+        return {
+            "Body": BytesIO(data),
+            "ContentLength": len(data),
+            "ContentRange": f"bytes {0}-{len(data) - 1}/{total}" if Range else None,
+        }
+
+    mock.get_object = MagicMock(side_effect=_get)
     return mock
 
 
 @pytest.fixture
 def s3_mock():
-    """Parchea el cliente S3 global del storage para evitar tocar MinIO real."""
+    """Parchea el cliente S3 singleton del storage para evitar tocar MinIO real."""
     mock = _fake_s3()
-    with patch("app.core.storage.get_s3", return_value=mock):
+    with patch("app.core.storage._s3_client", mock):
         yield mock
 
 
@@ -45,8 +63,16 @@ async def _crear_ticket(client, tok):  # type: ignore[no-untyped-def]
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={"titulo": "T", "descripcion": "D", "categoria_id": 1, "prioridad": "media"},
+        json={
+            "titulo": "T",
+            "descripcion": "D",
+            "categoria_id": 1,
+            "subcategoria_id": 1,
+            "elemento_afectado": "punto_venta",
+            "prioridad": "media",
+        },
     )
+    assert r.status_code == 201, r.text
     return r.json()["id"]
 
 
@@ -54,6 +80,7 @@ async def _setup_basico(db_session):  # type: ignore[no-untyped-def]
     await seed_empresa(db_session, pk=1)
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
 
 
 async def _subir_jpeg(client, tok, ticket_id):  # type: ignore[no-untyped-def]
@@ -189,6 +216,7 @@ async def test_cliente_otra_empresa_403(client, db_session, s3_mock):  # type: i
     await seed_usuario(db_session, email="c1@test.com", password="Password12345", rol="cliente", empresa_id=1)
     await seed_usuario(db_session, email="c2@test.com", password="Password12345", rol="cliente", empresa_id=2)
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
 
     tok_c1 = await login_token(client, "c1@test.com", "Password12345")
     tok_c2 = await login_token(client, "c2@test.com", "Password12345")
@@ -200,27 +228,27 @@ async def test_cliente_otra_empresa_403(client, db_session, s3_mock):  # type: i
         f"/api/tickets/{tid}/adjuntos/{adj_id}/archivo",
         headers=auth_header(tok_c2),
     )
-    assert r.status_code == 403
+    assert r.status_code == 404
     s3_mock.get_object.assert_not_called()
 
 
 async def test_stream_con_range_206(client, db_session, s3_mock):  # type: ignore[no-untyped-def]
-    body_bytes = b"x" * 1024
-    s3_mock.get_object.return_value = {
-        "Body": BytesIO(body_bytes[:100]),
-        "ContentLength": 100,
-        "ContentRange": "bytes 0-99/1024",
-    }
     await _setup_basico(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
     tid = await _crear_ticket(client, tok)
-    data, _ = await _subir_jpeg(client, tok, tid)
-    adj_id = data["id"]
+    contenido = JPEG_MAGIC + b"\x00" * 1020
+    r = await client.post(
+        f"/api/tickets/{tid}/adjuntos",
+        headers=auth_header(tok),
+        files={"file": ("rango.jpg", contenido, "image/jpeg")},
+    )
+    assert r.status_code == 201, r.text
+    adj_id = r.json()["id"]
 
     r = await client.get(
         f"/api/tickets/{tid}/adjuntos/{adj_id}/archivo",
         headers={**auth_header(tok), "Range": "bytes=0-99"},
     )
     assert r.status_code == 206
-    assert r.headers.get("content-range") == "bytes 0-99/1024"
-    assert r.content == body_bytes[:100]
+    assert r.headers.get("content-range") == f"bytes 0-99/{len(contenido)}"
+    assert r.content == contenido[:100]

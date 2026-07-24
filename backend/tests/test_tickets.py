@@ -7,6 +7,7 @@ from tests.helpers import (
     login_token,
     seed_categoria,
     seed_empresa,
+    seed_matriz_prioridad,
     seed_subcategoria,
     seed_usuario,
 )
@@ -35,17 +36,20 @@ async def test_cliente_crea_ticket_urgente(client, db_session):  # type: ignore[
         empresa_id=1,
     )
     await seed_categoria(db_session, nombre="Hardware")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="urgente",
+    )
     tok = await login_token(client, "c@test.com", "Password12345")
 
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={
-            "titulo": "Pantalla en blanco",
-            "descripcion": "No carga nada",
-            "categoria_id": 1,
-            "prioridad": "urgente",
-        },
+        json=_ticket_body(titulo="Pantalla en blanco", descripcion="No carga nada"),
     )
     assert r.status_code == 201, r.text
     t = r.json()
@@ -64,16 +68,12 @@ async def test_no_urgente_no_publica_evento(client, db_session):  # type: ignore
         empresa_id=1,
     )
     await seed_categoria(db_session, nombre="Software")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="SW")
     tok = await login_token(client, "c@test.com", "Password12345")
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={
-            "titulo": "Bug en login",
-            "descripcion": "No logea",
-            "categoria_id": 1,
-            "prioridad": "media",
-        },
+        json=_ticket_body(titulo="Bug en login", descripcion="No logea"),
     )
     assert r.status_code == 201
     assert r.json()["prioridad"] == "media"
@@ -95,11 +95,12 @@ async def test_cliente_no_admin_asignar_403(client, db_session):  # type: ignore
         rol="agente",
     )
     await seed_categoria(db_session, nombre="Redes")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Net")
     tok = await login_token(client, "c@test.com", "Password12345")
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={"titulo": "T", "descripcion": "D", "categoria_id": 1, "prioridad": "baja"},
+        json=_ticket_body(prioridad="baja"),
     )
     assert r.status_code == 201
     tid = r.json()["id"]
@@ -135,6 +136,7 @@ async def test_admin_asigna_transicion_abierto_asignado(client, db_session):  # 
         rol="administrador",
     )
     await seed_categoria(db_session, nombre="DB")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="DB")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_adm = await login_token(client, "adm@test.com", "Password12345")
 
@@ -168,12 +170,13 @@ async def test_transicion_invalida_409(client, db_session):  # type: ignore[no-u
         empresa_id=1,
     )
     await seed_categoria(db_session, nombre="Network")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Net")
     tok = await login_token(client, "c@test.com", "Password12345")
 
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={"titulo": "T", "descripcion": "D", "categoria_id": 1, "prioridad": "baja"},
+        json=_ticket_body(prioridad="baja"),
     )
     tid = r.json()["id"]
 
@@ -208,6 +211,7 @@ async def test_cliente_no_puede_resolver_403(client, db_session):  # type: ignor
         rol="administrador",
     )
     await seed_categoria(db_session, nombre="Infra")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Inf")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_adm = await login_token(client, "adm@test.com", "Password12345")
     agente = await get_usuario_by_email(db_session, "a@test.com")
@@ -215,7 +219,7 @@ async def test_cliente_no_puede_resolver_403(client, db_session):  # type: ignor
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok_c),
-        json={"titulo": "T", "descripcion": "D", "categoria_id": 1, "prioridad": "media"},
+        json=_ticket_body(),
     )
     tid = r.json()["id"]
     await client.post(
@@ -260,6 +264,7 @@ async def test_flujo_completo_ciclo_vida(client, db_session):  # type: ignore[no
         rol="administrador",
     )
     await seed_categoria(db_session, nombre="Hardware")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_a = await login_token(client, "a@test.com", "Password12345")
     tok_adm = await login_token(client, "adm@test.com", "Password12345")
@@ -269,7 +274,7 @@ async def test_flujo_completo_ciclo_vida(client, db_session):  # type: ignore[no
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok_c),
-        json={"titulo": "Bug serio", "descripcion": "No carga", "categoria_id": 1, "prioridad": "alta"},
+        json=_ticket_body(titulo="Bug serio", descripcion="No carga", prioridad="alta"),
     )
     tid = r.json()["id"]
     assert r.json()["estado"] == "abierto"
@@ -316,11 +321,12 @@ async def test_ticket_cerrado_no_admite_comentarios(client, db_session, db_engin
         empresa_id=1,
     )
     await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
     tok = await login_token(client, "c@test.com", "Password12345")
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok),
-        json={"titulo": "Cerrado rapido", "descripcion": "D", "categoria_id": 1, "prioridad": "baja"},
+        json=_ticket_body(titulo="Cerrado rapido", prioridad="baja"),
     )
     tid = r.json()["id"]
 
@@ -350,6 +356,7 @@ async def test_admin_reabre_ticket(client, db_session, db_engine):  # type: igno
         rol="administrador",
     )
     await seed_categoria(db_session, nombre="X")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="X")
     tok = await login_token(client, "adm@test.com", "Password12345")
 
     from sqlalchemy import text
@@ -359,8 +366,8 @@ async def test_admin_reabre_ticket(client, db_session, db_engine):  # type: igno
     async with Session() as s:
         await s.execute(
             text(
-                "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, titulo, descripcion, estado, prioridad) "
-                "VALUES (1, (SELECT id FROM usuarios WHERE email='adm@test.com'), 1, 'T', 'D', 'cerrado', 'media')"
+                "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, subcategoria_id, elemento_afectado, titulo, descripcion, estado, prioridad) "
+                "VALUES (1, (SELECT id FROM usuarios WHERE email='adm@test.com'), 1, 1, 'punto_venta', 'T', 'D', 'cerrado', 'media')"
             )
         )
         await s.commit()
@@ -391,13 +398,14 @@ async def test_multi_tenant_cross_empresa_404(client, db_session):  # type: igno
         empresa_id=2,
     )
     await seed_categoria(db_session, nombre="Cat")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Cat")
     tok1 = await login_token(client, "c1@test.com", "Password12345")
     tok2 = await login_token(client, "c2@test.com", "Password12345")
 
     r = await client.post(
         "/api/tickets",
         headers=auth_header(tok1),
-        json={"titulo": "Privado emp1", "descripcion": "D", "categoria_id": 1, "prioridad": "baja"},
+        json=_ticket_body(titulo="Privado emp1", prioridad="baja"),
     )
     tid = r.json()["id"]
 
@@ -774,3 +782,50 @@ async def test_mesa_ayuda_puede_resolver_su_propio_ticket(client, db_session):  
     r = await client.post(f"/api/tickets/{tid}/cerrar", headers=auth_header(tok_m))
     assert r.status_code == 200
     assert r.json()["estado"] == "cerrado"
+
+
+async def test_listar_con_filtro_fechas_no_500(client, db_session):  # type: ignore[no-untyped-def]
+    """Regresion: filtros fecha_inicio/fecha_fin deben compararse contra el TIMESTAMP naive
+    de Ticket.fecha_creacion. Antes el servicio construia un datetime tz-aware y asyncpg
+    lanzaba InvalidDatetimeFormatError -> HTTP 500."""
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="c@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="m@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
+    tok_c = await login_token(client, "c@test.com", "Password12345")
+    tok_m = await login_token(client, "m@test.com", "Password12345")
+
+    r = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(),
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(
+        "/api/tickets",
+        params={"fecha_inicio": "2020-01-01", "fecha_fin": "2099-12-31"},
+        headers=auth_header(tok_m),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == 1
+
+    r = await client.get(
+        "/api/tickets",
+        params={"fecha_inicio": "2099-01-01", "fecha_fin": "2099-12-31"},
+        headers=auth_header(tok_m),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == 0

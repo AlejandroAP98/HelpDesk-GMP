@@ -65,7 +65,21 @@ def _override_app_engine() -> None:
     )
 
 
-TABLAS = ["adjuntos", "comentarios", "tickets", "usuarios", "categorias", "empresas"]
+TABLAS = [
+    "tareas_pendientes",
+    "respuestas_rapidas",
+    "historial_estados",
+    "adjuntos",
+    "comentarios",
+    "tickets",
+    "push_subscriptions",
+    "puntos_venta",
+    "matriz_prioridad",
+    "subcategorias",
+    "usuarios",
+    "categorias",
+    "empresas",
+]
 
 
 async def _truncate(engine: AsyncEngine) -> None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import date, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
@@ -388,8 +388,8 @@ async def listar(
     agente_id: UUID | None = None,
     cliente_id: UUID | None = None,
     vista: VistaTicket | None = None,
-    fecha_inicio: "date | None" = None,
-    fecha_fin: "date | None" = None,
+    fecha_inicio: date | None = None,
+    fecha_fin: date | None = None,
 ) -> Pagina[tuple[Ticket, str | None]]:
     from datetime import datetime, time, timezone
 
@@ -431,11 +431,11 @@ async def listar(
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
 
     if fecha_inicio is not None:
-        dt_inicio = datetime.combine(fecha_inicio, time.min, tzinfo=timezone.utc)
+        dt_inicio = datetime.combine(fecha_inicio, time.min, tzinfo=timezone.utc).replace(tzinfo=None)
         base = base.where(Ticket.fecha_creacion >= dt_inicio)
         count_base = count_base.where(Ticket.fecha_creacion >= dt_inicio)
     if fecha_fin is not None:
-        dt_fin = datetime.combine(fecha_fin, time.max, tzinfo=timezone.utc)
+        dt_fin = datetime.combine(fecha_fin, time.max, tzinfo=timezone.utc).replace(tzinfo=None)
         base = base.where(Ticket.fecha_creacion <= dt_fin)
         count_base = count_base.where(Ticket.fecha_creacion <= dt_fin)
 

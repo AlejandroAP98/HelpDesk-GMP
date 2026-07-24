@@ -51,8 +51,8 @@ async def test_comentario_publico_visible_cliente(client, db_session):  # type: 
 
     r2 = await client.get(f"/api/tickets/{tid}/comentarios", headers=auth_header(tok_c))
     assert r2.status_code == 200
-    assert len(r2.json()) == 1
-    assert r2.json()[0]["es_nota_interna"] is False
+    assert len(r2.json()["items"]) == 1
+    assert r2.json()["items"][0]["es_nota_interna"] is False
 
 
 async def test_nota_interna_oculta_a_cliente(client, db_session):  # type: ignore[no-untyped-def]
@@ -81,12 +81,12 @@ async def test_nota_interna_oculta_a_cliente(client, db_session):  # type: ignor
     # Cliente ve solo 1 (el publico)
     r = await client.get(f"/api/tickets/{tid}/comentarios", headers=auth_header(tok_c))
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["contenido"] == "publico"
+    assert len(r.json()["items"]) == 1
+    assert r.json()["items"][0]["contenido"] == "publico"
 
     # Agente ve 2
     r2 = await client.get(f"/api/tickets/{tid}/comentarios", headers=auth_header(tok_a))
-    assert len(r2.json()) == 2
+    assert len(r2.json()["items"]) == 2
 
 
 async def test_cliente_no_puede_crear_nota_interna_403(client, db_session):  # type: ignore[no-untyped-def]

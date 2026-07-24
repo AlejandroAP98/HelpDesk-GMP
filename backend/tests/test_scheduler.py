@@ -51,19 +51,20 @@ async def _limpiar_y_popular(engine, antiguo: bool, reciente: bool) -> None:  # 
         )
         uid = (await s.execute(text("SELECT id FROM usuarios WHERE email='s1@test.com'"))).scalar()
         await s.execute(text("INSERT INTO categorias (id, nombre) VALUES (1, 'X')"))
+        await s.execute(text("INSERT INTO subcategorias (id, categoria_id, nombre) VALUES (1, 1, 'X')"))
         if antiguo:
             await s.execute(
                 text(
-                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
-                    "VALUES (1, :u, 1, 'T_old', 'D', 'resuelto', 'media', CURRENT_TIMESTAMP - INTERVAL '30 days')"
+                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, subcategoria_id, elemento_afectado, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
+                    "VALUES (1, :u, 1, 1, 'punto_venta', 'T_old', 'D', 'resuelto', 'media', CURRENT_TIMESTAMP - INTERVAL '30 days')"
                 ),
                 {"u": uid},
             )
         if reciente:
             await s.execute(
                 text(
-                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
-                    "VALUES (1, :u, 1, 'T_recent', 'D', 'resuelto', 'media', CURRENT_TIMESTAMP - INTERVAL '1 day')"
+                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, subcategoria_id, elemento_afectado, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
+                    "VALUES (1, :u, 1, 1, 'punto_venta', 'T_recent', 'D', 'resuelto', 'media', CURRENT_TIMESTAMP - INTERVAL '1 day')"
                 ),
                 {"u": uid},
             )
@@ -119,8 +120,8 @@ async def test_no_cierra_tickets_no_resueltos() -> None:
             uid = (await s.execute(text("SELECT id FROM usuarios WHERE email='s1@test.com'"))).scalar()
             await s.execute(
                 text(
-                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
-                    "VALUES (1, :u, 1, 'T_abierto', 'D', 'abierto', 'media', CURRENT_TIMESTAMP - INTERVAL '100 days')"
+                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, subcategoria_id, elemento_afectado, titulo, descripcion, estado, prioridad, fecha_actualizacion) "
+                    "VALUES (1, :u, 1, 1, 'punto_venta', 'T_abierto', 'D', 'abierto', 'media', CURRENT_TIMESTAMP - INTERVAL '100 days')"
                 ),
                 {"u": uid},
             )
