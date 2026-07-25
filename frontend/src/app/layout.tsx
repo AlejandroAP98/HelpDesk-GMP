@@ -4,9 +4,9 @@ import Providers from "./providers";
 import localFont from "next/font/local";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
-const ubuntu = localFont({
-  src: './fonts/Ubuntu-Regular.ttf',
-  variable: '--font-custom',
+const workSans = localFont({
+  src: './fonts/WorkSans-VariableFont_wght.ttf',
+  variable: '--font-workSans',
 })
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Soporte Técnico GMP Redes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${ubuntu.className} min-h-screen antialiased bg-bgCustom text-gray-900`}>
+      <body className={`${workSans.className} min-h-screen antialiased bg-bgCustom text-gray-900`}>
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />
       </body>
