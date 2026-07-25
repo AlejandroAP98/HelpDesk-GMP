@@ -217,7 +217,7 @@ export function SearchableSelect({
                   selectOption(opt.value);
                 }}
                 onMouseEnter={() => setHighlightIndex(idx)}
-                className={`px-4 py-2.5 cursor-pointer transition-colors text-xs sm:text-sm border-b border-gray-200 last:border-b-0 ${
+                className={`px-4 py-2.5 cursor-pointer transition-colors capitalize text-xs sm:text-sm border-b border-gray-200 last:border-b-0 ${
                   idx === highlightIndex || String(opt.value) === String(value ?? "")
                     ? "bg-gray-100 text-primary-600"
                     : "text-gray-700 hover:bg-gray-100"

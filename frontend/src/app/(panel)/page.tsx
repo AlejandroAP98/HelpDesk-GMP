@@ -168,10 +168,10 @@ export default function PanelHomePage() {
     <div className="space-y-3">
       <div className="flex gap-2 w-full justify-between">
         <div className="flex flex-col">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">
           Hola, {usuario?.nombre?.split(" ")[0]}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="sm:text-sm text-xs text-gray-500 mt-1">
             {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte"}
             {usuario?.rol === "agente" && "Revisa y resuelve tus tickets asignados"}
             {usuario?.rol === "mesa_ayuda" && "Supervisa, asigna y mide el rendimiento del equipo"}

@@ -112,6 +112,28 @@ def _ticket_payload(ticket: Ticket, event_type: str, empresa_nombre: str | None 
     }
 
 
+async def _enviar_emails_post_creacion(
+    ticket: Ticket,
+    cliente_email: str | None,
+    empresa_nombre: str | None,
+) -> None:
+    """Lanza los emails transaccionales que se disparan al crear un ticket.
+    Fire-and-forget: si falla el envio, no afecta la creacion del ticket."""
+    import asyncio
+
+    from app.services import email_service
+
+    async def _run() -> None:
+        try:
+            await email_service.send_ticket_created(ticket, cliente_email or "")
+            if ticket.prioridad == PrioridadTicket.urgente:
+                await email_service.send_ticket_urgent(ticket, empresa_nombre)
+        except Exception:
+            _logger.exception("Error enviando emails post-creacion para ticket %s", ticket.id)
+
+    asyncio.create_task(_run())
+
+
 async def _publicar_urgente_si_corresponde(ticket: Ticket, empresa_nombre: str | None = None) -> None:
     from app.websockets.pubsub import publish_to_roles
 
@@ -123,7 +145,6 @@ async def _publicar_urgente_si_corresponde(ticket: Ticket, empresa_nombre: str |
     try:
         await publish_to_roles(
             roles=[
-                RolUsuario.agente.value,
                 RolUsuario.mesa_ayuda.value,
                 RolUsuario.administrador.value,
             ],
@@ -321,6 +342,7 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
+    await _enviar_emails_post_creacion(ticket, current.email, empresa_nombre)
     return ticket
 
 
@@ -374,6 +396,7 @@ async def crear_admin(
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
+    await _enviar_emails_post_creacion(ticket, cliente.email, empresa_nombre)
     return ticket
 
 
@@ -686,7 +709,34 @@ async def cambiar_estado(
     )).scalar_one_or_none()
     await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
     await _publicar_cambio_estado(ticket, estado_anterior.value, empresa_nombre)
+    if nuevo == EstadoTicket.resuelto:
+        await _enviar_email_resolucion(ticket, db)
     return ticket
+
+
+async def _enviar_email_resolucion(ticket: Ticket, db: AsyncSession) -> None:
+    """Lanza email de resolucion al cliente (fire-and-forget).
+
+    Se dispara cuando el ticket pasa a `resuelto` (no en `cerrado`) porque
+    el cliente tambien puede cerrar el ticket y ya habria recibido el aviso.
+    """
+    import asyncio
+
+    from app.services import email_service
+
+    cliente = (
+        await db.execute(select(Usuario).where(Usuario.id == ticket.cliente_id))
+    ).scalar_one_or_none()
+    if cliente is None or not cliente.email:
+        return
+
+    async def _run() -> None:
+        try:
+            await email_service.send_ticket_resolved(ticket, cliente.email)
+        except Exception:
+            _logger.exception("Error enviando email de resolucion para ticket %s", ticket.id)
+
+    asyncio.create_task(_run())
 
 
 async def cambiar_prioridad(

@@ -92,8 +92,8 @@ export default function EmpresasPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Empresas</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestiona las empresas del sistema</p>
+          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Empresas</h1>
+          <p className="text-gray-500 sm:text-sm text-xs mt-1">Gestiona las empresas del sistema</p>
         </div>
         <Button onClick={abrirCrear} className=" text-nowrap" icon={<AddFactoryIcon />}>Nueva empresa</Button>
       </div>

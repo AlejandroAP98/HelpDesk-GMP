@@ -118,8 +118,8 @@ export default function MetricasPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Métricas</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">Métricas</h1>
+          <p className="sm:text-sm text-xs text-gray-500 mt-1">
             Indicadores de rendimiento y análisis de tickets
           </p>
         </div>

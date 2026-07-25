@@ -166,8 +166,8 @@ export default function UsuariosPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Usuarios</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
+          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Usuarios</h1>
+          <p className="sm:text-sm text-xs text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
         </div>
         <Button onClick={abrirCrear} className="text-nowrap" icon={<AddUserIcon />}>Nuevo usuario</Button>
       </div>

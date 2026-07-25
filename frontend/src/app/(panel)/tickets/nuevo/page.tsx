@@ -145,8 +145,8 @@ export default function NuevoTicketPage() {
 
   return (
     <div className="animate-scale-in max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-1">Nuevo Ticket</h1>
-      <p className="text-gray-600 text-sm font-medium mb-6">Completa el siguiente formulario de la forma más detallada posible para crear un nuevo ticket.</p>
+      <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900 mb-1">Nuevo Ticket</h1>
+      <p className="text-gray-500 sm:text-sm text-xs font-medium mb-6">Completa el siguiente formulario de la forma más detallada posible para crear un nuevo ticket.</p>
       <form onSubmit={submit} className="space-y-5">
         <Card >
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5 items-start mb-4 ">
@@ -220,16 +220,16 @@ export default function NuevoTicketPage() {
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {CAMPOS_RED.map((campo) => (
-              <div key={campo.key} className="flex items-start gap-3">
+              <div key={campo.key} className="flex items-center gap-3 h-6">
                 <input
                   type="checkbox"
                   id={campo.key}
                   checked={camposActivos[campo.key]}
                   onChange={() => toggleCampo(campo.key)}
-                  className="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brandCustom"
+                  className="w-4 h-4 rounded sm:text-xs text-[11px] border-gray-300 text-brand-600 focus:ring-brandCustom"
                 />
-                <div className="flex-1 min-w-0">
-                  <label htmlFor={campo.key} className="text-xs font-medium text-gray-600 cursor-pointer select-none">
+                <div className="flex gap-4 w-full">
+                  <label htmlFor={campo.key} className="text-nowrap self-center sm:text-xs text-[11px] font-medium text-gray-600 cursor-pointer select-none">
                     {campo.label}
                   </label>
                   {camposActivos[campo.key] && (
@@ -238,7 +238,7 @@ export default function NuevoTicketPage() {
                       value={valoresCampos[campo.key]}
                       onChange={(e) => setValorCampo(campo.key, e.target.value)}
                       placeholder={campo.placeholder}
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brandCustom focus:bg-white outline-none transition-all"
+                      className="w-auto rounded-lg text-nowrap border border-gray-200 bg-gray-50 px-3 py-1.5 sm:text-xs text-[11px] text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brandCustom focus:bg-white outline-none transition-all"
                     />
                   )}
                 </div>

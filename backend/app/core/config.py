@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_role_key: str = ""
 
+    # --- Resend (emails transaccionales) ---
+    resend_api_key: str = ""
+    resend_from_email: str = "HelpDesk <noreply@helpdesk.local>"
+    resend_urgent_recipients: str = ""
+
     # --- CORS ---
     cors_origins: list[str] = [
         "http://localhost:3000",

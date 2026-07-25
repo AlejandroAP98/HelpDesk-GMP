@@ -121,13 +121,17 @@ export default function PuntosVentaPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Puntos de Venta</h1>
-          <p className="text-sm text-gray-500 mt-1">Sedes y sucursales de cada empresa</p>
+          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Puntos de Venta</h1>
+          <p className="text-gray-500 sm:text-sm text-xs mt-1">Sedes y sucursales de cada empresa</p>
         </div>
-        <div className="flex justify-between w-full items-center">
+        <Button onClick={abrirCrear} className="text-nowrap" icon={<AddSedeIcon />}>
+            Nuevo punto
+        </Button>
+        <div className="flex w-full">
           <Select
+            label="Empresa"
             options={[
-              { value: "", label: "Todas las empresas" },
+              { value: "", label: "Todas" },
               ...empresas.map((e) => ({ value: String(e.id), label: e.nombre })),
             ]}
             value={filtroEmpresa ? String(filtroEmpresa) : ""}
@@ -137,9 +141,6 @@ export default function PuntosVentaPage() {
             }}
             className="min-w-[180px]"
           />
-          <Button onClick={abrirCrear} className="text-nowrap" icon={<AddSedeIcon />}>
-            Nuevo punto
-          </Button>
         </div>
       </div>
 

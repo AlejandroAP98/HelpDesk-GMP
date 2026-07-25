@@ -1,6 +1,9 @@
 """Tests de tickets: maquina de estados, asignacion, multi-tenant, urgente."""
 from __future__ import annotations
 
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
 from tests.helpers import (
     auth_header,
     get_usuario_by_email,
@@ -829,3 +832,255 @@ async def test_listar_con_filtro_fechas_no_500(client, db_session):  # type: ign
     )
     assert r.status_code == 200, r.text
     assert r.json()["total"] == 0
+
+
+async def test_crear_ticket_dispara_email_al_cliente(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
+    """Al crear un ticket, se debe llamar a send_ticket_created con el email del cliente."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="media",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    spy = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_created", spy)
+    monkeypatch.setattr(email_service, "send_ticket_urgent", AsyncMock(return_value=True))
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy.call_count == 1
+    assert spy.call_args.args[1] == "cliente@test.com"
+
+
+async def test_crear_ticket_urgente_dispara_email_urgente(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
+    """Al crear un ticket urgente, send_ticket_urgent debe ser llamado."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="urgente",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    spy_urgent = AsyncMock(return_value=True)
+    spy_created = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_created", spy_created)
+    monkeypatch.setattr(email_service, "send_ticket_urgent", spy_urgent)
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_urgent.call_count == 1
+    assert spy_created.call_count == 1
+
+
+async def test_resolver_ticket_dispara_email_resolucion(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
+    """Al pasar un ticket a `resuelto` se envia email al cliente.
+
+    NO se envia email en `cerrado` porque el cliente tambien puede cerrar y
+    ya habria recibido el aviso de resolucion (evita duplicados)."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="mesa@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="media",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    monkeypatch.setattr(email_service, "send_ticket_created", AsyncMock(return_value=True))
+    monkeypatch.setattr(email_service, "send_ticket_urgent", AsyncMock(return_value=True))
+    spy_resolved = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_resolved", spy_resolved)
+
+    tok_c = await login_token(client, "cliente@test.com", "Password12345")
+    tok_m = await login_token(client, "mesa@test.com", "Password12345")
+
+    r = await client.post("/api/tickets", headers=auth_header(tok_c), json=_ticket_body())
+    assert r.status_code == 201, r.text
+    tid = r.json()["id"]
+    agente = await get_usuario_by_email(db_session, "mesa@test.com")
+
+    r = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_m),
+        json={"agente_id": str(agente.id)},
+    )
+    assert r.status_code == 200
+    r = await client.patch(
+        f"/api/tickets/{tid}/estado",
+        headers=auth_header(tok_m),
+        json={"estado": "en_progreso"},
+    )
+    assert r.status_code == 200
+    r = await client.patch(
+        f"/api/tickets/{tid}/estado",
+        headers=auth_header(tok_m),
+        json={"estado": "resuelto"},
+    )
+    assert r.status_code == 200, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_resolved.call_count == 1
+    assert spy_resolved.call_args.args[1] == "cliente@test.com"
+
+
+async def test_cerrar_ticket_no_dispara_otro_email(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
+    """Pasar de `resuelto` a `cerrado` NO debe disparar email: el aviso ya se
+    envio al resolver. Esto evita duplicados cuando el cliente confirma cierre."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="mesa@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="media",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    monkeypatch.setattr(email_service, "send_ticket_created", AsyncMock(return_value=True))
+    monkeypatch.setattr(email_service, "send_ticket_urgent", AsyncMock(return_value=True))
+    spy_resolved = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_resolved", spy_resolved)
+
+    tok_c = await login_token(client, "cliente@test.com", "Password12345")
+    tok_m = await login_token(client, "mesa@test.com", "Password12345")
+
+    r = await client.post("/api/tickets", headers=auth_header(tok_c), json=_ticket_body())
+    assert r.status_code == 201, r.text
+    tid = r.json()["id"]
+    agente = await get_usuario_by_email(db_session, "mesa@test.com")
+
+    r = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_m),
+        json={"agente_id": str(agente.id)},
+    )
+    assert r.status_code == 200
+    r = await client.patch(
+        f"/api/tickets/{tid}/estado", headers=auth_header(tok_m), json={"estado": "en_progreso"}
+    )
+    assert r.status_code == 200
+    r = await client.patch(
+        f"/api/tickets/{tid}/estado", headers=auth_header(tok_m), json={"estado": "resuelto"}
+    )
+    assert r.status_code == 200
+    r = await client.post(f"/api/tickets/{tid}/cerrar", headers=auth_header(tok_c))
+    assert r.status_code == 200, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_resolved.call_count == 1
+
+
+async def test_urgente_no_notifica_a_agente(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
+    """El evento ticket:urgent_created debe publicarse SOLO a mesa_ayuda+administrador.
+
+    Antes los agentes tambien recibian el push, pero como no pueden autoasignarse
+    la notificacion era ruido. Este test asegura que la lista de roles para el
+    evento urgente excluye explcitamente al rol agente."""
+    from app.models.enums import RolUsuario
+
+    captured: dict = {}
+
+    async def _capture(roles, event):  # type: ignore[no-untyped-def]
+        captured["roles"] = list(roles)
+
+    monkeypatch.setattr("app.websockets.pubsub.publish_to_roles", _capture)
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="urgente",
+    )
+
+    monkeypatch.setattr(
+        "app.services.email_service.send_ticket_created", AsyncMock(return_value=True)
+    )
+    monkeypatch.setattr(
+        "app.services.email_service.send_ticket_urgent", AsyncMock(return_value=True)
+    )
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    assert "roles" in captured, "publish_to_roles no fue invocado"
+    assert RolUsuario.agente.value not in captured["roles"]
+    assert RolUsuario.mesa_ayuda.value in captured["roles"]
+    assert RolUsuario.administrador.value in captured["roles"]

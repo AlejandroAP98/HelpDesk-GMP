@@ -229,8 +229,8 @@ export default function TicketsListPage() {
     <div className="space-y-3">
       <div className="flex gap-2 w-full justify-between">
         <div className="flex flex-col">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
-          <p className="text-sm text-gray-500 mt-1">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </p>
+          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
+          <p className="sm:text-sm text-xs text-gray-500 mt-1">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </p>
         </div>
         <Link href="/tickets/nuevo">
           <Button
@@ -243,7 +243,7 @@ export default function TicketsListPage() {
           </Button>
         </Link>
       </div>
-      <div className="flex gap-4 sm:flex-row flex-col-reverse justify-between">
+      <div className="flex gap-4 flex-col-reverse justify-between">
         <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
           <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-1 rounded-lg h-fit">
             {VISTAS.map((v) => (
@@ -260,9 +260,32 @@ export default function TicketsListPage() {
             </button>
           ))}
           </div>
-          <TotalBadge total={total} />
+          <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
+            <button
+              onClick={() => cambiarModo("cards")}
+              title="Vista tarjetas"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "cards"
+                  ? "bg-brandCustom text-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-layout-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
+            </button>
+            <button
+              onClick={() => cambiarModo("table")}
+              title="Vista tabla"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "table"
+                  ? "bg-brandCustom text-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-table" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+          </div>
         </div>
-        <div className="flex gap-4 justify-end w-full flex-wrap">
+        <div className="grid md:flex grid-cols-3 gap-x-4">
           <Select
             label="Estado"
             value={estado}
@@ -297,6 +320,7 @@ export default function TicketsListPage() {
               className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 sm:text-sm text-[11px] focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
             />
           </div>
+          <TotalBadge total={total} />
           {hayFiltrosFecha && (
             <button
               onClick={limpiarFiltrosFecha}
@@ -305,30 +329,6 @@ export default function TicketsListPage() {
               Limpiar fechas
             </button>
           )}
-          <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
-            <button
-              onClick={() => cambiarModo("cards")}
-              title="Vista tarjetas"
-              className={`p-1.5 rounded-md transition-all ${
-                viewMode === "cards"
-                  ? "bg-brandCustom text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-layout-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
-            </button>
-            <button
-              onClick={() => cambiarModo("table")}
-              title="Vista tabla"
-              className={`p-1.5 rounded-md transition-all ${
-                viewMode === "table"
-                  ? "bg-brandCustom text-white"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-table" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-            </button>
-          </div>
         </div>
       </div>
       {cargando ? (

@@ -106,7 +106,7 @@ export default function TareasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Mis Tareas</h1>
-          <h2 className="text-gray-500 text-sm">Gestioná y organizá tus tareas diarias.</h2>
+          <h2 className="text-gray-500 sm:text-sm text-xs">Gestioná y organizá tus tareas diarias.</h2>
         </div>
         <Button onClick={() => setShowForm(!showForm)} icon={<AddCheckSquareIcon />} className="text-nowrap">
           Nueva tarea

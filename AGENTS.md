@@ -354,3 +354,31 @@ Fase 17 completada: Backup automatizado + systemd auto-restart.
   `ExecStop` lo detiene. `WantedBy=multi-user.target` para auto-restart
   en boot. `StartLimitBurst=3` con `StartLimitIntervalSec=300`.
 - `AGENTS.md`: documentados comandos de backup, restore y systemd.
+
+Fase 18 completada: Emails transaccionales via Resend + exclusion de agentes de urgentes.
+- Backend `services/email_service.py` (nuevo): cliente Resend via httpx async
+  contra `POST https://api.resend.com/emails` con Bearer `RESEND_API_KEY`.
+  Funciones: `send_ticket_created`, `send_ticket_closed`, `send_ticket_urgent`.
+  Fire-and-forget via `asyncio.create_task` (no bloquea la respuesta HTTP).
+  Si `RESEND_API_KEY` vacio, el servicio se desactiva silenciosamente.
+- Backend `core/config.py`: settings `resend_api_key`, `resend_from_email`,
+  `resend_urgent_recipients` (string CSV).
+- Backend `services/ticket_service.py`:
+  - `crear()` y `crear_admin()` llaman `_enviar_emails_post_creacion()` despues
+    del commit (cliente recibe confirmacion; si urgente, recipients CSV reciben
+    alerta).
+  - `cambiar_estado()` llama `_enviar_email_resolucion()` cuando nuevo estado es
+    `resuelto` (NO en `cerrado`, para evitar duplicado cuando el cliente
+    confirma el cierre).
+- Backend `websockets/pubsub.py:101-106` y `services/ticket_service.py:124-131`:
+  removido `RolUsuario.agente.value` de la lista de `ticket:urgent_created`
+  (agentes no se notifican pq no pueden autoasignarse). Docstring del
+  dispatcher tambien actualizado.
+- `.env.example`: documentadas las 3 variables de Resend.
+- Tests `tests/test_email_service.py` (nuevo, 10): cubre API key vacia,
+  multiples recipients urgentes, rechazo de Resend, excepciones de red,
+  payload correcto.
+- Tests `tests/test_tickets.py` (+4): verifican que `send_ticket_created`,
+  `send_ticket_urgent` y `send_ticket_closed` se invocan; y que la lista
+  de roles del evento urgente excluye al rol agente.
+- Resultado: 75 tests verdes, ruff limpio en archivos modificados.
