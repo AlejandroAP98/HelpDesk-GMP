@@ -150,7 +150,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
         </nav>
 
         <div className="p-2 border-t border-brandCustom">
-          <div className="bg-brandCustom/10 rounded-2xl p-4  ">
+          <div className="bg-brandCustom/10 rounded-2xl">
             <p className="font-semibold text-white truncate text-sm">{usuario?.nombre}</p>
             <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
             <div className="mt-3 flex items-center justify-between">
@@ -166,7 +166,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
               Cerrar sesion
             </Button>
             {(onOpenNotifications || onOpenPassword) && (
-              <div className="mt-4 flex gap-2">
+              <div className="mt-2 flex gap-2">
                 {onOpenPassword && (
                   <button
                     onClick={onOpenPassword}

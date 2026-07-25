@@ -232,6 +232,7 @@ export default function TicketsListPage() {
           <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
           <p className="sm:text-sm text-xs text-gray-500 mt-1">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </p>
         </div>
+        {usuario?.rol !== 'agente' && (
         <Link href="/tickets/nuevo">
           <Button
             className="text-nowrap"
@@ -242,6 +243,7 @@ export default function TicketsListPage() {
             Nuevo ticket
           </Button>
         </Link>
+        )}
       </div>
       <div className="flex gap-4 flex-col-reverse justify-between">
         <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
