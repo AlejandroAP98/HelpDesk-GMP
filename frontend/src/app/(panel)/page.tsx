@@ -293,7 +293,7 @@ export default function PanelHomePage() {
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-900">Tickets Recientes</h2>
-          <div className="flex items-center sm:gap-2 gap-1">
+          <div className="flex items-center sm:gap-2 gap-2">
             <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
               <button
                 onClick={() => cambiarModo("cards")}
@@ -384,8 +384,8 @@ export default function PanelHomePage() {
         )
         : (
           <div className="bg-cardCustom rounded-2xl min-h-[40vh]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6">
-            {recientes.map((t: Ticket, index: number) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-2">
+              {recientes.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
                 className={`group relative bg-white 
@@ -394,6 +394,8 @@ export default function PanelHomePage() {
                 style={{
                   animationDelay: `${index * 40}ms`,
                   animationFillMode: "forwards",
+                  WebkitMask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
+                  mask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
                 }}
               >
                 <div className="flex items-center justify-between gap-2 bg-brandCustom p-2 rounded-t-xl">

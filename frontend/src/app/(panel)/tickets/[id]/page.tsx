@@ -378,9 +378,15 @@ export default function TicketDetallePage() {
         {/* Columna izquierda: Info + Comentarios (en mobile: info primero, comentarios despues) */}
         <div className="flex flex-col gap-4 flex-1 min-w-0 ">
           {/* Informacion del ticket */}
-          <div className="bg-white rounded-2xl shadow-card">
+          <div 
+            className="bg-cardCustom shadow-card" 
+            style={{
+              WebkitMask: "radial-gradient(22px at 22px 22px, #0000 98%, #000) -22px -22px",
+              mask: "radial-gradient(22px at 22px 22px, #0000 98%, #000) -22px -22px",
+            }}
+          >
             <dl className="flex sm:flex-row flex-col items-center justify-between  gap-2 w-full mb-2 sm:mb-4 bg-brandCustom rounded-t-2xl sm:px-6 px-4 py-2">
-             <div className="flex sm:justify-start w-full justify-between sm:gap-10 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
+             <div className="flex px-2 sm:justify-start w-full justify-between sm:gap-10 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
                   <dt className="text-[10px] font-semibold text-gray-100 tracking-wider mb-0.5">Empresa</dt>
                   <dd className="font-regular text-white text-[11px]">{ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
@@ -480,7 +486,7 @@ export default function TicketDetallePage() {
               </div>
             )}
             {!estaCerrado &&  (
-              <div className="flex justify-between px-4 py-2 mt-4 rounded-b-2xl bg-grayCustom/5">
+              <div className="flex justify-between px-8 py-2 mt-4 rounded-b-2xl bg-grayCustom/5">
                 <div className="w-full flex-col justify-between">
                   {((esMesaAyudaAsignado || esAdmin) || (esCliente && ticket.estado === "resuelto") || (esAgente && esAgenteAsignado) || (esMesaAyuda && ticket.estado === "abierto"))  && (
                     <label className="sm:text-xs text-[10px] font-semibold text-gray-500 tracking-wider mb-2 block pl-1">Acciones:</label>
@@ -535,7 +541,7 @@ export default function TicketDetallePage() {
               </div>
             )}
             {estaCerrado && puedeReabrir && !esCliente && (
-              <div className="flex flex-col p-4 rounded-b-2xl w-fit">
+              <div className="flex flex-col px-8 py-4 rounded-b-2xl w-fit">
                 <label className="text-xs font-semibold text-gray-500 tracking-wider mb-2 block pl-1">Acciones:</label>
                 <button
                   onClick={reabrir}

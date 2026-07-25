@@ -163,14 +163,14 @@ export default function MetricasPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <StatsCard
               label="Tiempo Medio de Resolución"
-              value={tiempos?.mttr_horas != null ? `${tiempos.mttr_horas}h` : "—"}
+              value={tiempos?.mttr_horas != null ? `${tiempos.mttr_horas} h` : "—"}
               icon={
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-alarm-average" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M5 13a7 7 0 1 0 14 0 7 7 0 0 0-14 0m2-9L4.25 6M17 4l2.75 2"/><path d="M8 13h1l2 3 2-6 2 3h1"/></svg>}
               className="bg-brandCustom"
             />
             <StatsCard
               label="Primera Respuesta"
-              value={tiempos?.tiempo_primera_respuesta_minutos != null ? `${tiempos.tiempo_primera_respuesta_minutos}min` : "—"}
+              value={tiempos?.tiempo_primera_respuesta_minutos != null ? `${tiempos.tiempo_primera_respuesta_minutos} min` : "—"}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-reply" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/><path d="m11 8-3 3 3 3m5-3H8"/></svg>}
               className="bg-yellowCustom"

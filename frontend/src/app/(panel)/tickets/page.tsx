@@ -409,12 +409,14 @@ export default function TicketsListPage() {
             {tickets.map((t: Ticket, index: number) => (
               <div
                 key={t.id}
-                className={`group relative bg-white 
-                  rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
+                className={`group relative bg-white border border-gray-100
+                  transition-all flex flex-col justify-between gap-2 cursor-pointer
                   animate-fadeIn opacity-0`}
                 style={{
                   animationDelay: `${index * 40}ms`,
                   animationFillMode: "forwards",
+                  WebkitMask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
+                  mask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
                 }}
               >
                 <div className="flex items-center justify-between gap-2 bg-brandCustom p-2 rounded-t-xl">
@@ -425,6 +427,7 @@ export default function TicketsListPage() {
                     {t.elemento_afectado.replace("_", " ")}
                   </span>
                 </div>
+                
                 <div className="flex items-start justify-between gap-2 px-4 pt-2">
                   <Link
                     href={`/tickets/${t.id}`}
@@ -433,14 +436,18 @@ export default function TicketsListPage() {
                   >
                     {t.titulo}
                   </Link>
-                  <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">#{t.id.split("-")[0]}</span>
+                  <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">
+                    #{t.id.split("-")[0]}
+                  </span>
                 </div>
+
                 <div className="flex flex-col text-start h-full w-full">
                   <span className="px-4 text-gray-500 transition-colors line-clamp-2 text-xs">
                     {t.descripcion}
                   </span>
                 </div>
-                <div className="bg-grayCustom/5 px-2 py-2 border-t border-grayCustom/10 rounded-b-xl flex items-center justify-between gap-2 text-gray-400 sm:text-xs text-[10px]">
+
+                <div className="bg-grayCustom/10 px-4 py-2 rounded-b-xl flex items-center justify-between gap-2 text-gray-400 sm:text-xs text-[10px]">
                   <div className="flex items-center gap-2">
                     <EstadoBadge estado={t.estado}/>
                     <PrioridadBadge prioridad={t.prioridad} estado={t.estado}/>

@@ -1,3 +1,5 @@
+
+
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
@@ -14,6 +16,8 @@ export const metadata: Metadata = {
   description: "Sistema de soporte técnico GMP Redes",
   applicationName: "Soporte Técnico GMP Redes",
   manifest: "/manifest.json",
+  authors: [{ name: "Alejandro Álvarez" }],
+  publisher: "Alejandro Álvarez",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

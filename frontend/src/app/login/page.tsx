@@ -40,7 +40,7 @@ export default function LoginPage() {
         <form onSubmit={submit} className="space-y-5">
           <Card>
             <div className="text-center py-4">
-              <img src={logo.src} alt="Logo" className="w-32 h-32 mx-auto" />
+              <img src={logo.src} alt="Logo" className="w-36 h-36 mx-auto" />
             </div>
             <div className="space-y-4">
               <Input
@@ -51,6 +51,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Ingresa tu correo electrónico"
                 autoComplete="email"
+                className="!text-sm "
                 autoFocus
               />
 
@@ -59,7 +60,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="............"
+                placeholder="********"
                 autoComplete="current-password"
               />
             </div>
@@ -68,12 +69,13 @@ export default function LoginPage() {
 
             <div className="mt-5">
               <Button type="submit" loading={loading} icon={<LoginIcon className="w-5 h-5" />} className="w-full py-3 flex items-center gap-2">
-                Ingresar al Panel
+                Ingresar al sistema
               </Button>
             </div>
           </Card>
         </form>
       </div>
+      <footer className="text-gray-400 font-light absolute bottom-4 right-4 text-xs"><a href="https://github.com/AlejandroAP98/" target="_blank">Alejandro Álvarez &copy; {new Date().getFullYear()}</a></footer>
     </main>
   );
 }
