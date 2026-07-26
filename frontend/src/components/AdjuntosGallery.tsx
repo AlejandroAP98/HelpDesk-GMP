@@ -175,6 +175,10 @@ export function AdjuntosGallery({
 
   useEffect(() => {
     if (lightboxIndex === null) return;
+    const targetX = 0
+    const targetY = document.documentElement.scrollHeight / 2 -
+      window.innerHeight / 2;
+    window.scrollTo(targetX, targetY);
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
