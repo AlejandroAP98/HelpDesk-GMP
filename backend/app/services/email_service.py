@@ -81,7 +81,7 @@ def _render_ticket_created(ticket: Ticket, cliente_email: str) -> tuple[str, str
         </div>
         <h2 style="color: #007991; margin-top: 0; font-size: 24px; font-weight: 700; margin-bottom: 16px;">Tu ticket fue recibido</h2>
         <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {cliente_email}</p>
-        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Registramos tu ticket. Te avisaremos cuando haya novedades.</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Registramos tu solicitud de soporte. Ingresa al sistema para dar seguimiento al mismo o hablar con el técnico asignado.</p>
         
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr style="border-bottom: 1px solid #f3f4f6;">
