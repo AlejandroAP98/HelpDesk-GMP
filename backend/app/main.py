@@ -62,9 +62,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Iniciando HelpDesk-GMP backend (env=%s)", settings.app_env)
-    from app.core.storage import ensure_bucket
+    from app.core.storage import ensure_bucket_async
 
-    ensure_bucket()
+    await ensure_bucket_async()
     logger.info("Bucket MinIO verificado: %s", settings.minio_bucket)
 
     from app.websockets.pubsub import pubsub_listener

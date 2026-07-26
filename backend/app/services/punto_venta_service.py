@@ -5,18 +5,32 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import tenant_filter
 from app.models.empresa import Empresa
 from app.models.punto_venta import PuntoVenta
+from app.models.usuario import Usuario
 from app.schemas.punto_venta import (
     PuntoVentaCreate,
-    PuntoVentaOut,
     PuntoVentaUpdate,
 )
 from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
 
 
+def _empresa_permitida(current: Usuario, empresa_id: int | None) -> int | None:
+    """Resuelve el `empresa_id` efectivo aplicando aislamiento multi-tenant.
+
+    - cliente: siempre su propia empresa (ignora el query param ajeno).
+    - demas roles: respeta `empresa_id` si viene, sino None (todas).
+    """
+    tf = tenant_filter(current)
+    if "empresa_id" in tf:
+        return tf["empresa_id"]
+    return empresa_id
+
+
 async def listar(
+    current: Usuario,
     db: AsyncSession,
     page: int = 1,
     size: int = 20,
@@ -28,9 +42,10 @@ async def listar(
     )
     count_base = select(func.count(PuntoVenta.id))
 
-    if empresa_id is not None:
-        base = base.where(PuntoVenta.empresa_id == empresa_id)
-        count_base = count_base.where(PuntoVenta.empresa_id == empresa_id)
+    ef_empresa_id = _empresa_permitida(current, empresa_id)
+    if ef_empresa_id is not None:
+        base = base.where(PuntoVenta.empresa_id == ef_empresa_id)
+        count_base = count_base.where(PuntoVenta.empresa_id == ef_empresa_id)
 
     total = (await db.execute(count_base)).scalar_one()
     rows = (
@@ -47,8 +62,12 @@ async def listar(
 async def listar_por_empresa(
     empresa_id: int,
     solo_activos: bool,
+    current: Usuario,
     db: AsyncSession,
 ) -> list[PuntoVenta]:
+    tf = tenant_filter(current)
+    if "empresa_id" in tf and tf["empresa_id"] != empresa_id:
+        raise PermisoDenegado("No tienes acceso a puntos de venta de otra empresa")
     stmt = select(PuntoVenta).where(PuntoVenta.empresa_id == empresa_id)
     if solo_activos:
         stmt = stmt.where(PuntoVenta.activo.is_(True))
@@ -57,13 +76,18 @@ async def listar_por_empresa(
     return list(result.scalars().all())
 
 
-async def obtener(punto_venta_id: int, db: AsyncSession) -> PuntoVenta:
+async def obtener(
+    punto_venta_id: int, current: Usuario, db: AsyncSession
+) -> PuntoVenta:
     pv = (
         await db.execute(
             select(PuntoVenta).where(PuntoVenta.id == punto_venta_id)
         )
     ).scalar_one_or_none()
     if pv is None:
+        raise RecursoNoEncontrado(f"Punto de venta {punto_venta_id} no existe")
+    tf = tenant_filter(current)
+    if "empresa_id" in tf and pv.empresa_id != tf["empresa_id"]:
         raise RecursoNoEncontrado(f"Punto de venta {punto_venta_id} no existe")
     return pv
 

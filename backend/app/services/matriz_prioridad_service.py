@@ -4,7 +4,9 @@ from __future__ import annotations
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.categoria import Categoria
 from app.models.matriz_prioridad import MatrizPrioridad
+from app.models.subcategoria import Subcategoria
 from app.schemas.matriz_prioridad import MatrizPrioridadBulk, MatrizPrioridadCreate
 from app.utils.exceptions import Conflicto, RecursoNoEncontrado
 
@@ -76,6 +78,33 @@ async def sincronizar_categoria(
     categoria_id: int, data: MatrizPrioridadBulk, db: AsyncSession
 ) -> list[MatrizPrioridad]:
     """Reemplaza todas las entradas de matriz para una categoria."""
+    cat = (
+        await db.execute(select(Categoria).where(Categoria.id == categoria_id))
+    ).scalar_one_or_none()
+    if cat is None:
+        raise RecursoNoEncontrado(f"Categoria {categoria_id} no existe")
+
+    if data.items:
+        sub_ids = {entry.subcategoria_id for entry in data.items}
+        rows = (
+            await db.execute(
+                select(Subcategoria.id, Subcategoria.categoria_id).where(
+                    Subcategoria.id.in_(sub_ids)
+                )
+            )
+        ).all()
+        found_subs = {row[0]: row[1] for row in rows}
+        for entry in data.items:
+            if entry.subcategoria_id not in found_subs:
+                raise RecursoNoEncontrado(
+                    f"Subcategoria {entry.subcategoria_id} no existe"
+                )
+            if found_subs[entry.subcategoria_id] != categoria_id:
+                raise Conflicto(
+                    f"Subcategoria {entry.subcategoria_id} no pertenece a "
+                    f"la categoria {categoria_id}"
+                )
+
     await db.execute(
         delete(MatrizPrioridad).where(MatrizPrioridad.categoria_id == categoria_id)
     )

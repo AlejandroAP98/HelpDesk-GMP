@@ -35,6 +35,6 @@ class PaginacionParams(BaseModel):
 def paginacion(page: int = 1, size: int = 15) -> PaginacionParams:
     if page < 1:
         page = 1
-    if size < 1 or size > 90:
+    if size < 1 or size > 100:
         size = 15
     return PaginacionParams(page=page, size=size)

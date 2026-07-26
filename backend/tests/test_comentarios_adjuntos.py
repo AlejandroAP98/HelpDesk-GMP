@@ -32,15 +32,24 @@ async def _crear_ticket(client, tok):  # type: ignore[no-untyped-def]
     return r.json()["id"]
 
 
+async def _asignar_ticket(db_session, tid, agente_id):  # type: ignore[no-untyped-def]
+    """Asigna un agente al ticket directamente en la DB (para tests)."""
+    ticket = (await db_session.execute(select(Ticket).where(Ticket.id == tid))).scalar_one()
+    ticket.agente_id = agente_id
+    ticket.estado = "asignado"
+    await db_session.commit()
+
+
 async def test_comentario_publico_visible_cliente(client, db_session):  # type: ignore[no-untyped-def]
     await seed_empresa(db_session, pk=1)
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
-    await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
+    agente = await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
     await seed_categoria(db_session, nombre="HW")
     await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_a = await login_token(client, "a@test.com", "Password12345")
     tid = await _crear_ticket(client, tok_c)
+    await _asignar_ticket(db_session, tid, agente.id)
 
     r = await client.post(
         f"/api/tickets/{tid}/comentarios",
@@ -58,12 +67,13 @@ async def test_comentario_publico_visible_cliente(client, db_session):  # type: 
 async def test_nota_interna_oculta_a_cliente(client, db_session):  # type: ignore[no-untyped-def]
     await seed_empresa(db_session, pk=1)
     await seed_usuario(db_session, email="c@test.com", password="Password12345", rol="cliente", empresa_id=1)
-    await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
+    agente = await seed_usuario(db_session, email="a@test.com", password="Password12345", rol="agente")
     await seed_categoria(db_session, nombre="HW")
     await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
     tok_c = await login_token(client, "c@test.com", "Password12345")
     tok_a = await login_token(client, "a@test.com", "Password12345")
     tid = await _crear_ticket(client, tok_c)
+    await _asignar_ticket(db_session, tid, agente.id)
 
     # Agente publica
     await client.post(

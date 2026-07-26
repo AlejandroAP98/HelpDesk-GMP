@@ -68,7 +68,7 @@ async def descargar_archivo(
     )
     headers = {
         "Cache-Control": "private, max-age=3600",
-        "Content-Disposition": f'inline; filename="{adjunto_id}"',
+        "Content-Disposition": f'inline; filename="{result["nombre_archivo"]}"',
     }
     if result["content_length"] is not None:
         headers["Content-Length"] = str(result["content_length"])
@@ -89,5 +89,5 @@ async def eliminar(
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Mensaje:
-    await adjunto_service.eliminar(adjunto_id, current, db)
+    await adjunto_service.eliminar(ticket_id, adjunto_id, current, db)
     return Mensaje(detail=f"Adjunto {adjunto_id} eliminado")

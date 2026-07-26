@@ -59,6 +59,12 @@ async def actualizar(usuario_id: UUID, data: UsuarioUpdateByAdmin, db: AsyncSess
     if data.nombre is not None:
         usuario.nombre = data.nombre
     if data.rol is not None:
+        if (
+            data.rol == RolUsuario.cliente.value
+            and data.empresa_id is None
+            and usuario.empresa_id is None
+        ):
+            raise Conflicto("Un cliente debe tener empresa asignada")
         usuario.rol = data.rol
     if data.empresa_id is not None:
         empresa = (

@@ -14,7 +14,8 @@ from app.schemas.tarea_pendiente import (
     TareaPendienteOut,
     TareaPendienteUpdate,
 )
-from app.utils.exceptions import PermisoDenegado, RecursoNoEncontrado
+from app.services import ticket_service
+from app.utils.exceptions import RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
 
 
@@ -27,7 +28,11 @@ async def listar(
     completada: bool | None = None,
     ticket_id: UUID | None = None,
 ) -> Pagina[TareaPendienteOut]:
-    base = select(TareaPendiente).where(TareaPendiente.usuario_id == current.id)
+    base = (
+        select(TareaPendiente, Ticket.titulo.label("ticket_titulo"))
+        .outerjoin(Ticket, TareaPendiente.ticket_id == Ticket.id)
+        .where(TareaPendiente.usuario_id == current.id)
+    )
     count_base = select(func.count(TareaPendiente.id)).where(
         TareaPendiente.usuario_id == current.id
     )
@@ -43,22 +48,16 @@ async def listar(
     p = paginacion(page, size)
     total = (await db.execute(count_base)).scalar_one()
 
-    tareas = (
+    rows = (
         await db.execute(
             base.order_by(TareaPendiente.completada.asc(), TareaPendiente.fecha_creacion.desc())
             .offset(p.offset)
             .limit(p.limit)
         )
-    ).scalars().all()
+    ).all()
 
     out: list[TareaPendienteOut] = []
-    for t in tareas:
-        ticket_titulo: str | None = None
-        if t.ticket_id is not None:
-            ticket = (
-                await db.execute(select(Ticket).where(Ticket.id == t.ticket_id))
-            ).scalar_one_or_none()
-            ticket_titulo = ticket.titulo if ticket else None
+    for t, ticket_titulo in rows:
         out.append(
             TareaPendienteOut.model_validate(
                 {
@@ -77,9 +76,7 @@ async def crear(
     db: AsyncSession,
 ) -> TareaPendienteOut:
     if data.ticket_id is not None:
-        ticket = (
-            await db.execute(select(Ticket).where(Ticket.id == data.ticket_id))
-        ).scalar_one_or_none()
+        ticket = await ticket_service.obtener(data.ticket_id, current, db)
         if ticket is None:
             raise RecursoNoEncontrado("Ticket no encontrado")
 

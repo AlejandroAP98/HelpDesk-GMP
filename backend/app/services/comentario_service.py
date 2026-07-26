@@ -42,7 +42,11 @@ async def _resolve_implicated_user_ids(
     if ticket.agente_id is not None:
         implicated.add(ticket.agente_id)
     admin_rows = await db.execute(
-        select(Usuario.id).where(Usuario.rol == RolUsuario.administrador.value)
+        select(Usuario.id).where(
+            Usuario.rol == RolUsuario.administrador.value,
+            (Usuario.empresa_id == ticket.empresa_id)
+            | (Usuario.empresa_id.is_(None)),
+        )
     )
     for (uid,) in admin_rows.all():
         implicated.add(uid)
@@ -61,7 +65,11 @@ async def listar(
     await _resolve_ticket(ticket_id, current, db)
     p = paginacion(page, size)
 
-    base = select(Comentario).where(Comentario.ticket_id == ticket_id)
+    base = (
+        select(Comentario, Usuario.nombre.label("usuario_nombre"))
+        .outerjoin(Usuario, Comentario.usuario_id == Usuario.id)
+        .where(Comentario.ticket_id == ticket_id)
+    )
     count_base = select(func.count(Comentario.id)).where(Comentario.ticket_id == ticket_id)
 
     if current.rol == RolUsuario.cliente.value:
@@ -69,26 +77,19 @@ async def listar(
         count_base = count_base.where(Comentario.es_nota_interna == False)  # noqa: E712
 
     total = (await db.execute(count_base)).scalar_one()
-    comentarios = (
-        (
-            await db.execute(
-                base.order_by(Comentario.fecha_creacion.asc()).offset(p.offset).limit(p.limit)
-            )
+    rows = (
+        await db.execute(
+            base.order_by(Comentario.fecha_creacion.asc()).offset(p.offset).limit(p.limit)
         )
-        .scalars()
-        .all()
-    )
+    ).all()
 
     out: list[ComentarioOut] = []
-    for c in comentarios:
-        usuario = (
-            await db.execute(select(Usuario).where(Usuario.id == c.usuario_id))
-        ).scalar_one_or_none()
+    for c, usuario_nombre in rows:
         out.append(
             ComentarioOut.model_validate(
                 {
                     **{k: getattr(c, k) for k in c.__table__.columns.keys()},
-                    "usuario_nombre": usuario.nombre if usuario else None,
+                    "usuario_nombre": usuario_nombre,
                 }
             )
         )
@@ -115,12 +116,15 @@ async def crear(
         es_nota_interna=data.es_nota_interna,
     )
     db.add(comentario)
-    await db.commit()
-    await db.refresh(comentario)
 
+    marco_frt = False
     if current.rol != RolUsuario.cliente.value and ticket.fecha_primera_respuesta is None:
         ticket.fecha_primera_respuesta = func.now()
-        await db.commit()
+        marco_frt = True
+
+    await db.commit()
+    await db.refresh(comentario)
+    if marco_frt:
         await db.refresh(ticket)
 
     try:

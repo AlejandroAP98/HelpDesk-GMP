@@ -427,9 +427,12 @@ async def listar(
         base = base.where(Ticket.empresa_id == tf["empresa_id"])
         count_base = count_base.where(Ticket.empresa_id == tf["empresa_id"])
 
-    if current.rol == RolUsuario.agente.value and agente_id is None:
+    if current.rol == RolUsuario.agente.value:
         base = base.where(Ticket.agente_id == current.id)
         count_base = count_base.where(Ticket.agente_id == current.id)
+    elif agente_id is not None:
+        base = base.where(Ticket.agente_id == agente_id)
+        count_base = count_base.where(Ticket.agente_id == agente_id)
 
     if vista is not None:
         estados_vista = VISTA_ESTADOS.get(vista, [])
@@ -446,9 +449,6 @@ async def listar(
     if empresa_id is not None and current.rol != RolUsuario.cliente.value:
         base = base.where(Ticket.empresa_id == empresa_id)
         count_base = count_base.where(Ticket.empresa_id == empresa_id)
-    if agente_id is not None:
-        base = base.where(Ticket.agente_id == agente_id)
-        count_base = count_base.where(Ticket.agente_id == agente_id)
     if cliente_id is not None:
         base = base.where(Ticket.cliente_id == cliente_id)
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
@@ -498,6 +498,8 @@ async def obtener(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
         raise RecursoNoEncontrado(f"Ticket {ticket_id} no existe")
     tf = tenant_filter(current)
     if "empresa_id" in tf and ticket.empresa_id != tf["empresa_id"]:
+        raise RecursoNoEncontrado(f"Ticket {ticket_id} no existe")
+    if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
         raise RecursoNoEncontrado(f"Ticket {ticket_id} no existe")
     return ticket
 
@@ -568,6 +570,8 @@ async def actualizar(
         raise Conflicto("Ticket cerrado, no se puede editar")
     if current.rol == RolUsuario.cliente.value and ticket.cliente_id != current.id:
         raise PermisoDenegado("Solo el autor puede editar su ticket")
+    if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
+        raise PermisoDenegado("Solo el agente asignado puede editar el ticket")
     if data.categoria_id is not None:
         await _get_categoria(data.categoria_id, db)
     for field in (
@@ -747,6 +751,8 @@ async def cambiar_prioridad(
         raise Conflicto("Ticket cerrado, no se puede cambiar prioridad")
     if current.rol == RolUsuario.cliente.value and ticket.cliente_id != current.id:
         raise PermisoDenegado("Solo el autor puede cambiar prioridad")
+    if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
+        raise PermisoDenegado("Solo el agente asignado puede cambiar la prioridad")
     ticket.prioridad = data.prioridad
     ticket.modificado_por_id = current.id
     await db.commit()

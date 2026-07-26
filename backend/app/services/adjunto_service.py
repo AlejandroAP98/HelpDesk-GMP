@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.storage import get_s3
+from app.core.storage import s3_delete_object, s3_get_object, s3_upload_fileobj
 from app.models.adjunto import Adjunto
 from app.models.comentario import Comentario
 from app.models.enums import RolUsuario
@@ -27,6 +27,12 @@ JPEG_MAGIC = b"\xff\xd8\xff"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 WEBP_MAGIC_RIFF = b"RIFF"
 WEBP_MAGIC_WEBP = b"WEBP"
+
+MIME_TO_EXT: dict[str, str] = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 def _validate_magic_bytes(data: bytes, declared_mime: str) -> None:
@@ -119,10 +125,9 @@ async def subir(
 
     _validate_magic_bytes(data, normalized_mime)
 
-    object_key = f"tickets/{ticket_id}/{uuid4().hex}.webp"
+    object_key = f"tickets/{ticket_id}/{uuid4().hex}{MIME_TO_EXT[normalized_mime]}"
 
-    s3 = get_s3()
-    s3.upload_fileobj(
+    await s3_upload_fileobj(
         Fileobj=BytesIO(data),
         Bucket=settings.minio_bucket,
         Key=object_key,
@@ -144,6 +149,7 @@ async def subir(
 
 
 async def eliminar(
+    ticket_id: UUID,
     adjunto_id: UUID,
     current: Usuario,
     db: AsyncSession,
@@ -152,10 +158,10 @@ async def eliminar(
     adjunto = (
         await db.execute(select(Adjunto).where(Adjunto.id == adjunto_id))
     ).scalar_one_or_none()
-    if adjunto is None:
+    if adjunto is None or adjunto.ticket_id != ticket_id:
         raise RecursoNoEncontrado("Adjunto no encontrado")
 
-    ticket = await ticket_service.obtener(adjunto.ticket_id, current, db)
+    ticket = await ticket_service.obtener(ticket_id, current, db)
     if current.rol == RolUsuario.cliente.value and ticket.cliente_id != current.id:
         raise PermisoDenegado("No puedes borrar adjuntos de tickets ajenos")
     if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
@@ -163,7 +169,7 @@ async def eliminar(
 
     object_key = get_object_key(adjunto)
     try:
-        get_s3().delete_object(Bucket=settings.minio_bucket, Key=object_key)
+        await s3_delete_object(Bucket=settings.minio_bucket, Key=object_key)
     except Exception:
         pass
     await db.delete(adjunto)
@@ -221,7 +227,7 @@ async def stream_archivo(
         get_params["Range"] = range_header
 
     try:
-        obj = get_s3().get_object(**get_params)
+        obj = await s3_get_object(**get_params)
     except Exception as e:
         if "NoSuchKey" in type(e).__name__ or "404" in str(e):
             raise RecursoNoEncontrado("Archivo no encontrado en storage")
@@ -233,4 +239,5 @@ async def stream_archivo(
         "content_length": obj.get("ContentLength"),
         "content_range": obj.get("ContentRange"),
         "status_code": 206 if range_header else 200,
+        "nombre_archivo": adjunto.nombre_archivo or str(adjunto_id),
     }

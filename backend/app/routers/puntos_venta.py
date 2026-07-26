@@ -37,9 +37,11 @@ async def listar(
     size: int = Query(20, ge=1, le=100),
     empresa_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current: Usuario = Depends(get_current_user),
 ) -> Pagina[PuntoVentaOut]:
-    pagina = await punto_venta_service.listar(db=db, page=page, size=size, empresa_id=empresa_id)
+    pagina = await punto_venta_service.listar(
+        current=current, db=db, page=page, size=size, empresa_id=empresa_id
+    )
     return Pagina.of(
         [_to_out(pv, emp_nombre) for pv, emp_nombre in pagina.items],
         pagina.total, pagina.page, pagina.size,
@@ -51,9 +53,11 @@ async def listar_por_empresa(
     empresa_id: int,
     solo_activos: bool = Query(True),
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current: Usuario = Depends(get_current_user),
 ) -> list[PuntoVentaOut]:
-    items = await punto_venta_service.listar_por_empresa(empresa_id, solo_activos, db)
+    items = await punto_venta_service.listar_por_empresa(
+        empresa_id, solo_activos, current, db
+    )
     return [_to_out(pv) for pv in items]
 
 
@@ -61,9 +65,9 @@ async def listar_por_empresa(
 async def obtener(
     punto_venta_id: int,
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current: Usuario = Depends(get_current_user),
 ) -> PuntoVentaOut:
-    pv = await punto_venta_service.obtener(punto_venta_id, db)
+    pv = await punto_venta_service.obtener(punto_venta_id, current, db)
     return _to_out(pv)
 
 

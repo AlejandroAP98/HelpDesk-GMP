@@ -31,6 +31,11 @@ async def obtener(empresa_id: int, db: AsyncSession) -> Empresa:
 
 
 async def crear(data: EmpresaCreate, db: AsyncSession) -> Empresa:
+    existente = (
+        await db.execute(select(Empresa).where(Empresa.nombre == data.nombre))
+    ).scalar_one_or_none()
+    if existente is not None:
+        raise Conflicto(f"Ya existe una empresa con el nombre '{data.nombre}'")
     empresa = Empresa(nombre=data.nombre)
     db.add(empresa)
     await db.commit()
@@ -40,7 +45,12 @@ async def crear(data: EmpresaCreate, db: AsyncSession) -> Empresa:
 
 async def actualizar(empresa_id: int, data: EmpresaUpdate, db: AsyncSession) -> Empresa:
     empresa = await obtener(empresa_id, db)
-    if data.nombre is not None:
+    if data.nombre is not None and data.nombre != empresa.nombre:
+        dup = (
+            await db.execute(select(Empresa).where(Empresa.nombre == data.nombre))
+        ).scalar_one_or_none()
+        if dup is not None:
+            raise Conflicto(f"Ya existe una empresa con el nombre '{data.nombre}'")
         empresa.nombre = data.nombre
     await db.commit()
     await db.refresh(empresa)

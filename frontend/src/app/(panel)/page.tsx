@@ -123,7 +123,7 @@ export default function PanelHomePage() {
   }, [setOnTicketCreated, setOnTicketUpdated, usuario?.rol, empresaId]);
 
   useEffect(() => {
-    if (usuario?.rol === "administrador" || usuario?.rol === "agente" || usuario?.rol === "mesa_ayuda") {
+    if (usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") {
       empresaApi.listar({ size: 100 }).then((r) => setEmpresas(r.items)).catch(() => {});
     }
   }, [usuario?.rol]);
@@ -231,7 +231,7 @@ export default function PanelHomePage() {
                 className="rounded-xl border border-gray-200 bg-white text-gray-700 text-xs px-3 py-2 focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all"
               />
             </div>
-            {!esCliente && (
+            {!esCliente && empresas.length > 0 && (
               <Select
                 label="Empresa"
                 value={filtroEmpresaId}

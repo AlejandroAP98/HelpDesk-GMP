@@ -12,6 +12,22 @@ docker compose logs -f backend frontend                                         
 
 ### Backend (Python + Poetry)
 
+> **Nota:** el contenedor `backend` de dev NO incluye las dev-dependencies
+> (`ruff`, `mypy`, `pytest`). Para correr lint/typecheck/tests hay que
+> instalarlas una vez dentro del contenedor:
+>
+> ```bash
+> docker compose exec -f docker-compose.yml -f docker-compose.dev.yml backend \
+>   poetry install --with dev --no-root
+> ```
+>
+> Si `poetry install` falla por red (DNS/proxy), como alternativa correr
+> localmente (requiere Python 3.12 + Poetry en el host):
+>
+> ```bash
+> cd backend && poetry install --with dev && poetry run ruff check app
+> ```
+
 ```bash
 # Tests
 docker compose exec backend poetry run pytest
@@ -382,3 +398,76 @@ Fase 18 completada: Emails transaccionales via Resend + exclusion de agentes de 
   `send_ticket_urgent` y `send_ticket_closed` se invocan; y que la lista
   de roles del evento urgente excluye al rol agente.
 - Resultado: 75 tests verdes, ruff limpio en archivos modificados.
+
+Auditoria de seguridad multi-tenant y transaccional (Fixes A-G).
+- **A (CRITICO)** `puntos_venta` GET no aplicaba `tenant_filter`: un cliente
+  podia listar puntos de venta de cualquier empresa. Fix: `listar`,
+  `listar_por_empresa` y `obtener` ahora reciben `current` y filtran por
+  `empresa_id` del tenant. `listar_por_empresa` rechaza (403) si el cliente
+  pide una empresa ajena.
+- **B (ALTO)** `ticket_service.obtener` no restringia a agentes: un agente
+  podia ver tickets no asignados a el (contradecia AGENTS.md Fase 5). Fix:
+  anadido check `agente_id == current.id` para rol agente (cascada a
+  comentarios, adjuntos, historial, patches).
+- **C (ALTO)** `ticket_service.listar` auto-filtro del agente solo aplicaba
+  si `agente_id is None`; un agente podia evadirlo pasando
+  `?agente_id=<otro>`. Fix: auto-filtro ahora incondicional para rol agente;
+  el parametro `agente_id` solo se aplica para otros roles.
+- **D (ALTO)** `ticket_service.actualizar` y `cambiar_prioridad` no validaban
+  asignacion del agente. Fix: agente no asignado -> 403.
+- **E (ALTO)** `comentario_service.crear` hacía dos commits (comentario +
+  `fecha_primera_respuesta`); si el segundo fallaba, el comentario quedaba
+  sin marca FRT. Fix: un solo commit tras ambos writes.
+- **F (ALTO)** `adjunto_service.eliminar` no validaba
+  `adjunto.ticket_id == ticket_id` del path (el GET de descarga si lo hacia).
+  Fix: el servicio ahora recibe `ticket_id` y valida coincidencia.
+- **G (MEDIO)** `usuario_service.actualizar` podia dejar un usuario con
+  rol `cliente` sin `empresa_id` (solo validaba si `empresa_id` venia en el
+  payload). Fix: si el rol resultante es `cliente` y no hay `empresa_id`
+  (ni en payload ni en el usuario existente) -> 409.
+- Verificacion: `py_compile` limpio en todos los archivos modificados;
+  app recarga sin errores; 75 endpoints intactos.
+
+Optimizacion de performance (Fixes H-K).
+- **H (MEDIO)** `routers/stats.py`: reemplazadas 7 queries COUNT
+  separadas por 1 `GROUP BY estado` + 1 COUNT para urgentes (2
+  round-trips en lugar de 7). Filtros tenant+agente extraidos a
+  helper `_base_filters` reutilizable.
+- **I (MEDIO)** `services/comentario_service.py:listar`: eliminado
+  N+1 (un `SELECT Usuario` por comentario) reemplazandolo por un
+  `outerjoin(Usuario)` en la query principal.
+- **J (MEDIO)** `services/tarea_pendiente_service.py:listar`:
+  eliminado N+1 (un `SELECT Ticket` por tarea) reemplazandolo por un
+  `outerjoin(Ticket)` en la query principal.
+- **K (MEDIO)** `core/storage.py`: anadidos wrappers async
+  (`s3_upload_fileobj`, `s3_get_object`, `s3_delete_object`,
+  `ensure_bucket_async`) que delegan al cliente boto3 sincrono via
+  `asyncio.to_thread()`. `adjunto_service.py` y `main.py` ahora usan
+  los wrappers async; las llamadas S3 ya no bloquean el event loop.
+
+Mejoras de validacion / integridad (Fixes menores 1-7).
+- **1** `utils/pagination.py`: `paginacion()` clampeaba `size` a max
+  90, pero los routers declaran `le=100`. Unificado a 100.
+- **2** `services/empresa_service.py`: `crear` y `actualizar` ahora
+  validan unicidad de nombre (409), consistente con categorias,
+  subcategorias y puntos_venta.
+- **3** `services/matriz_prioridad_service.py:sincronizar_categoria`:
+  ahora valida que `categoria_id` exista (404) y que los
+  `subcategoria_id` pertenezcan a esa categoria (409), antes de
+  ejecutar el DELETE+INSERT destructivo.
+- **4** `services/tarea_pendiente_service.py:crear`: validaba
+  existencia del ticket sin tenant. Ahora usa
+  `ticket_service.obtener` que aplica `tenant_filter` + restriccion
+  de agente asignado.
+- **5** `services/adjunto_service.py:subir`: `object_key` ahora usa
+  la extension real del MIME (`.jpg`/`.png`/`.webp`) via
+  `MIME_TO_EXT`, en vez de siempre `.webp`.
+- **6** `services/adjunto_service.py:stream_archivo` +
+  `routers/adjuntos.py`: `Content-Disposition` ahora usa
+  `nombre_archivo` real en vez del UUID del adjunto.
+- **7** `services/comentario_service.py:_resolve_implicated_user_ids`:
+  admins notificados se filtran por `empresa_id == ticket.empresa_id`
+  o `empresa_id IS NULL` (admins globales), evitando notificar a
+  admins de otras empresas (data leak por metadata).
+- Verificacion: `py_compile` limpio en todos los archivos
+  modificados; app recarga sin errores; 75 endpoints intactos.
