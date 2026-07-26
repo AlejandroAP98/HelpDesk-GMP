@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
+from app.models.enums import RolUsuario
+from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.websockets.manager import manager
 from app.utils.exceptions import TokenInvalido
@@ -42,6 +44,27 @@ async def _resolve_user(token: str, db: AsyncSession) -> Usuario:
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
     return usuario
+
+
+async def _can_access_ticket(usuario: Usuario, ticket_id: UUID, db: AsyncSession) -> bool:
+    """Valida si un usuario tiene acceso a un ticket para suscripcion WS."""
+    from sqlalchemy import select
+
+    ticket = (
+        await db.execute(select(Ticket).where(Ticket.id == ticket_id))
+    ).scalar_one_or_none()
+    if ticket is None:
+        return False
+    rol = usuario.rol.value if hasattr(usuario.rol, "value") else usuario.rol
+    if rol == RolUsuario.administrador.value:
+        if usuario.empresa_id is None:
+            return True
+        return ticket.empresa_id == usuario.empresa_id
+    if rol == RolUsuario.mesa_ayuda.value:
+        return ticket.agente_id == usuario.id
+    if rol == RolUsuario.cliente.value:
+        return ticket.empresa_id == usuario.empresa_id
+    return False
 
 
 @router.websocket("/ws")
@@ -86,7 +109,14 @@ async def websocket_endpoint(
             elif isinstance(data, dict) and data.get("type") == "subscribe_ticket":
                 tid = data.get("ticket_id")
                 if tid:
-                    manager.subscribe_ticket(conn_id, UUID(tid))
+                    if await _can_access_ticket(usuario, UUID(tid), db):
+                        manager.subscribe_ticket(conn_id, UUID(tid))
+                    else:
+                        logger.warning(
+                            "WS subscribe_ticket rechazado: usuario=%s ticket=%s",
+                            usuario.id,
+                            tid,
+                        )
             elif isinstance(data, dict) and data.get("type") == "unsubscribe_ticket":
                 tid = data.get("ticket_id")
                 if tid:

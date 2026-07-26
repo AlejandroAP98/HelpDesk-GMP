@@ -32,8 +32,8 @@ async def _resolve_implicated_user_ids(
 ) -> list[UUID]:
     """Usuarios que deben recibir la notificacion de un nuevo comentario.
 
-    - Comentario publico: cliente del ticket + agente asignado + todos los admins.
-    - Nota interna: agente asignado + todos los admins (cliente NUNCA la recibe).
+    - Comentario publico: cliente del ticket + agente asignado.
+    - Nota interna: agente asignado + admins de la empresa (cliente NUNCA la recibe).
     - El autor del comentario se excluye para no notificarse a si mismo.
     """
     implicated: set[UUID] = set()
@@ -41,15 +41,16 @@ async def _resolve_implicated_user_ids(
         implicated.add(ticket.cliente_id)
     if ticket.agente_id is not None:
         implicated.add(ticket.agente_id)
-    admin_rows = await db.execute(
-        select(Usuario.id).where(
-            Usuario.rol == RolUsuario.administrador.value,
-            (Usuario.empresa_id == ticket.empresa_id)
-            | (Usuario.empresa_id.is_(None)),
+    if es_nota_interna:
+        admin_rows = await db.execute(
+            select(Usuario.id).where(
+                Usuario.rol == RolUsuario.administrador.value,
+                (Usuario.empresa_id == ticket.empresa_id)
+                | (Usuario.empresa_id.is_(None)),
+            )
         )
-    )
-    for (uid,) in admin_rows.all():
-        implicated.add(uid)
+        for (uid,) in admin_rows.all():
+            implicated.add(uid)
     implicated.discard(current.id)
     return list(implicated)
 
@@ -128,7 +129,7 @@ async def crear(
         await db.refresh(ticket)
 
     try:
-        from app.websockets.pubsub import publish_to_ticket, publish_to_users
+        from app.websockets.pubsub import publish_to_users
 
         event = {
             "type": "ticket:commented",
@@ -140,7 +141,6 @@ async def crear(
             "es_nota_interna": data.es_nota_interna,
             "fecha_creacion": comentario.fecha_creacion.replace(tzinfo=timezone.utc).isoformat(),
         }
-        await publish_to_ticket(ticket_id=ticket_id, event=event)
         implicated = await _resolve_implicated_user_ids(
             ticket, current, db, es_nota_interna=data.es_nota_interna
         )
