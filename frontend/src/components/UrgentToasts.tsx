@@ -22,9 +22,6 @@ function playBeep(frequency = 880) {
   }
 }
 
-function playAssignedBeep() {
-  playBeep(660);
-}
 
 function AlertCard({
   alert,
@@ -309,13 +306,13 @@ export default function UrgentToasts() {
     if (alerts.length === 0) return;
     const latest = alerts[0];
     if (latest.kind === "assigned") {
-      playAssignedBeep();
+      playBeep(660);
     } else if (latest.kind === "state_changed") {
       playBeep(770);
     } else if (latest.kind === "commented") {
       playBeep(520);
     } else if (latest.kind === "new_ticket") {
-      playBeep(620);
+      playBeep(628);
     } else {
       playBeep();
     }
