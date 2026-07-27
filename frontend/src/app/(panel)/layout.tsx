@@ -87,7 +87,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Cambiar contrasena</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Cambiar contraseña</h2>
                 <button
                   onClick={() => setShowPassword(false)}
                   className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"

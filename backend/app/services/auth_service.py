@@ -124,9 +124,9 @@ async def cambiar_password(
     db: AsyncSession,
 ) -> Mensaje:
     if not verify_password(data.old_password, usuario.password_hash):
-        raise CredencialesInvalidas("La contrasena actual no es correcta")
+        raise CredencialesInvalidas("La contraseña actual no es correcta")
     if data.old_password == data.new_password:
-        raise Conflicto("La nueva contrasena debe ser diferente a la actual")
+        raise Conflicto("La nueva contraseña debe ser diferente a la actual")
     usuario.password_hash = hash_password(data.new_password)
     await db.commit()
-    return Mensaje(detail="Contrasena actualizada correctamente")
+    return Mensaje(detail="Contraseña actualizada correctamente")
