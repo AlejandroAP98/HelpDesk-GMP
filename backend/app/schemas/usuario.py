@@ -36,6 +36,7 @@ class UsuarioOut(BaseModel):
     email: EmailStr
     rol: RolUsuario
     empresa_id: int | None
+    notificaciones_email: bool = True
     fecha_creacion: DatetimeUTC
 
 
@@ -56,6 +57,10 @@ class RefreshRequest(BaseModel):
 
 class Mensaje(BaseModel):
     detail: str
+
+
+class PreferenciasNotificacion(BaseModel):
+    notificaciones_email: bool
 
 
 class UsuarioUpdateByAdmin(BaseModel):

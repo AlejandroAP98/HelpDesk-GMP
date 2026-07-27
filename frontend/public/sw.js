@@ -18,6 +18,7 @@ const PRECACHE_URLS = [
   "/manifest.json",
   "/icon-192.png?v4",
   "/icon-512.png?v4",
+  "/icon-maskable-512.png?v4",
   "/apple-touch-icon.png?v4",
 ];
 

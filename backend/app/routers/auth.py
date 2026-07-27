@@ -13,7 +13,7 @@ from app.schemas.auth import (
     RegistroAgenteRequest,
     RegistroRequest,
 )
-from app.schemas.usuario import Mensaje, RefreshRequest, Token, UsuarioOut
+from app.schemas.usuario import Mensaje, PreferenciasNotificacion, RefreshRequest, Token, UsuarioOut
 from app.services import auth_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -47,6 +47,18 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
 
 @router.get("/me", response_model=UsuarioOut)
 async def me(current: Annotated[Usuario, Depends(get_current_user)]) -> UsuarioOut:
+    return UsuarioOut.model_validate(current)
+
+
+@router.patch("/preferences", response_model=UsuarioOut)
+async def actualizar_preferencias(
+    data: PreferenciasNotificacion,
+    current: Annotated[Usuario, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+) -> UsuarioOut:
+    current.notificaciones_email = data.notificaciones_email
+    await db.commit()
+    await db.refresh(current)
     return UsuarioOut.model_validate(current)
 
 

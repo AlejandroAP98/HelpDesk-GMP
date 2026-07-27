@@ -67,6 +67,7 @@ export default function PanelHomePage() {
 
   useEffect(() => {
     setOnTicketCreated((ev) => {
+      if (usuario?.rol === "agente") return;
       if (usuario?.rol === "cliente" && empresaId != null && ev.empresa_id !== empresaId) return;
       setRecientes((prev) => {
         if (prev.some((t) => t.id === ev.ticket_id)) return prev;

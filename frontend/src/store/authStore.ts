@@ -11,6 +11,7 @@ export interface Usuario {
   email: string;
   rol: Rol;
   empresa_id: number | null;
+  notificaciones_email: boolean;
   fecha_creacion: string;
 }
 
@@ -19,6 +20,7 @@ interface AuthState {
   refreshToken: string | null;
   usuario: Usuario | null;
   setSession: (s: { access_token: string; refresh_token: string; usuario: Usuario }) => void;
+  updateUsuario: (u: Partial<Usuario>) => void;
   logout: () => void;
   hasRole: (...roles: Rol[]) => boolean;
 }
@@ -35,6 +37,10 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: s.refresh_token,
           usuario: s.usuario,
         }),
+      updateUsuario: (u) =>
+        set((state) => ({
+          usuario: state.usuario ? { ...state.usuario, ...u } : null,
+        })),
       logout: () => set({ token: null, refreshToken: null, usuario: null }),
       hasRole: (...roles) => {
         const u = get().usuario;

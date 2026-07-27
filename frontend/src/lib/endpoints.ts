@@ -232,6 +232,13 @@ export const authApi = {
   },
 };
 
+export const preferencesApi = {
+  update: async (data: { notificaciones_email: boolean }) => {
+    const r = await api.patch("/api/auth/preferences", data);
+    return r.data as Usuario;
+  },
+};
+
 export const ticketApi = {
   listar: async (params: Record<string, unknown> = {}) => {
     const r = await api.get("/api/tickets", { params });

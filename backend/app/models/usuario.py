@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, String, func
+from sqlalchemy import ForeignKey, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -29,6 +29,9 @@ class Usuario(Base):
     rol: Mapped[RolUsuario] = mapped_column(
         SAEnum(RolUsuario, name="rol_usuario", create_type=True, validate_strings=True),
         nullable=False,
+    )
+    notificaciones_email: Mapped[bool] = mapped_column(
+        nullable=False, server_default=text("true"), default=True
     )
     fecha_creacion: Mapped[datetime] = mapped_column(
         server_default=func.current_timestamp(), nullable=False

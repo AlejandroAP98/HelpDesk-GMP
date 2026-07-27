@@ -231,6 +231,15 @@ export default function UsuariosPage() {
               },
               },
               {
+                key: "notificaciones_email",
+                header: "Notificaciones Email",
+                cell: (u: Usuario) => (
+                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-semibold ${u.notificaciones_email ? "bg-grayCustom/5 text-grayCustom" : "bg-redCustom/10 text-redCustom"}`}>
+                    {u.notificaciones_email ? "Si" : "No"}
+                  </span>
+                ),
+              },
+              {
                 key: "acciones",
                 header: "Acciones",
                 cell: (u: Usuario) => (

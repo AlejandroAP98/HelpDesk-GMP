@@ -102,14 +102,14 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-56 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-auto bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="py-4 border-b border-brandCustom">
           <div className="flex items-start justify-between">
             <div className="flex items-center justify-center w-full">
-              <img src={logo.src} alt="Logo GMP" className="w-28 h-auto " />
+              <img src={logo.src} alt="Logo GMP" className="w-28 h-auto" />
             </div>
             <button
               onClick={onClose}
@@ -121,7 +121,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           </div>
         </div>
 
-        <nav className="flex-1 py-4 space-y-1 overflow-y-auto border-r border-brandCustom">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto border-brandCustom">
           {links.map((l) => {
             const active = l.href === "/"
               ? pathname === "/"
@@ -134,7 +134,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                 key={l.href}
                 href={l.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5  text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-3 px-4 py-2.5  text-sm font-medium transition-all duration-200 ${
                   active
                     ? "bg-brandCustom text-white"
                     : "text-white hover:text-brandCustom hover:bg-bgCustom "

@@ -135,8 +135,8 @@ function AlertCard({
               #{alert.ticket_id.slice(0, 8)}
             </span>
             {alert.estado_anterior && alert.estado_nuevo && (
-              <span className="text-[10px] text-gray-500 font-semibold">
-                {alert.estado_anterior} <span className="text-emerald-500">→</span> {alert.estado_nuevo}
+              <span className="text-[10px] text-gray-500 font-semibold capitalize">
+                {alert.estado_anterior.replace("_", " ")} <span className="text-emerald-500">→</span> {alert.estado_nuevo.replace("_", " ")}
               </span>
             )}
           </div>
@@ -148,7 +148,7 @@ function AlertCard({
   if (alert.kind === "new_ticket") {
     return (
       <div
-        className="rounded-2xl bg-white border border-violet-200 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        className="rounded-2xl bg-white border border-brandCustom/20 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
         role="alert"
         onClick={() => {
           window.location.href = `/tickets/${alert.ticket_id}`;

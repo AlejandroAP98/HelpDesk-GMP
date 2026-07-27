@@ -90,7 +90,57 @@ function WebSocketListener() {
         ev.type === "ticket:state_changed"
       ) {
         dispatch(ev as unknown as WsTicketEvent);
-        if (ev.type === "ticket:state_changed") {
+        if (ev.type === "ticket:assigned") {
+          const assigned = ev as unknown as {
+            agente_id: string | null;
+            ticket_id: string;
+            empresa_id: number;
+            titulo: string;
+            prioridad: string;
+            estado: string;
+          };
+          if (assigned.agente_id && usuario?.id && assigned.agente_id === usuario.id) {
+            addAlert({
+              kind: "assigned",
+              ticket_id: assigned.ticket_id,
+              empresa_id: assigned.empresa_id,
+              titulo: assigned.titulo,
+              prioridad: assigned.prioridad,
+              estado: assigned.estado,
+            });
+            if (typeof window !== "undefined" && "Notification" in window) {
+              const showNotif = () => {
+                try {
+                  const n = new Notification("Te asignaron un ticket", {
+                    body: `${assigned.titulo} - ${assigned.estado} (${assigned.prioridad})`,
+                    icon: "/icon-192.png?v4",
+                    badge: "/icon-192.png?v4",
+                    tag: `assigned-${assigned.ticket_id}`,
+                    data: { url: `/tickets/${assigned.ticket_id}` },
+                  });
+                  n.onclick = () => {
+                    try {
+                      window.focus();
+                    } catch {
+                    }
+                    window.location.href = `/tickets/${assigned.ticket_id}`;
+                    n.close();
+                  };
+                } catch {
+                }
+              };
+              if (Notification.permission === "granted") {
+                showNotif();
+              } else if (Notification.permission !== "denied") {
+                Notification.requestPermission()
+                  .then((perm) => {
+                    if (perm === "granted") showNotif();
+                  })
+                  .catch(() => undefined);
+              }
+            }
+          }
+        } else if (ev.type === "ticket:state_changed") {
           const sc = ev as unknown as {
             ticket_id: string;
             empresa_id: number;
@@ -128,56 +178,6 @@ function WebSocketListener() {
                     } catch {
                     }
                     window.location.href = `/tickets/${sc.ticket_id}`;
-                    n.close();
-                  };
-                } catch {
-                }
-              };
-              if (Notification.permission === "granted") {
-                showNotif();
-              } else if (Notification.permission !== "denied") {
-                Notification.requestPermission()
-                  .then((perm) => {
-                    if (perm === "granted") showNotif();
-                  })
-                  .catch(() => undefined);
-              }
-            }
-          }
-        } else if (ev.type === "ticket:assigned") {
-          const assigned = ev as unknown as {
-            agente_id: string | null;
-            ticket_id: string;
-            empresa_id: number;
-            titulo: string;
-            prioridad: string;
-            estado: string;
-          };
-          if (assigned.agente_id && usuario?.id && assigned.agente_id === usuario.id) {
-            addAlert({
-              kind: "assigned",
-              ticket_id: assigned.ticket_id,
-              empresa_id: assigned.empresa_id,
-              titulo: assigned.titulo,
-              prioridad: assigned.prioridad,
-              estado: assigned.estado,
-            });
-            if (typeof window !== "undefined" && "Notification" in window) {
-              const showNotif = () => {
-                try {
-                  const n = new Notification("Te asignaron un ticket", {
-                    body: `${assigned.titulo} - ${assigned.estado} (${assigned.prioridad})`,
-                    icon: "/icon-192.png?v4",
-                    badge: "/icon-192.png?v4",
-                    tag: `assigned-${assigned.ticket_id}`,
-                    data: { url: `/tickets/${assigned.ticket_id}` },
-                  });
-                  n.onclick = () => {
-                    try {
-                      window.focus();
-                    } catch {
-                    }
-                    window.location.href = `/tickets/${assigned.ticket_id}`;
                     n.close();
                   };
                 } catch {

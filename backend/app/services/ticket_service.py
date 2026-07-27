@@ -114,7 +114,7 @@ def _ticket_payload(ticket: Ticket, event_type: str, empresa_nombre: str | None 
 
 async def _enviar_emails_post_creacion(
     ticket: Ticket,
-    cliente_email: str | None,
+    cliente: Usuario,
     empresa_nombre: str | None,
 ) -> None:
     """Lanza los emails transaccionales que se disparan al crear un ticket.
@@ -123,9 +123,12 @@ async def _enviar_emails_post_creacion(
 
     from app.services import email_service
 
+    if not cliente.notificaciones_email:
+        return
+
     async def _run() -> None:
         try:
-            await email_service.send_ticket_created(ticket, cliente_email or "")
+            await email_service.send_ticket_created(ticket, cliente.email)
             if ticket.prioridad == PrioridadTicket.urgente:
                 await email_service.send_ticket_urgent(ticket, empresa_nombre)
         except Exception:
@@ -155,11 +158,10 @@ async def _publicar_urgente_si_corresponde(ticket: Ticket, empresa_nombre: str |
 
 
 async def _publicar_evento_ticket(ticket: Ticket, event_type: str, empresa_nombre: str | None = None) -> None:
-    from app.websockets.pubsub import publish_to_ticket, publish_broadcast
+    from app.websockets.pubsub import publish_broadcast
 
     payload = _ticket_payload(ticket, event_type, empresa_nombre)
     try:
-        await publish_to_ticket(ticket.id, event=payload)
         await publish_broadcast(event=payload)
         _logger.info(
             "Evento %s publicado para ticket %s (empresa=%s)",
@@ -174,13 +176,12 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str, empresa_nombr
 
 
 async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str, empresa_nombre: str | None = None) -> None:
-    from app.websockets.pubsub import publish_to_ticket, publish_broadcast
+    from app.websockets.pubsub import publish_broadcast
 
     payload = _ticket_payload(ticket, "ticket:state_changed", empresa_nombre)
     payload["estado_anterior"] = estado_anterior
     payload["estado_nuevo"] = ticket.estado.value
     try:
-        await publish_to_ticket(ticket.id, event=payload)
         await publish_broadcast(event=payload)
         _logger.info(
             "Evento ticket:state_changed publicado para ticket %s: %s -> %s",
@@ -225,18 +226,16 @@ async def _publicar_nuevo_ticket(ticket: Ticket, empresa_nombre: str | None = No
 async def _publicar_asignacion(ticket: Ticket, empresa_nombre: str | None = None) -> None:
     """Publica evento ticket:assigned (dispara Web Push al agente asignado).
 
-    Se publica a:
-    - El room del ticket (para quien tenga el detalle abierto)
-    - El rol agente+mesa_ayuda+administrador (para que el agente asignado lo reciba
-      aunque este viendo la lista, no el detalle)
+    Se publica solo a roles agente+mesa_ayuda+administrador via publish_to_roles.
+    El agente asignado recibe la notificacion por su rol; los usuarios en la sala
+    del ticket reciben la actualizacion via ticket:updated (broadcast).
     """
-    from app.websockets.pubsub import publish_to_ticket, publish_to_roles
+    from app.websockets.pubsub import publish_to_roles
 
     if ticket.agente_id is None:
         return
     payload = _ticket_payload(ticket, "ticket:assigned", empresa_nombre)
     try:
-        await publish_to_ticket(ticket.id, event=payload)
         await publish_to_roles(
             roles=[
                 RolUsuario.agente.value,
@@ -342,7 +341,7 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
-    await _enviar_emails_post_creacion(ticket, current.email, empresa_nombre)
+    await _enviar_emails_post_creacion(ticket, current, empresa_nombre)
     return ticket
 
 
@@ -396,7 +395,7 @@ async def crear_admin(
     await _publicar_urgente_si_corresponde(ticket, empresa_nombre)
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
-    await _enviar_emails_post_creacion(ticket, cliente.email, empresa_nombre)
+    await _enviar_emails_post_creacion(ticket, cliente, empresa_nombre)
     return ticket
 
 
@@ -732,6 +731,8 @@ async def _enviar_email_resolucion(ticket: Ticket, db: AsyncSession) -> None:
         await db.execute(select(Usuario).where(Usuario.id == ticket.cliente_id))
     ).scalar_one_or_none()
     if cliente is None or not cliente.email:
+        return
+    if not cliente.notificaciones_email:
         return
 
     async def _run() -> None:
