@@ -280,39 +280,41 @@ export default function NotificationSettings() {
         </div>
       )}
 
-      {/* Seccion: Notificaciones por correo */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">Notificaciones por correo</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Recibirás por email confirmaciones de tickets creados y resueltos.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={emailBusy}
-            onClick={handleToggleEmail}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
-              emailEnabled ? "bg-brandCustom" : "bg-grayCustom/50"
-            }`}
-          >
-            <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                emailEnabled ? "translate-x-5" : "translate-x-0"
+      {usuario?.rol !== "agente" && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Notificaciones por correo</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Recibirás por email confirmaciones de tickets creados y resueltos.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={emailBusy}
+              onClick={handleToggleEmail}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed ${
+                emailEnabled ? "bg-brandCustom" : "bg-grayCustom/50"
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  emailEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            {emailEnabled
+              ? "Actualmente recibiendo emails de notificacion."
+              : "No recibiras emails de notificacion. Puedes cambiar esto en cualquier momento."}
+          </p>
+          {emailError && (
+            <p className="mt-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-100">{emailError}</p>
+          )}
         </div>
-        <p className="mt-2 text-xs text-gray-400">
-          {emailEnabled
-            ? "Actualmente recibiendo emails de notificacion."
-            : "No recibiras emails de notificacion. Puedes cambiar esto en cualquier momento."}
-        </p>
-        {emailError && (
-          <p className="mt-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-100">{emailError}</p>
-        )}
-      </div>
+      )}
     </div>
+    
   );
 }
