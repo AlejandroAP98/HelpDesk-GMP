@@ -173,8 +173,8 @@ export default function PanelHomePage() {
           Hola, {usuario?.nombre?.split(" ")[0]}
           </h1>
           <p className="sm:text-sm text-xs text-gray-500 mt-1">
-            {usuario?.rol === "cliente" && "Gestiona tus tickets de soporte"}
-            {usuario?.rol === "agente" && "Revisa y resuelve tus tickets asignados"}
+            {usuario?.rol === "cliente" && "Información del estado de tus tickets de soporte y generación de reportes"}
+            {usuario?.rol === "agente" && "Información del estado de los tickets"}
             {usuario?.rol === "mesa_ayuda" && "Supervisa, asigna y mide el rendimiento del equipo"}
             {usuario?.rol === "administrador" && "Panel de administracion y control global"}
           </p>
