@@ -88,7 +88,7 @@ function AlertCard({
   if (alert.kind === "state_changed") {
     return (
       <div
-        className="rounded-2xl bg-white border border-brandCustom p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        className="rounded-2xl bg-white p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
         role="alert"
         onClick={() => {
           window.location.href = `/tickets/${alert.ticket_id}`;
@@ -148,7 +148,7 @@ function AlertCard({
   if (alert.kind === "new_ticket") {
     return (
       <div
-        className="rounded-2xl bg-white border border-brandCustom/20 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        className="rounded-2xl bg-white p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
         role="alert"
         onClick={() => {
           window.location.href = `/tickets/${alert.ticket_id}`;
@@ -212,7 +212,7 @@ function AlertCard({
   if (alert.kind === "commented") {
     return (
       <div
-        className="rounded-2xl bg-white border border-orange-200 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
+        className="rounded-2xl bg-white p-4 shadow-elevated animate-slide-in-right relative overflow-hidden cursor-pointer"
         role="alert"
         onClick={() => {
           window.location.href = `/tickets/${alert.ticket_id}`;
@@ -258,7 +258,7 @@ function AlertCard({
 
   return (
     <div
-      className="rounded-2xl bg-white border border-red-100 p-4 shadow-elevated animate-slide-in-right relative overflow-hidden"
+      className="rounded-2xl bg-white p-4 shadow-elevated animate-slide-in-right relative overflow-hidden"
       role="alert"
     >
       <div className="absolute top-0 left-0 w-1 h-full bg-redCustom rounded-l-2xl" />
