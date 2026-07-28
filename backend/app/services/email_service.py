@@ -119,7 +119,7 @@ def _render_ticket_resolved(ticket: Ticket, cliente_email: str) -> tuple[str, st
         </div>
         <h2 style="color: #60993e; margin-top: 0; font-size: 24px; font-weight: 700; margin-bottom: 16px;">Tu ticket ha sido resuelto</h2>
         <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {cliente_email}</p>
-        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">El equipo de soporte ha marcado tu ticket como resuelto. Si el problema persiste, puedes responder desde la plataforma y lo reabriremos. Si todo está bien, puedes cerrarlo para confirmar.</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">El equipo de soporte ha marcado tu ticket como resuelto. Puedes cerrarlo si todo está en orden, si no es así puedes escribir nuevamente al equipo de soporte para reabrirlo y continuar recibiendo asistencia.</p>
         
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr style="border-bottom: 1px solid #f3f4f6;">
