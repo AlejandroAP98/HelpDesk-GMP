@@ -192,7 +192,7 @@ export default function NotificationSettings() {
             <div>
               <h3 className="text-base font-semibold text-gray-900">Notificaciones push</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Recibi alertas de tickets urgentes y asignaciones aunque no estes conectado.
+                Recibirás alertas de los cambios de estado de tus tickets.
               </p>
             </div>
             <div className="flex items-center gap-2">
