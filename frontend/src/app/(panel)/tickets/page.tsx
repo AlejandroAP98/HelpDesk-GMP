@@ -239,7 +239,7 @@ export default function TicketsListPage() {
             </button>
           </div>
         </div>
-        <div className="grid md:flex grid-cols-3 gap-x-4">
+        <div className="grid md:flex grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1">
           <Select
             label="Estado"
             value={estado}
@@ -253,7 +253,7 @@ export default function TicketsListPage() {
             options={PRIORIDADES}
           />
           <div className="flex flex-col">
-            <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+            <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
               Desde
             </label>
             <input
@@ -264,7 +264,7 @@ export default function TicketsListPage() {
             />
           </div>
           <div className="flex flex-col">
-            <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+            <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
               Hasta
             </label>
             <input

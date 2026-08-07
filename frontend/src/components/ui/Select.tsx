@@ -21,7 +21,7 @@ export function Select({
   return (
     <label className="flex flex-col">
       {label && (
-        <span className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+        <span className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
           {label}
         </span>
       )}

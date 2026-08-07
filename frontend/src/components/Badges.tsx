@@ -42,7 +42,7 @@ export function PrioridadBadge({ prioridad, estado= "" }: { prioridad: string, e
 
 export function TotalBadge({ total }: { total: number }) {
   return (
-    <span className="flex h-fit self-end justify-center items-center text-nowrap flex-nowrap text-xs mb-1 font-normal text-brandCustom bg-brandCustom/5 px-3.5 py-1.5 rounded-lg  border-brandCustom/40">
+    <span className="flex h-auto self-end justify-center items-center text-nowrap flex-nowrap text-xs sm:mb-1 mt-2  font-normal text-brandCustom bg-brandCustom/5 px-3.5 py-1.5 rounded-lg  border-brandCustom/40">
       {total} ticket{total !== 1 ? "s" : ""}
     </span>
   );
