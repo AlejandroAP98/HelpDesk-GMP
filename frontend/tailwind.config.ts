@@ -39,6 +39,7 @@ const config: Config = {
         'wifi-dot': 'wifiDot 2s ease-in-out infinite',
         'flash-complete': 'flashComplete 500ms ease-out',
         'flash-uncomplete': 'flashUncomplete 500ms ease-out',
+
       },
       keyframes: {
         fadeIn: {
@@ -85,6 +86,7 @@ const config: Config = {
           '0%': { backgroundColor: 'rgba(80, 132, 132, 0.25)' },
           '100%': { backgroundColor: 'rgba(80, 132, 132, 0)' },
         },
+
       },
       boxShadow: {
         'card': '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',

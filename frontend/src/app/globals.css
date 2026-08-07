@@ -41,6 +41,16 @@ body::before {
   background: #9ca3af;
 }
 
+@keyframes cloudsRight {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes cloudsLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(50%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
