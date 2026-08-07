@@ -8,7 +8,7 @@ export function Input({ label, className = "", ...props }: InputProps) {
   return (
     <label className="flex flex-col gap-2 px-1">
       {label && (
-        <span className="sm:text-xs text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">
+        <span className="sm:text-xs text-[10px] font-medium text-gray-500 uppercase tracking-wider block">
           {label}
         </span>
       )}
@@ -28,7 +28,7 @@ export function Textarea({ label, className = "", ...props }: TextareaProps) {
   return (
     <label className="flex flex-col gap-2">
       {label && (
-        <span className="sm:text-xs text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">
+        <span className="sm:text-xs text-[10px] font-medium text-gray-500 uppercase tracking-wider block">
           {label}
         </span>
       )}

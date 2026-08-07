@@ -33,7 +33,7 @@ export function DataTable<T>({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="px-5 py-2 sm:py-3.5 sm:text-xs text-[10px] font-semibold tracking-wider uppercase"
+                className="px-5 py-2 sm:py-3.5 sm:text-xs text-[10px] font-medium tracking-wider uppercase"
               >
                 {col.header}
               </th>
@@ -48,7 +48,7 @@ export function DataTable<T>({
             return (
               <tr
                 key={keyExtractor(row)}
-                className={`hover:bg-gray-100/50 animate-fadeIn opacity-0 transition-colors ${baseRowClass} ${clickClass}`}
+                className={`hover:bg-gray-100/50 animate-fade-in opacity-0 transition-colors ${baseRowClass} ${clickClass}`}
                 style={{
                   animationDelay: `${(i+1)* 20}ms`,
                   animationFillMode: "forwards",

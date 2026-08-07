@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
+import { PageHeader } from "@/components/ui/PageHeader";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 
 const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
@@ -145,9 +146,11 @@ export default function NuevoTicketPage() {
 
   return (
     <div className="animate-scale-in max-w-4xl mx-auto">
-      <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900 mb-1">Nuevo Ticket</h1>
-      <p className="text-gray-500 sm:text-sm text-xs font-medium mb-6">Completa el siguiente formulario de la forma más detallada posible para crear un nuevo ticket.</p>
-      <form onSubmit={submit} className="space-y-5">
+      <PageHeader
+        title="Nuevo Ticket"
+        subtitle="Completa el siguiente formulario de la forma más detallada posible para crear un nuevo ticket."
+      />
+      <form onSubmit={submit} className="space-y-5 mt-4">
         <Card >
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5 items-start mb-4 ">
             <Select
@@ -177,7 +180,7 @@ export default function NuevoTicketPage() {
             />
             {elemento === "punto_venta" && (
               <div className="flex flex-col gap-1">
-                <span className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">
+                <span className="sm:text-xs text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
                   Punto de venta
                 </span>
                 <SearchableSelect
@@ -215,7 +218,7 @@ export default function NuevoTicketPage() {
             />
           </div>
           <section className="mt-5 border border-gray-200 rounded-xl p-4">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 block">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 block">
             Información de red (opcional)
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -229,7 +232,7 @@ export default function NuevoTicketPage() {
                   className="w-4 h-4 rounded sm:text-xs text-[11px] border-gray-300 text-brand-600 focus:ring-brandCustom"
                 />
                 <div className="flex gap-4 w-full">
-                  <label htmlFor={campo.key} className="text-nowrap self-center sm:text-xs text-[11px] font-medium text-gray-600 cursor-pointer select-none">
+                  <label htmlFor={campo.key} className="text-nowrap self-center sm:text-xs text-[11px] font-normal text-gray-600 cursor-pointer select-none">
                     {campo.label}
                   </label>
                   {camposActivos[campo.key] && (

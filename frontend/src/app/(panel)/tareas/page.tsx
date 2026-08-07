@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { tareaApi, ticketApi, type TareaPendiente, type Ticket, type Pagina } from "@/lib/endpoints";
 import { extractApiError } from "@/lib/errors";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import TareaCard from "@/components/TareaCard";
@@ -103,18 +104,18 @@ export default function TareasPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Mis Tareas</h1>
-          <h2 className="text-gray-500 sm:text-sm text-xs">Gestioná y organizá tus tareas diarias.</h2>
-        </div>
-        <Button onClick={() => setShowForm(!showForm)} icon={<AddCheckSquareIcon />} className="text-nowrap">
-          Nueva tarea
-        </Button>
-      </div>
+      <PageHeader
+        title="Mis Tareas"
+        subtitle="Gestioná y organizá tus tareas diarias."
+        actions={
+          <Button onClick={() => setShowForm(!showForm)} icon={<AddCheckSquareIcon />} className="text-nowrap text-xs sm:text-sm">
+            Nueva tarea
+          </Button>
+        }
+      />
 
       {showForm && (
-        <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="mb-6 mt-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
           <span className="text-sm text-gray-500">Nueva tarea</span>
           <textarea
             value={nuevoTexto}
@@ -149,12 +150,12 @@ export default function TareasPage() {
         </div>
       )}
 
-      <div className="flex w-full border-b border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit text-nowrap mb-1">
+      <div className="flex w-full mt-2 border-b border-grayCustom/50 bg-grayCustom/10  rounded-lg h-fit text-nowrap mb-1">
         {(["pendientes", "completadas","todas"] as FiltroTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => { setFiltro(tab); setPage(1); }}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+            className={`flex-1 py-2 text-sm font-normal rounded-md transition-all ${
               filtro === tab
                 ? "bg-brandCustom text-white shadow-sm"
                 : "text-grayCustom hover:text-gray-700"

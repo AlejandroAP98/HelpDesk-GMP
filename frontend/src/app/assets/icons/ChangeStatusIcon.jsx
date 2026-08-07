@@ -1,4 +1,4 @@
-const ChangeStatusIcon = ({strokeWidth = 2, className=""}) => {
+const ChangeStatusIcon = ({strokeWidth = 1.5, className=""}) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

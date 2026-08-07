@@ -10,6 +10,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import AddFactoryIcon from "@/app/assets/icons/AddFactoryIcon";
 
 export default function EmpresasPage() {
@@ -90,13 +91,11 @@ export default function EmpresasPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Empresas</h1>
-          <p className="text-gray-500 sm:text-sm text-xs mt-1">Gestiona las empresas del sistema</p>
-        </div>
-        <Button onClick={abrirCrear} className=" text-nowrap" icon={<AddFactoryIcon />}>Nueva empresa</Button>
-      </div>
+      <PageHeader
+        title="Empresas"
+        subtitle="Gestiona las empresas del sistema"
+        actions={<Button onClick={abrirCrear} className="text-nowrap text-xs sm:text-sm" icon={<AddFactoryIcon />}>Nueva empresa</Button>}
+      />
 
       {error && <ErrorMessage message={error} />}
 
@@ -116,7 +115,7 @@ export default function EmpresasPage() {
               {
                 key: "nombre",
                 header: "Nombre",
-                cell: (e: Empresa) => <span className="font-medium text-gray-900 sm:text-xs text-xs">{e.nombre}</span>,
+                cell: (e: Empresa) => <span className="font-normal text-gray-900 sm:text-xs text-xs">{e.nombre}</span>,
               },
               {
                 key: "fecha_creacion",
@@ -163,7 +162,7 @@ export default function EmpresasPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editando ? "Editar empresa" : "Nueva empresa"}
             </h2>
             <div className="space-y-4">

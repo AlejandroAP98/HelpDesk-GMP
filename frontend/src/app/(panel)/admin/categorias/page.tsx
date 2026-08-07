@@ -18,6 +18,7 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import AddCagoryIcon from "@/app/assets/icons/AddCagoryIcon";
 import AddSubCategoryIcon from "@/app/assets/icons/AddSubCategoryIcon";
 
@@ -295,20 +296,16 @@ export default function CategoriasPage() {
     baja: "text-gray-600",
     media: "text-blue-600",
     alta: "text-orange-600",
-    urgente: "text-red-600 font-semibold",
+    urgente: "text-red-600 font-medium",
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Categorías</h1>
-          <p className="sm:text-sm text-xs text-gray-500 mt-1">
-            Gestiona categorías, subcategorías y matriz de prioridad
-          </p>
-        </div>
-        <Button onClick={abrirCrearCat} className="text-nowrap" icon={<AddCagoryIcon />}>Nueva categoría</Button>
-      </div>
+      <PageHeader
+        title="Categorías"
+        subtitle="Gestiona categorías, subcategorías y matriz de prioridad"
+        actions={<Button onClick={abrirCrearCat} className="text-nowrap text-xs sm:text-sm" icon={<AddCagoryIcon />}>Nueva categoría</Button>}
+      />
 
       {error && <ErrorMessage message={error} />}
 
@@ -341,13 +338,13 @@ export default function CategoriasPage() {
                       </svg>
                     </button>
                     <div>
-                      <span className="font-medium text-gray-900 text-sm sm:text-base">{cat.nombre}</span>
+                      <span className="font-normal text-gray-900 text-sm sm:text-base">{cat.nombre}</span>
                       {cat.descripcion && (
                         <span className="text-gray-400 text-xs ml-2 sm:text-sm">— {cat.descripcion}</span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex sm:flex-row flex-col sm:items-center items-start gap-2">
                     <Button variant="secondary" onClick={() => abrirCrearSub(cat.id)} className="sm:py-2 py-1 sm:px-2.5 px-1 sm:text-sm !text-[10px]" icon={<AddSubCategoryIcon />}>
                       Sub Categoría
                     </Button>
@@ -373,7 +370,7 @@ export default function CategoriasPage() {
                       <div className="px-5 py-4 text-sm text-gray-400">No hay subcategorías.</div>
                     ) : (
                       <>
-                        <div className="divide-y divide-gray-100">
+                        <div className="divide-y divide-gray-100 ">
                           {subcategorias.map((sub) => (
                             <div key={sub.id} className="flex items-center justify-between px-5 py-2.5 pl-12">
                               <div>
@@ -382,7 +379,7 @@ export default function CategoriasPage() {
                                   <span className="text-gray-400 text-xs ml-2">— {sub.descripcion}</span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex sm:items-center gap-2 sm:flex-row flex-col items-start ml-1">
                                 <Button variant="secondary" onClick={() => abrirEditarSub(sub)} className="py-1 px-2.5 !text-[10px]">
                                   Editar
                                 </Button>
@@ -401,7 +398,7 @@ export default function CategoriasPage() {
 
                         <div className="px-5 py-4 border-t border-gray-100">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Matriz de Prioridad
                             </h4>
                             {matrizModificada && (
@@ -418,11 +415,11 @@ export default function CategoriasPage() {
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b border-gray-200">
-                                  <th className="text-left py-2 pr-3 font-medium text-gray-500 min-w-[140px]">
+                                  <th className="text-left py-2 pr-3 font-normal text-gray-500 min-w-[140px]">
                                     Subcategoría
                                   </th>
                                   {ELEMENTOS.map((e) => (
-                                    <th key={e.value} className="text-center py-2 px-2 font-medium text-gray-500">
+                                    <th key={e.value} className="text-center py-2 px-2 font-normal text-gray-500">
                                       {e.label}
                                     </th>
                                   ))}
@@ -431,7 +428,7 @@ export default function CategoriasPage() {
                               <tbody>
                                 {subcategorias.map((sub) => (
                                   <tr key={sub.id} className="border-b border-gray-100 last:border-0">
-                                    <td className="py-2 pr-3 text-gray-700 font-medium truncate max-w-[180px]">
+                                    <td className="py-2 pr-3 text-gray-700 font-normal truncate max-w-[180px]">
                                       {sub.nombre}
                                     </td>
                                     {ELEMENTOS.map((elem) => {
@@ -483,7 +480,7 @@ export default function CategoriasPage() {
       {modalCatOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editandoCat ? "Editar categoría" : "Nueva categoría"}
             </h2>
             <div className="space-y-4">
@@ -516,7 +513,7 @@ export default function CategoriasPage() {
       {modalSubOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editandoSub ? "Editar subcategoría" : "Nueva subcategoría"}
             </h2>
             <div className="space-y-4">

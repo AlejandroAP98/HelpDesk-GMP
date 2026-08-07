@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import AssingUserIcon from "@/app/assets/icons/AssignUserIcon";
 import TicketIcon from "@/app/assets/icons/TicketIcon";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function BandejaPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -161,10 +162,10 @@ export default function BandejaPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Bandeja de Tickets Abiertos</h1>
-        <p className="sm:text-sm text-xs text-gray-500 mt-1">Asigna tickets a los agentes disponibles</p>
-      </div>
+      <PageHeader
+        title="Bandeja de Tickets Abiertos"
+        subtitle="Asigna tickets a los agentes disponibles"
+      />
 
       {error && <ErrorMessage message={error} />}
 
@@ -180,7 +181,7 @@ export default function BandejaPage() {
               key: "ticket_number",
               header: "# Ticket",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase">
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase">
                   #{t.id.split('-')[0].toUpperCase()}
                 </Link>
               ),
@@ -189,7 +190,7 @@ export default function BandejaPage() {
               key: "titulo",
               header: "Titulo",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
+                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
                   {t.titulo.substring(0, 20) + "..."}
                 </Link>
               ),
@@ -244,7 +245,7 @@ export default function BandejaPage() {
                     onClick={() => asignarme(t.id)}
                     disabled={Boolean(agenteSel[t.id]) || asignandoId === t.id}
                     loading={asignandoId === t.id}
-                    className="py-2 text-xs w-fit !bg-violetCustom !text-white hover:!bg-violetCustom/80"
+                    className="py-2 text-xs w-fit !bg-violetCustom !text-white hover:!bg-violetCustom/95"
                     title="Asignarme este ticket a mi mismo"
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-user-star" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0M6 21v-2a4 4 0 0 1 4-4h.5m7.3 5.817-2.172 1.138a.392.392 0 0 1-.568-.41l.415-2.411-1.757-1.707a.389.389 0 0 1 .217-.665l2.428-.352 1.086-2.193a.392.392 0 0 1 .702 0l1.086 2.193 2.428.352a.39.39 0 0 1 .217.665l-1.757 1.707.414 2.41a.39.39 0 0 1-.567.411z"/></svg>}
                   >

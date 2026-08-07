@@ -265,7 +265,7 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       style={{ touchAction: "pan-y", ...style }}
-      className={`relative rounded-xl border select-none opacity-0 animate-fadeIn ${
+      className={`relative rounded-xl border select-none opacity-0 animate-fade-in ${
         tarea.completada
           ? "bg-gray-50/60 border-gray-200/60"
           : "bg-white border-gray-200/80"
@@ -282,7 +282,7 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }
         }}
       >
         <div
-          className="flex items-center gap-2.5 font-bold text-sm"
+          className="flex items-center gap-2.5 font-semibold text-sm"
           style={{
             opacity: Math.min(1, revealRatioR * 1.5),
             transform: `scale(${0.9 + revealRatioR * 0.15}) translateX(${revealR * 0.1}px)`,
@@ -318,7 +318,7 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }
         }}
       >
         <div
-          className="flex items-center gap-2.5 font-bold text-sm"
+          className="flex items-center gap-2.5 font-semibold text-sm"
           style={{
             opacity: Math.min(1, revealRatioL * 1.5),
             transform: `scale(${0.9 + revealRatioL * 0.15}) translateX(${-revealL * 0.1}px)`,
@@ -417,13 +417,13 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }
                   <button
                     onClick={handleSaveEdit}
                     disabled={loading || !editText.trim()}
-                    className="text-xs font-medium text-white bg-brandCustom hover:bg-brandCustom/85 disabled:opacity-40 rounded-lg px-3 py-1.5 transition-all"
+                    className="text-xs font-normal text-white bg-brandCustom hover:bg-brandCustom/85 disabled:opacity-40 rounded-lg px-3 py-1.5 transition-all"
                   >
                     Guardar
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    className="text-xs font-medium text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200/80 rounded-lg px-3 py-1.5 transition-all"
+                    className="text-xs font-normal text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200/80 rounded-lg px-3 py-1.5 transition-all"
                   >
                     Cancelar
                   </button>
@@ -446,7 +446,7 @@ export default function TareaCard({ tarea, onToggle, onDelete, onUpdate, style }
                   {tarea.ticket_id && tarea.ticket_titulo && (
                     <Link
                       href={`/tickets/${tarea.ticket_id}`}
-                      className="inline-flex items-center gap-1 text-[11px] text-brandCustom/80 hover:text-brandCustom font-medium transition-colors bg-brandCustom/5 hover:bg-brandCustom/10 rounded-md px-1.5 py-0.5"
+                      className="inline-flex items-center gap-1 text-[11px] text-brandCustom/80 hover:text-brandCustom font-normal transition-colors bg-brandCustom/5 hover:bg-brandCustom/10 rounded-md px-1.5 py-0.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <svg

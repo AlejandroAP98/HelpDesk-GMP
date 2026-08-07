@@ -40,7 +40,7 @@ export default function AnimatedWifiIcon() {
           className="animate-wifi-dot"
         />
       </svg>
-      <span className="text-sm font-medium text-[#508484] animate-pulse">Cargando...</span>
+      <span className="text-sm font-normal text-[#508484] animate-pulse">Cargando...</span>
     </div>
   );
 }

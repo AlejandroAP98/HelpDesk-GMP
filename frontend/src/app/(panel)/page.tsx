@@ -12,6 +12,8 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TicketCard } from "@/components/TicketCard";
 import NewTicketIcon from "../assets/icons/NewTicketIcon";
 import TicketIcon from "../assets/icons/TicketIcon";
 import TicketOpenedIcon from "../assets/icons/TicketOpenedIcon";
@@ -167,36 +169,35 @@ export default function PanelHomePage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 w-full justify-between">
-        <div className="flex flex-col">
-          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">
-          Hola, {usuario?.nombre?.split(" ")[0]}
-          </h1>
-          <p className="sm:text-sm text-xs text-gray-500 mt-1">
+      <PageHeader
+        title={`Hola, ${usuario?.nombre?.split(" ")[0]}`}
+        subtitle={
+          <>
             {usuario?.rol === "cliente" && "Información del estado de tus tickets de soporte y generación de reportes"}
             {usuario?.rol === "agente" && "Información del estado de los tickets"}
             {usuario?.rol === "mesa_ayuda" && "Supervisa, asigna y mide el rendimiento del equipo"}
             {usuario?.rol === "administrador" && "Panel de administracion y control global"}
-          </p>
-        </div>
-        {!esCliente && (
-        <a href="https://app.gmpredes.online/" target="_blank" rel="noopener noreferrer" className="self-end justify-end hidden sm:block">
-          <Button className="bg-gradient-to-r from-accentCustom text-nowrap to-red-600 hover:from-red-700 hover:to-red-700 !font-regular !sm:text-base !text-[12px] !self-end ">
-            Reportes GMP
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-external-link" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1 9-9m-5 0h5v5"/></svg>
-          </Button>
-        </a>
-        )}
-        {esCliente && (
-        <Link href="/tickets/nuevo">
-          <Button className="text-nowrap">
-            Nuevo ticket
-            <NewTicketIcon />
-          </Button>
-        </Link>
-      )}
-      </div>
-      <section className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fadeIn">
+          </>
+        }
+        actions={
+          !esCliente ? (
+            <a href="https://app.gmpredes.online/" target="_blank" rel="noopener noreferrer" className="hidden sm:block">
+              <Button className="bg-gradient-to-r from-accentCustom text-nowrap to-red-600 hover:from-red-700 hover:to-red-700 !font-regular !sm:text-base !text-[12px] !self-end ">
+                Reportes GMP
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-external-link" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1 9-9m-5 0h5v5"/></svg>
+              </Button>
+            </a>
+          ) : (
+            <Link href="/tickets/nuevo">
+              <Button className="text-nowrap">
+                Nuevo ticket
+                <NewTicketIcon />
+              </Button>
+            </Link>
+          )
+        }
+      />
+      <section className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fade-in">
         <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
         {
@@ -209,13 +210,13 @@ export default function PanelHomePage() {
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </section>
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">
-        <h2 className="text-base font-bold tracking-tight text-gray-900">
+        <h2 className="text-base font-semibold tracking-tight text-gray-900">
           Reporte de tickets
         </h2>
         <div className=" flex justify-between gap-2 w-full">
           <div className="flex flex-wrap justify-between gap-3">
             <div className="flex flex-col">
-              <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">Fecha inicio</label>
+              <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">Fecha inicio</label>
               <input
                 type="date"
                 value={fechaInicio}
@@ -224,7 +225,7 @@ export default function PanelHomePage() {
               />
             </div>
             <div className="flex flex-col">
-              <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">Fecha fin</label>
+              <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">Fecha fin</label>
               <input
                 type="date"
                 value={fechaFin}
@@ -293,7 +294,7 @@ export default function PanelHomePage() {
       </section>
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900">Tickets Recientes</h2>
+          <h2 className="text-base font-medium text-gray-900">Tickets Recientes</h2>
           <div className="flex items-center sm:gap-2 gap-2">
             <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
               <button
@@ -319,7 +320,7 @@ export default function PanelHomePage() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
               </button>
             </div>
-            <Link href="/tickets" className="text-xs text-nowrap sm:text-sm font-medium text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">
+            <Link href="/tickets" className="text-xs text-nowrap sm:text-sm font-normal text-brandCustom hover:text-brandCustom/80 transition-colors flex justify-center items-center gap-1">
               Ver todos
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-chevron-right" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m9 6 6 6-6 6"/></svg>
             </Link>
@@ -337,7 +338,7 @@ export default function PanelHomePage() {
                 key: "ticket_number",
                 header: "# Ticket",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors">
+                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="text-xs font-normal text-gray-500 hover:text-brand-600 transition-colors">
                     #{t.id.split('-')[0].toUpperCase()}
                   </Link>
                 ),
@@ -346,7 +347,7 @@ export default function PanelHomePage() {
                 key: "titulo",
                 header: "Titulo",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-medium text-gray-800 hover:text-brand-600 transition-colors">
+                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-gray-800 hover:text-brand-600 transition-colors">
                     {t.titulo.substring(0, 20) + "..."}
                   </Link>
                 ),
@@ -387,61 +388,8 @@ export default function PanelHomePage() {
           <div className="bg-cardCustom rounded-2xl min-h-[40vh]">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-2">
               {recientes.map((t: Ticket, index: number) => (
-              <div
-                key={t.id}
-                className={`group relative bg-white 
-                  rounded-xl shadow-sm hover:shadow-md hover:border-brandCustom/40 transition-all flex flex-col justify-between gap-2 cursor-pointer
-                  animate-fadeIn opacity-0`}
-                style={{
-                  animationDelay: `${index * 40}ms`,
-                  animationFillMode: "forwards",
-                  WebkitMask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
-                  mask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 bg-brandCustom p-2 rounded-t-xl">
-                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-                    {t.empresa_nombre}
-                  </span>
-                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-                    {t.elemento_afectado.replace("_", " ")}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-2 px-4 pt-2">
-                  <Link
-                    href={`/tickets/${t.id}`}
-                    title={`Ver ticket: ${t.titulo}`}
-                    className="font-medium text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm sm:text-base after:absolute after:inset-0"
-                  >
-                    {t.titulo}
-                  </Link>
-                  <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">#{t.id.split("-")[0]}</span>
-                </div>
-                <div className="flex flex-col text-start h-full w-full">
-                  <span className="px-4 text-gray-500 transition-colors line-clamp-2 text-xs">
-                    {t.descripcion}
-                  </span>
-                </div>
-                <div className="bg-grayCustom/5 px-2 py-2 border-t border-grayCustom/10 rounded-b-xl flex items-center justify-between gap-2 text-gray-400 sm:text-xs text-[10px]">
-                  <div className="flex items-center gap-2">
-                    <EstadoBadge estado={t.estado}/>
-                    <PrioridadBadge prioridad={t.prioridad} estado={t.estado}/>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-mono text-[10px]">
-                      {new Date(t.fecha_creacion).toLocaleString(undefined, {
-                        timeZone: "America/Bogota",
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                <TicketCard key={t.id} ticket={t} index={index} />
+              ))}
           </div>
         </div>
         )}

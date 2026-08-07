@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import AddSedeIcon from "@/app/assets/icons/AddSedeIcon";
 
 export default function PuntosVentaPage() {
@@ -119,29 +120,29 @@ export default function PuntosVentaPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Puntos de Venta</h1>
-          <p className="text-gray-500 sm:text-sm text-xs mt-1">Sedes y sucursales de cada empresa</p>
-        </div>
-        <Button onClick={abrirCrear} className="text-nowrap" icon={<AddSedeIcon />}>
+      <PageHeader
+        title="Puntos de Venta"
+        subtitle="Sedes y sucursales de cada empresa"
+        actions={
+          <Button onClick={abrirCrear} className="text-nowrap text-xs sm:text-sm" icon={<AddSedeIcon />}>
             Nuevo punto
-        </Button>
-        <div className="flex w-full">
-          <Select
-            label="Empresa"
-            options={[
-              { value: "", label: "Todas" },
-              ...empresas.map((e) => ({ value: String(e.id), label: e.nombre })),
-            ]}
-            value={filtroEmpresa ? String(filtroEmpresa) : ""}
-            onChange={(e) => {
-              setFiltroEmpresa(Number(e.target.value) || null);
-              setPage(1);
-            }}
-            className="min-w-[180px]"
-          />
-        </div>
+          </Button>
+        }
+      />
+      <div className="flex">
+        <Select
+          label="Empresa"
+          options={[
+            { value: "", label: "Todas" },
+            ...empresas.map((e) => ({ value: String(e.id), label: e.nombre })),
+          ]}
+          value={filtroEmpresa ? String(filtroEmpresa) : ""}
+          onChange={(e) => {
+            setFiltroEmpresa(Number(e.target.value) || null);
+            setPage(1);
+          }}
+          className="min-w-[180px]"
+        />
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -170,7 +171,7 @@ export default function PuntosVentaPage() {
                 key: "nombre",
                 header: "Nombre",
                 cell: (pv: PuntoVenta) => (
-                  <span className="font-medium text-gray-900 sm:text-xs text-xs">{pv.nombre}</span>
+                  <span className="font-normal text-gray-900 sm:text-xs text-xs">{pv.nombre}</span>
                 ),
               },
               {
@@ -191,7 +192,7 @@ export default function PuntosVentaPage() {
                 key: "activo",
                 header: "Estado",
                 cell: (pv: PuntoVenta) => (
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
                     pv.activo ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                   }`}>
                     {pv.activo ? "Activo" : "Inactivo"}
@@ -234,7 +235,7 @@ export default function PuntosVentaPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editando ? "Editar punto de venta" : "Nuevo punto de venta"}
             </h2>
             <div className="space-y-4">

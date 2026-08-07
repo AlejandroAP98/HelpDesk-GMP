@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/Table";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TicketCard } from "@/components/TicketCard";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 
 
@@ -177,32 +179,32 @@ export default function TicketsListPage() {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 w-full justify-between">
-        <div className="flex flex-col">
-          <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-gray-900">Tickets</h1>
-          <p className="sm:text-sm text-xs text-gray-500 mt-1">Hola, {usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí </p>
-        </div>
-        {usuario?.rol !== 'agente' && (
-        <Link href="/tickets/nuevo">
-          <Button
-            className="text-nowrap"
-            variant="primary"
-            disabled={cargando}
-            icon={<NewTicketIcon />}
-          >
-            Nuevo ticket
-          </Button>
-        </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Tickets"
+        subtitle={`Hola, ${usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí`}
+        actions={
+          usuario?.rol !== 'agente' ? (
+            <Link href="/tickets/nuevo">
+              <Button
+                className="text-nowrap text-xs sm:text-sm"
+                variant="primary"
+                disabled={cargando}
+                icon={<NewTicketIcon />}
+              >
+                Nuevo ticket
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
       <div className="flex gap-4 flex-col-reverse justify-between">
         <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
-          <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-1 rounded-lg h-fit">
+          <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-0 rounded-lg h-fit">
             {VISTAS.map((v) => (
             <button
               key={v.value}
               onClick={() => cambiarVista(v.value)}
-              className={`px-4 py-1.5 sm:text-sm text-xs font-medium rounded-md transition-all last:border-none border-grayCustom ${
+              className={`px-4 py-1.5 text-xs transition-all duration-100 ease-in rounded-md font-normal last:border-none border-grayCustom ${
                 vista === v.value
                   ? "bg-brandCustom text-white"
                   : "text-gray-500 hover:text-gray-700"
@@ -251,25 +253,25 @@ export default function TicketsListPage() {
             options={PRIORIDADES}
           />
           <div className="flex flex-col">
-            <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">
+            <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
               Desde
             </label>
             <input
               type="date"
               value={fechaInicio}
               onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
-              className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 sm:text-sm text-[11px] focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+              className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
             />
           </div>
           <div className="flex flex-col">
-            <label className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">
+            <label className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
               Hasta
             </label>
             <input
               type="date"
               value={fechaFin}
               onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
-              className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 sm:text-sm text-[11px] focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+              className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
             />
           </div>
           <TotalBadge total={total} />
@@ -297,7 +299,7 @@ export default function TicketsListPage() {
                 <Link
                 href={`/tickets/${t.id}`}
                 title={`Ver ticket: ${t.titulo}`}
-                className="font-medium text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
+                className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
                 >
                   #{t.id.split('-')[0].toUpperCase()}
                 </Link>
@@ -310,7 +312,7 @@ export default function TicketsListPage() {
                 <Link
                 href={`/tickets/${t.id}`}
                 title={`Ver ticket: ${t.titulo}`}
-                className="font-medium text-gray-800 hover:text-brandCustom transition-colors lowercase"
+                className="font-normal text-gray-800 hover:text-brandCustom transition-colors lowercase"
                 >
                   {t.titulo.length > 20 ? `${t.titulo.substring(0, 20)}...` : t.titulo}
                 </Link>
@@ -357,67 +359,9 @@ export default function TicketsListPage() {
         />
       ) : (
         <div className="bg-cardCustom rounded-2xl min-h-[70vh]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 gap-3 sm:p-6 p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 sm:p-6 p-4">
             {tickets.map((t: Ticket, index: number) => (
-              <div
-                key={t.id}
-                className={`group relative bg-white border border-gray-100
-                  transition-all flex flex-col justify-between gap-2 cursor-pointer
-                  animate-fadeIn opacity-0`}
-                style={{
-                  animationDelay: `${index * 40}ms`,
-                  animationFillMode: "forwards",
-                  WebkitMask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
-                  mask: "radial-gradient(12px at 12px 12px, #0000 98%, #000) -12px -12px",
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 bg-brandCustom p-2 rounded-t-xl">
-                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-                    {t.empresa_nombre}
-                  </span>
-                  <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-                    {t.elemento_afectado.replace("_", " ")}
-                  </span>
-                </div>
-                
-                <div className="flex items-start justify-between gap-2 px-4 pt-2">
-                  <Link
-                    href={`/tickets/${t.id}`}
-                    title={`Ver ticket: ${t.titulo}`}
-                    className="font-medium text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm sm:text-base after:absolute after:inset-0"
-                  >
-                    {t.titulo}
-                  </Link>
-                  <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">
-                    #{t.id.split("-")[0]}
-                  </span>
-                </div>
-
-                <div className="flex flex-col text-start h-full w-full">
-                  <span className="px-4 text-gray-500 transition-colors line-clamp-2 text-xs">
-                    {t.descripcion}
-                  </span>
-                </div>
-
-                <div className="bg-grayCustom/10 px-4 py-2 rounded-b-xl flex items-center justify-between gap-2 text-gray-400 sm:text-xs text-[10px]">
-                  <div className="flex items-center gap-2">
-                    <EstadoBadge estado={t.estado}/>
-                    <PrioridadBadge prioridad={t.prioridad} estado={t.estado}/>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-mono text-[10px]">
-                      {new Date(t.fecha_creacion).toLocaleString(undefined, {
-                        timeZone: "America/Bogota",
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <TicketCard key={t.id} ticket={t} index={index} />
             ))}
           </div>
         </div>

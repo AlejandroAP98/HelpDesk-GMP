@@ -13,7 +13,7 @@ export function PasswordInput({ label, className = "", ...props }: PasswordInput
   return (
     <label className="flex flex-col gap-2 px-1">
       {label && (
-        <span className="sm:text-xs text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">
+        <span className="sm:text-xs text-[10px] font-medium text-gray-500 uppercase tracking-wider block">
           {label}
         </span>
       )}

@@ -50,7 +50,7 @@ export default function CambiarPassword() {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
-      <h3 className="text-base font-semibold text-gray-900">Cambiar contraseña</h3>
+      <h3 className="text-base font-medium text-gray-900">Cambiar contraseña</h3>
       <p className="mt-1 text-sm text-gray-500">
         Ingresa tu contraseña actual y la nueva.
       </p>

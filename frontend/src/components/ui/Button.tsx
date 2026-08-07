@@ -16,7 +16,7 @@ export function Button({
   icon,
   ...props
 }: ButtonProps) {
-  const base = "inline-flex items-center justify-center gap-2 rounded-xl px-2 py-1.5 sm:px-5 sm:py-2.5 text-sm font-semibold active:scale-[0.98] transition-all disabled:opacity-50";
+  const base = "inline-flex items-center justify-center gap-2 rounded-lg px-1.5 py-1.5 sm:px-5 sm:py-2.5 text-sm font-medium active:scale-[0.97] transition-all duration-150 ease-out disabled:cursor-not-allowed hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brandCustom/50 focus-visible:ring-offset-2";
 
   const styles = {
     primary: "bg-brandCustom text-white hover:bg-brandCustom/90 shadow-brand",

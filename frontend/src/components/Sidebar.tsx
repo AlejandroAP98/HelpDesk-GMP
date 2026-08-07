@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import TicketIcon from "@/app/assets/icons/TicketIcon";
 import HomeIcon from "@/app/assets/icons/HomeIcon";
 import InboxIcon from "@/app/assets/icons/InboxIcon";
-import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
+import NewTicketIcon from "@/app/assets/icons/NewTicketIconSiderbar";
 import UsersIcon from "@/app/assets/icons/UsersIcon";
 import CategoryIcon from "@/app/assets/icons/CategoryIcon";
 import FactoryIcon from "@/app/assets/icons/FactoryIcon";
@@ -16,11 +16,11 @@ import MetricsIcon from "@/app/assets/icons/MetricsIcon";
 import SedesIcon from "@/app/assets/icons/SedesIcon";
 import logo from "../app/assets/logo-white.svg";
 
-const NAV: Record<string, { href: string; label: string; icon: React.ReactNode }[]> = {
+const NAV: Record<string, { href: string; label: string; icon: React.ReactNode; }[]> = {
   cliente: [
-    { href: "/", label: "Inicio", icon: <HomeIcon /> },
-    { href: "/tickets", label: "Mis Tickets", icon: <TicketIcon/> },
-    { href: "/tickets/nuevo", label: "Crear Ticket", icon: <NewTicketIcon/> },
+    { href: "/", label: "Inicio", icon: <HomeIcon />  },
+    { href: "/tickets", label: "Mis Tickets", icon: <TicketIcon /> },
+    { href: "/tickets/nuevo", label: "Crear Ticket", icon: <NewTicketIcon /> },
   ],
   agente: [
     { href: "/", label: "Inicio", icon: <HomeIcon/> },
@@ -96,19 +96,19 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
     <>
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden animate-fade-in"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-auto bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-52 min-w-52 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="py-4 border-b border-brandCustom">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center justify-center w-full">
+        <div className="border-b border-brandCustom">
+          <div className="flex items-start h-full justify-between">
+            <div className="flex items-center justify-center w-full py-4">
               <img src={logo.src} alt="Logo GMP" className="w-28 h-auto" />
             </div>
             <button
@@ -121,7 +121,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           </div>
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto border-brandCustom">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto border-brandCustom overflow-hidden">
           {links.map((l) => {
             const active = l.href === "/"
               ? pathname === "/"
@@ -134,14 +134,14 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                 key={l.href}
                 href={l.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-4 py-2.5  text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center justify-start gap-2 px-4 py-2.5  text-sm font-light transition-all duration-300 ${
                   active
-                    ? "bg-brandCustom text-white"
-                    : "text-white hover:text-brandCustom hover:bg-bgCustom "
+                    ? "bg-brandCustom text-white font-normal "
+                    : "text-white hover:text-brandCustom hover:font-normal hover:bg-bgCustom hover:scale-[1.03]"
                 }`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1}>
-                  {l.icon}
+                  {l.icon }
                 </svg>
                 {l.label}
               </Link>
@@ -151,10 +151,10 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
 
         <div className="p-2 border-t border-brandCustom">
           <div className="bg-brandCustom/10 rounded-2xl">
-            <p className="font-semibold text-white truncate text-sm">{usuario?.nombre}</p>
+            <p className="font-medium text-white truncate text-sm">{usuario?.nombre}</p>
             <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
             <div className="mt-3 flex items-center justify-between">
-              <span className="inline-block rounded-lg bg-brandCustom px-2.5 py-1 uppercase tracking-wider text-[10px] font-bold text-white">
+              <span className="inline-block rounded-lg bg-brandCustom px-2.5 py-1 uppercase tracking-wider text-[10px] font-semibold text-white">
                 {rol.replace("_", " ")}
               </span>
             </div>
@@ -171,7 +171,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                   <button
                     onClick={onOpenPassword}
                     title="Cambiar contraseña"
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-normal text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-password-user" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 17v4m-2-1 4-2m-4 0 4 2m-9-3v4m-2-1 4-2m-4 0 4 2m12-3v4m-2-1 4-2m-4 0 4 2M9 6a3 3 0 1 0 6 0 3 3 0 0 0-6 0m-2 8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2"/></svg>
                   </button>
@@ -180,7 +180,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                   <button
                     title="Notificaciones"
                     onClick={onOpenNotifications}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-normal text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-bell-ringing" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M10 5a2 2 0 0 1 4 0 7 7 0 0 1 4 6v3a4 4 0 0 0 2 3H4a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6M9 17v1a3 3 0 0 0 6 0v-1m6-10.273A11.05 11.05 0 0 0 18.206 3M3 6.727A11.05 11.05 0 0 1 5.792 3"/></svg>
                   </button>

@@ -28,10 +28,13 @@ const config: Config = {
         grayCustom:"#7e7f83",
       },
       animation: {
-        'fade-in': 'fadeIn 0.4s ease-out forwards',
+        'fade-in': 'fadeIn 0.35s ease-out forwards',
         'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'slide-in-right': 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'slide-out-right': 'slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'shimmer': 'shimmer 1.8s ease-in-out infinite',
+        'slide-down': 'slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'wifi-pulse': 'wifiPulse 2s ease-in-out infinite',
         'wifi-dot': 'wifiDot 2s ease-in-out infinite',
         'flash-complete': 'flashComplete 500ms ease-out',
@@ -39,8 +42,8 @@ const config: Config = {
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
+          '0%': { opacity: '0', transform: 'translateY(5px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         slideUp: {
           '0%': { opacity: '0', transform: 'translateY(16px)' },
@@ -50,9 +53,21 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateX(20px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
+        slideOutRight: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(20px)' },
+        },
+        slideDown: {
+          '0%': { opacity: '0', transform: 'translateY(-10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
         wifiPulse: {
           '0%, 100%': { opacity: '0.15' },

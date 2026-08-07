@@ -47,7 +47,7 @@ function AlertCard({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <p className="font-bold text-brandCustom uppercase tracking-wider text-[11px]">
+            <p className="font-semibold text-brandCustom uppercase tracking-wider text-[11px]">
               Te asignaron un ticket
             </p>
           </div>
@@ -66,14 +66,14 @@ function AlertCard({
         </div>
 
         <div className="mt-3 pl-3">
-          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <p className="text-sm font-medium text-gray-900 truncate leading-tight">
             {alert.titulo}
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-brandCustom font-bold uppercase tracking-wider border border-blue-100">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-brandCustom font-semibold uppercase tracking-wider border border-blue-100">
               #{alert.ticket_id.slice(0, 8)}
             </span>
-            <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+            <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
               {alert.estado}
             </span>
           </div>
@@ -105,7 +105,7 @@ function AlertCard({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </div>
-            <p className="font-bold text-emerald-700 uppercase tracking-wider text-[11px]">
+            <p className="font-semibold text-emerald-700 uppercase tracking-wider text-[11px]">
               Estado del ticket
             </p>
           </div>
@@ -124,15 +124,15 @@ function AlertCard({
         </div>
 
         <div className="mt-3 pl-3">
-          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <p className="text-sm font-medium text-gray-900 truncate leading-tight">
             {alert.titulo}
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 text-emerald-700 font-bold uppercase tracking-wider border border-emerald-100">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-emerald-50 text-emerald-700 font-semibold uppercase tracking-wider border border-emerald-100">
               #{alert.ticket_id.slice(0, 8)}
             </span>
             {alert.estado_anterior && alert.estado_nuevo && (
-              <span className="text-[10px] text-gray-500 font-semibold capitalize">
+              <span className="text-[10px] text-gray-500 font-medium capitalize">
                 {alert.estado_anterior.replace("_", " ")} <span className="text-emerald-500">→</span> {alert.estado_nuevo.replace("_", " ")}
               </span>
             )}
@@ -159,7 +159,7 @@ function AlertCard({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <p className="font-bold text-brandCustom uppercase tracking-wider text-[11px]">
+            <p className="font-semibold text-brandCustom uppercase tracking-wider text-[11px]">
               Nuevo ticket
             </p>
           </div>
@@ -178,20 +178,20 @@ function AlertCard({
         </div>
 
         <div className="mt-3 pl-3">
-          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <p className="text-sm font-medium text-gray-900 truncate leading-tight">
             {alert.titulo}
           </p>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-brandCustom font-bold uppercase tracking-wider border border-brandCustom">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-brandCustom font-semibold uppercase tracking-wider border border-brandCustom">
               #{alert.ticket_id.slice(0, 8)}
             </span>
             {alert.empresa_nombre && (
-              <span className="text-[10px] text-gray-500 font-semibold">
+              <span className="text-[10px] text-gray-500 font-medium">
                 {alert.empresa_nombre}
               </span>
             )}
             {alert.prioridad && (
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${
+              <span className={`text-[10px] font-semibold uppercase tracking-wider ${
                 alert.prioridad === "urgente" ? "text-red-600" :
                 alert.prioridad === "alta" ? "text-orange-600" :
                 alert.prioridad === "media" ? "text-yellow-600" :
@@ -221,7 +221,7 @@ function AlertCard({
             <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>
             </div>
-            <p className="font-bold text-accentCustom uppercase tracking-wider text-[11px]">
+            <p className="font-semibold text-accentCustom uppercase tracking-wider text-[11px]">
               Nuevo comentario
             </p>
           </div>
@@ -240,11 +240,11 @@ function AlertCard({
         </div>
 
         <div className="mt-3 pl-3">
-          <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+          <p className="text-sm font-medium text-gray-900 truncate leading-tight">
             {alert.comentario_usuario} comentó en el ticket
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-accentCustom text-white font-bold uppercase tracking-wider border border-accentCustom">
+            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-accentCustom text-white font-semibold uppercase tracking-wider border border-accentCustom">
               #{alert.ticket_id.slice(0, 8)}
             </span>
           </div>
@@ -266,7 +266,7 @@ function AlertCard({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="font-bold text-red-600 uppercase tracking-wider text-[11px]">
+          <p className="font-semibold text-red-600 uppercase tracking-wider text-[11px]">
             Ticket Urgente
           </p>
         </div>
@@ -282,14 +282,14 @@ function AlertCard({
       </div>
 
       <div className="mt-3 pl-3">
-        <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+        <p className="text-sm font-medium text-gray-900 truncate leading-tight">
           {alert.titulo}
         </p>
         <div className="mt-2 flex items-center gap-2">
-          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-red-50 text-red-600 font-bold uppercase tracking-wider border border-red-100">
+          <span className="inline-block px-2 py-0.5 rounded-md text-[10px] bg-red-50 text-red-600 font-semibold uppercase tracking-wider border border-red-100">
             #{alert.ticket_id.slice(0, 8)}
           </span>
-          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+          <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
             {alert.estado}
           </span>
         </div>

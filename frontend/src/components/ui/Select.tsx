@@ -19,14 +19,14 @@ export function Select({
   ...props
 }: SelectProps) {
   return (
-    <label className="flex flex-col gap-1 ">
+    <label className="flex flex-col">
       {label && (
-        <span className="sm:text-xs text-[10px] px-1 font-semibold text-gray-500 uppercase tracking-normal">
+        <span className="text-[11px] px-1 font-medium text-gray-500 uppercase tracking-normal">
           {label}
         </span>
       )}
       <select
-        className={`w-full rounded-xl sm:min-w-40 border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 sm:text-sm text-[11px] focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ${className}`}
+        className={`w-full rounded-xl sm:min-w-40 border disabled:opacity-50 disabled:cursor-not-allowed bg-white text-gray-700 px-2.5 py-2.5 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ${className}`}
         {...props}
       >
         {placeholder && <option value="">{placeholder}</option>}

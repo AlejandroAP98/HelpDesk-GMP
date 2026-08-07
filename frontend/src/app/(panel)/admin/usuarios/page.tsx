@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import AddUserIcon from "@/app/assets/icons/AddUserIcon";
 import { extractApiError } from "@/lib/errors";
 
@@ -164,13 +165,11 @@ export default function UsuariosPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="sm:text-2xl text-lg font-bold tracking-tight text-gray-900">Usuarios</h1>
-          <p className="sm:text-sm text-xs text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
-        </div>
-        <Button onClick={abrirCrear} className="text-nowrap" icon={<AddUserIcon />}>Nuevo usuario</Button>
-      </div>
+      <PageHeader
+        title="Usuarios"
+        subtitle="Gestiona los usuarios del sistema"
+        actions={<Button onClick={abrirCrear} className="text-nowrap text-xs sm:text-sm" icon={<AddUserIcon />}>Nuevo usuario</Button>}
+      />
 
       <div className="flex flex-wrap gap-3">
         <Select
@@ -202,7 +201,7 @@ export default function UsuariosPage() {
               {
                 key: "nombre",
                 header: "Nombre",
-                cell: (u: Usuario) => <span className="font-medium text-xs sm:text-sm text-gray-900">{u.nombre}</span>,
+                cell: (u: Usuario) => <span className="font-normal text-xs sm:text-sm text-gray-900">{u.nombre}</span>,
               },
               {
                 key: "email",
@@ -213,7 +212,7 @@ export default function UsuariosPage() {
                 key: "rol",
                 header: "Rol",
                 cell: (u: Usuario) => (
-                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-semibold ${ROL_COLORS[u.rol] ?? "bg-gray-100 text-gray-600"}`}>
+                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-medium ${ROL_COLORS[u.rol] ?? "bg-gray-100 text-gray-600"}`}>
                     {u.rol.replace("_", " ")}
                   </span>
                 ),
@@ -234,7 +233,7 @@ export default function UsuariosPage() {
                 key: "notificaciones_email",
                 header: "Notificaciones Email",
                 cell: (u: Usuario) => (
-                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-semibold ${u.notificaciones_email ? "bg-grayCustom/5 text-grayCustom" : "bg-redCustom/10 text-redCustom"}`}>
+                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-medium ${u.notificaciones_email ? "bg-grayCustom/5 text-grayCustom" : "bg-redCustom/10 text-redCustom"}`}>
                     {u.notificaciones_email ? "Si" : "No"}
                   </span>
                 ),
@@ -275,7 +274,7 @@ export default function UsuariosPage() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editando ? "Editar usuario" : "Nuevo usuario"}
             </h2>
             <div className="space-y-4">

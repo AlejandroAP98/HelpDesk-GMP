@@ -77,7 +77,7 @@ function AdjuntoThumb({
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="absolute bottom-0 left-0 right-0 p-2">
           <p
-            className="text-[10px] text-white font-medium truncate"
+            className="text-[10px] text-white font-normal truncate"
             title={nombre}
           >
             {nombre}
@@ -267,7 +267,7 @@ export function AdjuntosGallery({
                 if (e.target.files?.length) handleFiles(e.target.files);
               }}
               disabled={subiendo}
-              className="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 transition-all cursor-pointer disabled:opacity-50"
+              className="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 transition-all cursor-pointer disabled:opacity-50"
             />
           </label>
           {subiendo && (
@@ -404,7 +404,7 @@ export function AdjuntosGallery({
               alt={adjuntos[lightboxIndex].nombre_archivo}
             />
             <div className="mt-3 text-center">
-              <p className="text-sm text-white font-medium">
+              <p className="text-sm text-white font-normal">
                 {adjuntos[lightboxIndex].nombre_archivo}
               </p>
               <p className="text-xs text-gray-300 mt-1">
