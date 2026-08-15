@@ -26,12 +26,12 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
           {ticket.elemento_afectado.replace("_", " ")}
         </span>
       </div>
-      <div className="h-full space-y-2 flex-1 px-4">
+      <div className="h-full space-y-1 flex-1 px-4">
         <div className="flex items-start justify-between gap-2 pt-2">
           <Link
             href={`/tickets/${ticket.id}`}
             title={`Ver ticket: ${ticket.titulo}`}
-            className="font-normal text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm sm:text-base after:absolute after:inset-0"
+            className="font-normal text-gray-800 group-hover:text-gray-500 transition-colors line-clamp-2 text-sm after:absolute after:inset-0"
           >
             {ticket.titulo}
           </Link>

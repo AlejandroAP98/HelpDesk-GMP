@@ -55,7 +55,7 @@ const AnimatedWifiIcon = () => {
         fontWeight="bold" 
         fill="#508484"
       >
-        GMP Redes
+        Cargando...
       </text>
     </svg>
   );

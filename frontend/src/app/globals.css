@@ -24,8 +24,8 @@ body::before {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -33,7 +33,7 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #9ca3af;
   border-radius: 3px;
 }
 

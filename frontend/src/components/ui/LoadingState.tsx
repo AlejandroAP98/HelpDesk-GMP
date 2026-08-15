@@ -1,7 +1,7 @@
 
 export function LoadingState() {
   return (
-    <div className="flex justify-center items-center  w-full h-[calc(90vh-200px)] top-16">
+    <div className="absolute inset-0 flex items-center justify-center">
     <svg 
       xmlns="http://www.w3.org/2000/svg" 
       viewBox="-20 -20 120 160" 
@@ -57,7 +57,7 @@ export function LoadingState() {
         fontWeight="bold" 
         fill="#508484"
       >
-        GMP Redes
+        Cargando...
       </text>
     </svg>
   </div>

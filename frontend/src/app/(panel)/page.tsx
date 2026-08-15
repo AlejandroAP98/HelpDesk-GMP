@@ -50,7 +50,7 @@ export default function PanelHomePage() {
       setCargando(true);
       try {
         const [ultimos, statsData] = await Promise.all([
-          ticketApi.listar({ size: 5 }),
+          ticketApi.listar({ size: 4 }),
           statsApi.obtener(),
         ]);
         setRecientes(ultimos.items);
@@ -159,6 +159,7 @@ export default function PanelHomePage() {
   const hayFiltros = fechaInicio || fechaFin || filtroEmpresaId || estado || prioridad;
 
   const esCliente = usuario?.rol === "cliente";
+  const esAgente = usuario?.rol === "agente";
   
   const cambiarModo = (modo: VistaMode) => {
     setViewMode(modo);
@@ -209,7 +210,8 @@ export default function PanelHomePage() {
         <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />}  className="animate-scale-in bg-greenCustom" />
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </section>
-      <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">
+      {!esAgente && (
+        <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">
         <h2 className="text-base font-semibold tracking-tight text-gray-900">
           Reporte de tickets
         </h2>
@@ -292,6 +294,7 @@ export default function PanelHomePage() {
             Descargar
           </Button>
       </section>
+      )}
       <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-medium text-gray-900">Tickets Recientes</h2>
@@ -328,7 +331,9 @@ export default function PanelHomePage() {
         </div>
 
         {cargando ? (
-          <LoadingState />
+          <div className="relative h-48">
+            <LoadingState />
+          </div>
         ) : recientes.length === 0 ? (
           <EmptyState message="No hay tickets todavia." />
         ) : viewMode === "table" ? (

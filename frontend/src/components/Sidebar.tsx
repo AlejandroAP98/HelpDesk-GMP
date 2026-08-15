@@ -102,14 +102,14 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-52 min-w-52 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-48 min-w-48 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="border-b border-brandCustom">
-          <div className="flex items-start h-full justify-between">
+        <div className="">
+          <div className="flex items-start h-full justify-between bg-brandCustom/20">
             <div className="flex items-center justify-center w-full py-4">
-              <img src={logo.src} alt="Logo GMP" className="w-28 h-auto" />
+              <img src={logo.src} alt="Logo GMP" className="w-28  h-auto" />
             </div>
             <button
               onClick={onClose}
@@ -121,7 +121,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           </div>
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto border-brandCustom overflow-hidden">
+        <nav className="flex-1 overflow-y-auto border-brandCustom overflow-hidden">
           {links.map((l) => {
             const active = l.href === "/"
               ? pathname === "/"
@@ -134,7 +134,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                 key={l.href}
                 href={l.href}
                 onClick={onClose}
-                className={`flex items-center justify-start gap-2 px-4 py-2.5  text-sm font-light transition-all duration-300 ${
+                className={`flex items-center justify-start gap-2 px-2 py-2.5  text-sm font-light transition-all duration-300 border-t border-white/10  last:border-b last:border-white/10  ${
                   active
                     ? "bg-brandCustom text-white font-normal "
                     : "text-white hover:text-brandCustom hover:font-normal hover:bg-bgCustom hover:scale-[1.03]"
@@ -149,19 +149,14 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           })}
         </nav>
 
-        <div className="p-2 border-t border-brandCustom">
-          <div className="bg-brandCustom/10 rounded-2xl">
+        <div className="bg-brandCustom/20 p-2">
+          <div>
             <p className="font-medium text-white truncate text-sm">{usuario?.nombre}</p>
             <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="inline-block rounded-lg bg-brandCustom px-2.5 py-1 uppercase tracking-wider text-[10px] font-semibold text-white">
-                {rol.replace("_", " ")}
-              </span>
-            </div>
             <Button
               onClick={handleLogout}
               variant="secondary"
-              className="mt-3 w-full py-2"
+              className="mt-4 w-full"
             >
               Cerrar sesion
             </Button>
