@@ -91,6 +91,7 @@ class Ticket(Base):
         Index("idx_tickets_empresa", "empresa_id"),
         Index("idx_tickets_estado", "estado"),
         Index("idx_tickets_prioridad", "prioridad"),
+        Index("idx_tickets_agente", "agente_id"),
     )
 
     def __repr__(self) -> str:

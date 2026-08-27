@@ -466,6 +466,152 @@ async def test_mesa_ayuda_puede_asignar_201(client, db_session):  # type: ignore
     assert body["empresa_nombre"] is not None
 
 
+async def test_admin_puede_reasignar_ticket_asignado_200(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="c@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="a1@test.com",
+        password="Password12345",
+        rol="agente",
+    )
+    await seed_usuario(
+        db_session,
+        email="a2@test.com",
+        password="Password12345",
+        rol="agente",
+    )
+    await seed_usuario(
+        db_session,
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
+    tok_c = await login_token(client, "c@test.com", "Password12345")
+    tok_admin = await login_token(client, "admin@test.com", "Password12345")
+
+    r = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(),
+    )
+    assert r.status_code == 201, r.text
+    tid = r.json()["id"]
+
+    agente1 = await get_usuario_by_email(db_session, "a1@test.com")
+    r2 = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_admin),
+        json={"agente_id": str(agente1.id)},
+    )
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["estado"] == "asignado"
+    assert r2.json()["agente_id"] == str(agente1.id)
+
+    agente2 = await get_usuario_by_email(db_session, "a2@test.com")
+    r3 = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_admin),
+        json={"agente_id": str(agente2.id)},
+    )
+    assert r3.status_code == 200, r3.text
+    body = r3.json()
+    assert body["estado"] == "asignado"
+    assert body["agente_id"] == str(agente2.id)
+
+
+async def test_admin_puede_reasignar_ticket_en_progreso_200(client, db_session):  # type: ignore[no-untyped-def]
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="c@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="a1@test.com",
+        password="Password12345",
+        rol="agente",
+    )
+    await seed_usuario(
+        db_session,
+        email="a2@test.com",
+        password="Password12345",
+        rol="agente",
+    )
+    await seed_usuario(
+        db_session,
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
+    tok_c = await login_token(client, "c@test.com", "Password12345")
+    tok_a1 = await login_token(client, "a1@test.com", "Password12345")
+    tok_admin = await login_token(client, "admin@test.com", "Password12345")
+
+    r = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(),
+    )
+    assert r.status_code == 201, r.text
+    tid = r.json()["id"]
+
+    agente1 = await get_usuario_by_email(db_session, "a1@test.com")
+    r2 = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_admin),
+        json={"agente_id": str(agente1.id)},
+    )
+    assert r2.status_code == 200, r2.text
+
+    r3 = await client.patch(
+        f"/api/tickets/{tid}/estado",
+        headers=auth_header(tok_a1),
+        json={"estado": "en_progreso"},
+    )
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["estado"] == "en_progreso"
+
+    agente2 = await get_usuario_by_email(db_session, "a2@test.com")
+    r4 = await client.post(
+        f"/api/tickets/{tid}/asignar",
+        headers=auth_header(tok_admin),
+        json={"agente_id": str(agente2.id)},
+    )
+    assert r4.status_code == 200, r4.text
+    body = r4.json()
+    assert body["estado"] == "asignado"
+    assert body["agente_id"] == str(agente2.id)
+
+    r5 = await client.patch(
+        f"/api/tickets/{tid}/estado",
+        headers=auth_header(tok_a1),
+        json={"estado": "en_progreso"},
+    )
+    assert r5.status_code == 403
+
+    r6 = await client.patch(
+        f"/api/tickets/{tid}/estado",
+        headers=auth_header(tok_admin),
+        json={"estado": "en_progreso"},
+    )
+    assert r6.status_code == 200, r6.text
+    assert r6.json()["estado"] == "en_progreso"
+
+
 async def test_mesa_ayuda_no_puede_reabrir_403(client, db_session):  # type: ignore[no-untyped-def]
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import async_sessionmaker

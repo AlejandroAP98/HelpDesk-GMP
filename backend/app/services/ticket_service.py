@@ -412,12 +412,15 @@ async def listar(
     vista: VistaTicket | None = None,
     fecha_inicio: date | None = None,
     fecha_fin: date | None = None,
-) -> Pagina[tuple[Ticket, str | None]]:
+    orden: str | None = None,
+) -> Pagina[tuple[Ticket, str | None, str | None]]:
     from datetime import datetime, time, timezone
 
     p = paginacion(page, size)
-    base = select(Ticket, Empresa.nombre.label("empresa_nombre")).outerjoin(
-        Empresa, Ticket.empresa_id == Empresa.id
+    base = (
+        select(Ticket, Empresa.nombre.label("empresa_nombre"), Usuario.nombre.label("agente_nombre"))
+        .outerjoin(Empresa, Ticket.empresa_id == Empresa.id)
+        .outerjoin(Usuario, Ticket.agente_id == Usuario.id)
     )
     count_base = select(func.count(Ticket.id))
 
@@ -479,15 +482,19 @@ async def listar(
     )
 
     total = (await db.execute(count_base)).scalar_one()
+    
+    if orden == "fecha":
+        query = base.order_by(Ticket.fecha_creacion.desc())
+    else:
+        query = base.order_by(peso_estado.asc(), peso_prioridad.asc(), Ticket.fecha_creacion.asc())
+    
     rows = (
         await db.execute(
-            base.order_by(peso_estado.asc(), peso_prioridad.asc(), Ticket.fecha_creacion.asc())
-            .offset(p.offset)
-            .limit(p.limit)
+            query.offset(p.offset).limit(p.limit)
         )
     ).all()
 
-    items = [(ticket, emp_nombre) for ticket, emp_nombre in rows]
+    items = [(ticket, emp_nombre, agente_nombre) for ticket, emp_nombre, agente_nombre in rows]
     return Pagina.of(items, total, p.page, p.size)
 
 
@@ -603,9 +610,10 @@ async def _asignar_a(
     current: Usuario,
     db: AsyncSession,
 ) -> Ticket:
-    """Core de la transicion abierto -> asignado. Usado por asignar() y asignarme()."""
-    if ticket.estado != EstadoTicket.abierto:
-        raise Conflicto(f"Ticket en estado {ticket.estado.value} no es asignable")
+    """Core de la transicion abierto -> asignado o reasignacion. Usado por asignar() y asignarme()."""
+    estado_anterior = ticket.estado
+    if estado_anterior not in (EstadoTicket.abierto, EstadoTicket.asignado, EstadoTicket.en_progreso):
+        raise Conflicto(f"Ticket en estado {estado_anterior.value} no es asignable")
     if agente.empresa_id is not None and agente.empresa_id != ticket.empresa_id:
         raise Conflicto("El agente pertenece a otra empresa")
 
@@ -615,7 +623,7 @@ async def _asignar_a(
     if ticket.fecha_asignacion is None:
         ticket.fecha_asignacion = func.now()
     await _registrar_historial(
-        ticket.id, current.id, EstadoTicket.abierto, EstadoTicket.asignado, db
+        ticket.id, current.id, estado_anterior, EstadoTicket.asignado, db
     )
     await db.commit()
     await db.refresh(ticket)
@@ -624,7 +632,8 @@ async def _asignar_a(
     )).scalar_one_or_none()
     await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
     await _publicar_asignacion(ticket, empresa_nombre)
-    await _publicar_cambio_estado(ticket, EstadoTicket.abierto, empresa_nombre)
+    if estado_anterior != EstadoTicket.asignado:
+        await _publicar_cambio_estado(ticket, estado_anterior, empresa_nombre)
     return ticket
 
 

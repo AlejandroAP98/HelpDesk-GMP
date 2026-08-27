@@ -53,6 +53,7 @@ async def listar(
     vista: VistaTicket | None = Query(None),
     fecha_inicio: date | None = Query(None, description="Filtrar tickets creados desde esta fecha (YYYY-MM-DD)"),
     fecha_fin: date | None = Query(None, description="Filtrar tickets creados hasta esta fecha (YYYY-MM-DD)"),
+    orden: str | None = Query(None, description="Ordenamiento: 'prioridad' (default) o 'fecha'"),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[TicketOut]:
@@ -60,7 +61,7 @@ async def listar(
         current=current, db=db, page=page, size=size, estado=estado,
         prioridad=prioridad, empresa_id=empresa_id,
         agente_id=agente_id, cliente_id=cliente_id, vista=vista,
-        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
+        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, orden=orden,
     )
     return Pagina.of(
         [
@@ -70,6 +71,7 @@ async def listar(
                 empresa_nombre=emp_nombre,
                 cliente_id=t.cliente_id,
                 agente_id=t.agente_id,
+                agente_nombre=agente_nombre,
                 modificado_por_id=t.modificado_por_id,
                 categoria_id=t.categoria_id,
                 subcategoria_id=t.subcategoria_id,
@@ -89,7 +91,7 @@ async def listar(
                 fecha_primera_respuesta=t.fecha_primera_respuesta,
                 fecha_resolucion=t.fecha_resolucion,
             )
-            for t, emp_nombre in pagina.items
+            for t, emp_nombre, agente_nombre in pagina.items
         ],
         pagina.total, pagina.page, pagina.size,
     )

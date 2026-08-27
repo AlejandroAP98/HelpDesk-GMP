@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ticketApi, type Ticket, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
+import { ticketApi, adminApi, empresaApi, type Ticket, type Empresa, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
+import type { Usuario } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
 import { EstadoBadge, PrioridadBadge, TotalBadge } from "@/components/Badges";
@@ -56,11 +57,18 @@ const ESTADOS_POR_VISTA: Record<VistaTicket, { value: string; label: string }[]>
 };
 
 type VistaMode = "cards" | "table";
+type OrdenMode = "prioridad" | "fecha";
 const VISTA_STORAGE_KEY = "tickets:viewMode";
+const ORDEN_STORAGE_KEY = "tickets:ordenMode";
 
 function getInitialVistaMode(): VistaMode {
   if (typeof window === "undefined") return "cards";
   return window.localStorage.getItem(VISTA_STORAGE_KEY) === "table" ? "table" : "cards";
+}
+
+function getInitialOrdenMode(): OrdenMode {
+  if (typeof window === "undefined") return "prioridad";
+  return window.localStorage.getItem(ORDEN_STORAGE_KEY) === "fecha" ? "fecha" : "prioridad";
 }
 
 export default function TicketsListPage() {
@@ -75,10 +83,30 @@ export default function TicketsListPage() {
   const [fechaFin, setFechaFin] = useState("");
   const [cargando, setCargando] = useState(true);
   const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
+  const [orden, setOrden] = useState<OrdenMode>(getInitialOrdenMode);
+  const [filtroEmpresaId, setFiltroEmpresaId] = useState("");
+  const [filtroAgenteId, setFiltroAgenteId] = useState("");
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [agentes, setAgentes] = useState<Usuario[]>([]);
 
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
   const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
   const usuario = useAuthStore((s) => s.usuario);
+
+  const esAdminOMesaAyuda = usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda";
+
+  useEffect(() => {
+    if (esAdminOMesaAyuda) {
+      Promise.all([
+        empresaApi.listar({ size: 100 }),
+        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
+        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
+      ]).then(([empresasRes, agentesRes, mesasRes]) => {
+        setEmpresas(empresasRes.items);
+        setAgentes([...agentesRes.items, ...mesasRes.items]);
+      }).catch(() => {});
+    }
+  }, [esAdminOMesaAyuda]);
 
   useEffect(() => {
     (async () => {
@@ -90,6 +118,9 @@ export default function TicketsListPage() {
         if (prioridad !== "todas") params.prioridad = prioridad;
         if (fechaInicio) params.fecha_inicio = fechaInicio;
         if (fechaFin) params.fecha_fin = fechaFin;
+        if (orden === "fecha") params.orden = "fecha";
+        if (filtroEmpresaId) params.empresa_id = filtroEmpresaId;
+        if (filtroAgenteId) params.agente_id = filtroAgenteId;
         const data = await ticketApi.listar(params);
         setTickets(data.items);
         setTotal(data.total);
@@ -101,7 +132,7 @@ export default function TicketsListPage() {
         setCargando(false);
       }
     })();
-  }, [page, estado, prioridad, vista, fechaInicio, fechaFin]);
+  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId]);
 
   const hayFiltrosFecha = fechaInicio || fechaFin;
   const limpiarFiltrosFecha = () => {
@@ -177,6 +208,14 @@ export default function TicketsListPage() {
     }
   };
 
+  const cambiarOrden = () => {
+    const nuevoOrden = orden === "prioridad" ? "fecha" : "prioridad";
+    setOrden(nuevoOrden);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ORDEN_STORAGE_KEY, nuevoOrden);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full min-h-[calc(100dvh-7rem)] justify-between gap-2">
       <div className="flex flex-col gap-3">
@@ -200,7 +239,8 @@ export default function TicketsListPage() {
         />  
         <div className="flex gap-4 flex-col-reverse justify-between">
           <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
-            <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-0 rounded-lg h-fit">
+            <div className="flex items-center gap-1">
+              <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-0 rounded-lg h-fit">
               {VISTAS.map((v) => (
               <button
                 key={v.value}
@@ -214,6 +254,18 @@ export default function TicketsListPage() {
                 {v.label}
               </button>
             ))}
+            </div>
+            <button
+                onClick={cambiarOrden}
+                title={orden === "prioridad" ? "Ordenar por fecha" : "Ordenar por prioridad"}
+                className="p-1.5 rounded-md transition-all text-grayCustom/90 hover:text-brandCustom hover:bg-brandCustom/10"
+              >
+                {orden === "fecha" ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m4 15 3 3 3-3M7 6v12m7-13a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1zm3 9-3.5 6h7z"/></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m4 15 3 3 3-3M7 6v12M17 3a2 2 0 0 1 2 2v3a2 2 0 1 1-4 0V5a2 2 0 0 1 2-2m-2 13a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/><path d="M19 16v3a2 2 0 0 1-2 2h-1.5"/></svg>
+                  )}
+            </button>
             </div>
             <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
               <button
@@ -253,6 +305,22 @@ export default function TicketsListPage() {
               onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
               options={PRIORIDADES}
             />
+            {esAdminOMesaAyuda && (
+              <Select
+                label="Empresa"
+                value={filtroEmpresaId}
+                onChange={(e) => { setFiltroEmpresaId(e.target.value); setPage(1); }}
+                options={[{ value: "", label: "Todas" }, ...empresas.map((e) => ({ value: String(e.id), label: e.nombre }))]}
+              />
+            )}
+            {esAdminOMesaAyuda && (
+              <Select
+                label="Agente"
+                value={filtroAgenteId}
+                onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
+                options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
+              />
+            )}
             <div className="flex flex-col">
               <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
                 Desde
@@ -300,9 +368,9 @@ export default function TicketsListPage() {
               header: "# Ticket",
               cell: (t: Ticket) => (
                 <Link
-                href={`/tickets/${t.id}`}
-                title={`Ver ticket: ${t.titulo}`}
-                className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
+                  href={`/tickets/${t.id}`}
+                  title={`Ver ticket: ${t.titulo}`}
+                  className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
                 >
                   #{t.id.split('-')[0].toUpperCase()}
                 </Link>
@@ -310,14 +378,29 @@ export default function TicketsListPage() {
             },
             {
               key: "titulo",
-              header: "Titulo",
+              header: "Información",
               cell: (t: Ticket) => (
                 <Link
-                href={`/tickets/${t.id}`}
-                title={`Ver ticket: ${t.titulo}`}
-                className="font-normal text-gray-800 hover:text-brandCustom transition-colors lowercase"
+                  href={`/tickets/${t.id}`}
+                  title={`Ver ticket: ${t.titulo}`}
+                  className="flex flex-col gap-0.5 hover:text-brandCustom transition-colors"
                 >
-                  {t.titulo.length > 20 ? `${t.titulo.substring(0, 20)}...` : t.titulo}
+                  <span className="font-medium text-gray-800 text-sm capitalize">
+                    {t.titulo.length > 30 ? `${t.titulo.substring(0, 30)}...` : t.titulo}
+                  </span>
+                  <span className="text-gray-500 text-[10px] line-clamp-1">
+                    {t.descripcion.length > 60 ? `${t.descripcion.substring(0, 60)}...` : t.descripcion}
+                  </span>
+                  <span className="text-gray-400 text-[9px] mt-0.5">
+                    {new Date(t.fecha_creacion).toLocaleDateString(undefined, {
+                      timeZone: "America/Bogota",
+                      day: "2-digit",
+                      month: "short",
+                      year: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </Link>
               ),
             },
@@ -341,18 +424,11 @@ export default function TicketsListPage() {
               cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} estado={t.estado} />,
             },
             {
-              key: "creado",
-              header: "Creado",
+              key: "asignado",
+              header: "Asignado",
               cell: (t: Ticket) => (
-                <span className="text-gray-400 sm:text-xs text-[10px]">
-                  {new Date(t.fecha_creacion).toLocaleString(undefined, {
-                    timeZone: "America/Bogota",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <span className={`text-gray-500 sm:text-xs text-[10px] ${!t.agente_nombre ? "text-redCustom" : "text-bgSiderBar"}`}>
+                  {t.agente_nombre ? t.agente_nombre : "Sin asignar"}
                 </span>
               ),
             },

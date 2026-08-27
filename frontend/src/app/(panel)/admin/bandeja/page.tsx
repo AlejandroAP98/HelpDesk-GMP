@@ -31,12 +31,13 @@ export default function BandejaPage() {
     (async () => {
       setCargando(true);
       try {
-        const [tk, ags] = await Promise.all([
+        const [tk, ags, mesas] = await Promise.all([
           ticketApi.listar({ estado: "abierto", page, size: 15 }),
-          adminApi.listarUsuarios({ rol: "agente", size: 10 }),
+          adminApi.listarUsuarios({ rol: "agente", size: 100 }),
+          adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
         ]);
         setTickets(tk.items);
-        setAgentes(ags.items);
+        setAgentes([...ags.items, ...mesas.items]);
         setTotalPages(tk.pages);
       } catch {
         setError("No se pudo cargar la bandeja");
@@ -188,29 +189,38 @@ export default function BandejaPage() {
             },
             {
               key: "titulo",
-              header: "Titulo",
+              header: "Ticket",
               cell: (t: Ticket) => (
-                <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-sm text-gray-900 hover:text-brandCustom transition-colors cursor-pointer">
-                  {t.titulo.substring(0, 20) + "..."}
+                <Link
+                  href={`/tickets/${t.id}`}
+                  title={`Ver ticket: ${t.titulo}`}
+                  className="flex flex-col gap-0.5 hover:text-brandCustom transition-colors"
+                >
+                  <span className="font-medium text-gray-800 text-xs lowercase">
+                    {t.titulo.length > 30 ? `${t.titulo.substring(0, 30)}...` : t.titulo}
+                  </span>
+                  <span className="text-gray-500 text-[10px] line-clamp-1">
+                    {t.descripcion.length > 40 ? `${t.descripcion.substring(0, 40)}...` : t.descripcion}
+                  </span>
+                  <span className="text-gray-400 text-[9px] mt-0.5">
+                    {new Date(t.fecha_creacion).toLocaleDateString(undefined, {
+                      timeZone: "America/Bogota",
+                      day: "2-digit",
+                      month: "short",
+                    })}
+                  </span>
                 </Link>
               ),
             },
             {
               key: "empresa",
               header: "Empresa",
-              cell: (t: Ticket) => <span className="text-gray-400 text-xs">{t.empresa_nombre ?? `#${t.empresa_id}`}</span>,
+              cell: (t: Ticket) => <span className="text-gray-500 sm:text-xs text-[10px]">{t.empresa_nombre ?? `#${t.empresa_id}`}</span>,
             },
             {
               key: "prioridad",
               header: "Prioridad",
               cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
-            },
-            {
-              key: "creado",
-              header: "Creado",
-              cell: (t: Ticket) => (
-                <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
-              ),
             },
             {
               key: "asignar_select",

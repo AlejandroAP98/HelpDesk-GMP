@@ -16,59 +16,66 @@ import MetricsIcon from "@/app/assets/icons/MetricsIcon";
 import SedesIcon from "@/app/assets/icons/SedesIcon";
 import logo from "../app/assets/logo-white.svg";
 
-const NAV: Record<string, { href: string; label: string; icon: React.ReactNode; }[]> = {
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+interface NavSection {
+  title?: string;
+  items: NavItem[];
+}
+
+const NAV: Record<string, NavSection[]> = {
   cliente: [
-    { href: "/", label: "Inicio", icon: <HomeIcon />  },
-    { href: "/tickets", label: "Mis Tickets", icon: <TicketIcon /> },
-    { href: "/tickets/nuevo", label: "Crear Ticket", icon: <NewTicketIcon /> },
+    {
+      items: [
+        { href: "/", label: "Inicio", icon: <HomeIcon /> },
+        { href: "/tickets", label: "Mis Tickets", icon: <TicketIcon /> },
+        { href: "/tickets/nuevo", label: "Crear Ticket", icon: <NewTicketIcon /> },
+      ],
+    },
   ],
   agente: [
-    { href: "/", label: "Inicio", icon: <HomeIcon/> },
-    { href: "/tickets", label: "Tickets Asignados", icon: <TicketIcon/> },
-    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
+    {
+      items: [
+        { href: "/", label: "Inicio", icon: <HomeIcon /> },
+        { href: "/tickets", label: "Tickets Asignados", icon: <TicketIcon /> },
+        { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon /> },
+      ],
+    },
   ],
   mesa_ayuda: [
-    { href: "/", label: "Inicio", icon: <HomeIcon /> },
-    { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon /> },
-    { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
-    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon /> },
-    { href: "/metricas", label: "Métricas", icon: <MetricsIcon /> },
+    {
+      items: [
+        { href: "/", label: "Inicio", icon: <HomeIcon /> },
+        { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon /> },
+        { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
+        { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon /> },
+        { href: "/metricas", label: "Métricas", icon: <MetricsIcon /> },
+      ],
+    },
   ],
   administrador: [
-    { href: "/", label: "Inicio", icon: <HomeIcon /> },
-    { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon/> },
-    { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
-    { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon/> },
     {
-      href: "/metricas",
-      label: "Métricas",
-      icon: (
-        <MetricsIcon/>
-      ),
+      title: "General",
+      items: [
+        { href: "/", label: "Inicio", icon: <HomeIcon /> },
+        { href: "/admin/bandeja", label: "Bandeja de Entrada", icon: <InboxIcon /> },
+        { href: "/tickets", label: "Tickets", icon: <TicketIcon /> },
+        { href: "/tareas", label: "Mis Tareas", icon: <CheckSquareIcon /> },
+        { href: "/metricas", label: "Métricas", icon: <MetricsIcon /> },
+      ],
     },
     {
-      href: "/admin/empresas",
-      label: "Empresas",
-      icon: (
-        <FactoryIcon/>
-      ),
-    },
-    {
-      href: "/admin/usuarios",
-      label: "Usuarios",
-      icon: <UsersIcon/>,
-    },
-    {
-      href: "/admin/categorias",
-      label: "Categorías",
-      icon: (
-        <CategoryIcon/>
-      ),
-    },
-    {
-      href: "/admin/puntos-venta",
-      label: "Puntos de Venta",
-      icon: <SedesIcon/>,
+      title: "Administración",
+      items: [
+        { href: "/admin/empresas", label: "Empresas", icon: <FactoryIcon /> },
+        { href: "/admin/usuarios", label: "Usuarios", icon: <UsersIcon /> },
+        { href: "/admin/categorias", label: "Categorías", icon: <CategoryIcon /> },
+        { href: "/admin/puntos-venta", label: "Puntos de Venta", icon: <SedesIcon /> },
+      ],
     },
   ],
 };
@@ -108,7 +115,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
       >
         <div className="">
           <div className="flex items-start h-full justify-between bg-brandCustom/20">
-            <div className="flex items-center justify-center w-full py-4">
+            <div className="flex items-center justify-center w-full py-2">
               <img src={logo.src} alt="Logo GMP" className="w-28  h-auto" />
             </div>
             <button
@@ -122,41 +129,52 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
         </div>
 
         <nav className="flex-1 overflow-y-auto border-brandCustom overflow-hidden">
-          {links.map((l) => {
-            const active = l.href === "/"
-              ? pathname === "/"
-              : pathname === l.href || (
-                  pathname.startsWith(l.href + "/") &&
-                  !links.some((o) => o.href !== l.href && o.href === pathname)
+          {links.map((section, sectionIdx) => (
+            <div key={sectionIdx}>
+              {section.title && (
+                <div className="px-1 pt-2 pb-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60">
+                    {section.title}
+                  </span>
+                </div>
+              )}
+              {section.items.map((l) => {
+                const active = l.href === "/"
+                  ? pathname === "/"
+                  : pathname === l.href || (
+                      pathname.startsWith(l.href + "/") &&
+                      !section.items.some((o) => o.href !== l.href && o.href === pathname)
+                    );
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    onClick={onClose}
+                    className={`flex items-center justify-start gap-2 px-2 py-2.5 text-xs font-light transition-all duration-300 border-t border-white/10 last:none ${
+                      active
+                        ? "bg-brandCustom text-white font-normal"
+                        : "text-white hover:text-brandCustom hover:font-normal hover:bg-bgCustom"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1}>
+                      {l.icon}
+                    </svg>
+                    {l.label}
+                  </Link>
                 );
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={onClose}
-                className={`flex items-center justify-start gap-2 px-2 py-2.5  text-sm font-light transition-all duration-300 border-t border-white/10  last:border-b last:border-white/10  ${
-                  active
-                    ? "bg-brandCustom text-white font-normal "
-                    : "text-white hover:text-brandCustom hover:font-normal hover:bg-bgCustom hover:scale-[1.03]"
-                }`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2 : 1}>
-                  {l.icon }
-                </svg>
-                {l.label}
-              </Link>
-            );
-          })}
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="bg-brandCustom/20 p-2">
           <div>
-            <p className="font-medium text-white truncate text-sm">{usuario?.nombre}</p>
+            <p className="font-medium text-white truncate text-xs">{usuario?.nombre}</p>
             <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
             <Button
               onClick={handleLogout}
               variant="secondary"
-              className="mt-4 w-full"
+              className="mt-4 w-full text-xs"
             >
               Cerrar sesion
             </Button>

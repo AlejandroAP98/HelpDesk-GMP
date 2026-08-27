@@ -343,17 +343,33 @@ export default function PanelHomePage() {
                 key: "ticket_number",
                 header: "# Ticket",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="text-xs font-normal text-gray-500 hover:text-brand-600 transition-colors">
+                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase">
                     #{t.id.split('-')[0].toUpperCase()}
                   </Link>
                 ),
               },
               {
                 key: "titulo",
-                header: "Titulo",
+                header: "Información",
                 cell: (t: Ticket) => (
-                  <Link href={`/tickets/${t.id}`} title={`Ver ticket: ${t.titulo}`} className="font-normal text-gray-800 hover:text-brand-600 transition-colors">
-                    {t.titulo.substring(0, 20) + "..."}
+                  <Link
+                    href={`/tickets/${t.id}`}
+                    title={`Ver ticket: ${t.titulo}`}
+                    className="flex flex-col gap-0.5 hover:text-brandCustom transition-colors"
+                  >
+                    <span className="font-medium text-gray-800 text-xs lowercase">
+                      {t.titulo.length > 30 ? `${t.titulo.substring(0, 30)}...` : t.titulo}
+                    </span>
+                    <span className="text-gray-500 text-[10px] line-clamp-1">
+                      {t.descripcion.length > 40 ? `${t.descripcion.substring(0, 40)}...` : t.descripcion}
+                    </span>
+                    <span className="text-gray-400 text-[9px] mt-0.5">
+                      {new Date(t.fecha_creacion).toLocaleDateString(undefined, {
+                        timeZone: "America/Bogota",
+                        day: "2-digit",
+                        month: "short",
+                      })}
+                    </span>
                   </Link>
                 ),
               },
@@ -377,10 +393,12 @@ export default function PanelHomePage() {
                 cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} />,
               },
               {
-                key: "actualizado",
-                header: "Actualizado",
+                key: "asignado",
+                header: "Asignado",
                 cell: (t: Ticket) => (
-                  <span className="text-gray-400 sm:text-xs text-[10px]">{new Date(t.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="text-gray-500 sm:text-xs text-[10px]">
+                    {t.agente_nombre ?? "Sin asignar"}
+                  </span>
                 ),
               },
             ]}

@@ -8,6 +8,7 @@ import {
   adjuntoApi,
   comentarioApi,
   ticketApi,
+  adminApi,
   type Adjunto,
   type Comentario,
   type ElementoInfraestructura,
@@ -16,6 +17,7 @@ import {
   type PrioridadTicket,
   type Ticket,
 } from "@/lib/endpoints";
+import type { Usuario } from "@/store/authStore";
 import { EstadoBadge, PrioridadBadge, PRIORIDADES, prioridadLabels, estadoStyles } from "@/components/Badges";
 import UserCommentsIcon from "@/app/assets/icons/UserCommentsIcon";
 import ChangeStatusIcon from "@/app/assets/icons/ChangeStatusIcon";
@@ -141,6 +143,9 @@ export default function TicketDetallePage() {
   const [adjuntosTotalPages, setAdjuntosTotalPages] = useState(1);
   const [historialPage, setHistorialPage] = useState(1);
   const [historialTotalPages, setHistorialTotalPages] = useState(1);
+  const [agentes, setAgentes] = useState<Usuario[]>([]);
+  const [agenteSel, setAgenteSel] = useState<string>("");
+  const [reasignando, setReasignando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -214,6 +219,17 @@ export default function TicketDetallePage() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    if ((usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") && ticket?.agente_id) {
+      Promise.all([
+        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
+        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
+      ]).then(([agentes, mesas]) => {
+        setAgentes([...agentes.items, ...mesas.items]);
+      }).catch(() => {});
+    }
+  }, [usuario?.rol, ticket?.agente_id]);
 
   useEffect(() => {
     setOnTicketUpdated((ev) => {
@@ -309,6 +325,21 @@ export default function TicketDetallePage() {
     }
   };
 
+  const reasignar = async () => {
+    if (!agenteSel) return;
+    setReasignando(true);
+    setError(null);
+    try {
+      await ticketApi.asignar(ticketId, agenteSel);
+      setAgenteSel("");
+      await cargar();
+    } catch {
+      setError("No se pudo reasignar el ticket");
+    } finally {
+      setReasignando(false);
+    }
+  };
+
   const setPrioridad = async (p: PrioridadTicket) => {
     try {
       await ticketApi.cambiarPrioridad(ticketId, p);
@@ -344,6 +375,7 @@ export default function TicketDetallePage() {
     (esMesaAyuda && esMesaAyudaAsignado);
   const puedeReabrir = esAdmin;
   const puedeAutoasignar = (esAdmin || esMesaAyuda) && ticket.estado === "abierto";
+  const puedeReasignar = (esAdmin || esMesaAyuda) && ticket.agente_id && ticket.estado !== "cerrado" && ticket.estado !== "resuelto";
   const estaCerrado = ticket.estado === "cerrado";
   return (
     <div className="space-y-1">
@@ -361,26 +393,30 @@ export default function TicketDetallePage() {
             <dl className="flex sm:flex-row flex-col items-center justify-between gap-2 w-full mb-2 bg-brandCustom rounded-t-[0.6rem] sm:px-6 px-4 py-2">
              <div className="flex sm:justify-start w-full justify-between sm:gap-5 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
-                  <dt className="text-[10px] font-medium text-gray-50 tracking-wider mb-0.5">Empresa</dt>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Empresa</dt>
                   <dd className="font-regular text-white text-[11px]">{ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-medium text-gray-50 tracking-wider mb-0.5">Subcategoría</dt>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Subcategoría</dt>
                   <dd className="font-regular text-white text-[11px]">{ticket.subcategoria_nombre ?? `#${ticket.subcategoria_id}`}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-medium text-gray-50 tracking-wider mb-0.5">Elemento</dt>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Elemento</dt>
                   <dd className="font-regular text-white text-[11px]">{elementoLabels[ticket.elemento_afectado] ?? ticket.elemento_afectado}</dd>
                 </div>
              </div>
               <div className="flex sm:justify-end justify-between w-full sm:gap-4 gap-2">
                 <div>
-                  <dt className="text-[10px] font-medium text-gray-50 tracking-wider mb-0.5">Creado</dt>
-                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</dd>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Creado</dt>
+                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short'})}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-medium text-gray-50 tracking-wider mb-0.5">Actualizado</dt>
-                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</dd>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Actualizado</dt>
+                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short' })}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Agente</dt>
+                  <dd className="font-regular text-white text-[11px]">{ticket.agente_nombre ?? "Sin asignar"}</dd>
                 </div>
               </div>
             </dl>
@@ -531,6 +567,30 @@ export default function TicketDetallePage() {
               </div>
             )}
           </div>
+          {puedeReasignar && (
+            <div className="flex flex-col gap-1 self-start w-auto">
+              <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider block">Reasignar a:</label>
+              <div className="flex items-center gap-1">
+                <select
+                  value={agenteSel}
+                  onChange={(e) => setAgenteSel(e.target.value)}
+                  className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer flex-1 sm:flex-none sm:min-w-[180px]"
+                >
+                  <option value="">Seleccione agente...</option>
+                  {agentes.filter((a) => a.id !== ticket.agente_id).map((a) => (
+                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={reasignar}
+                  disabled={!agenteSel || reasignando}
+                  className="rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all whitespace-nowrap"
+                >
+                  {reasignando ? "Reasignando..." : "Reasignar"}
+                </button>
+              </div>
+            </div>
+          )}
           <section className="w-full space-y-2">
             <h2 className="text-sm sm:text-md font-semibold tracking-tight text-brandCustom">Comentarios ({comentarios.length})</h2>
             <div className={`space-y-2.5 flex flex-col w-full p-4 ${comentarios.length > 0 ? 'bg-cardCustom rounded-xl' : 'bg-transparent'} `}>
@@ -650,7 +710,7 @@ export default function TicketDetallePage() {
               const hasAnyDate = timeline.some((item) => item.date !== null);
               if (!hasAnyDate) return null;
               return (
-                <div className="relative border border-gray-100 shadow-card p-4 bg-cardCustom rounded-2xl">
+                <div className="relative border border-gray-100 shadow-card p-3 bg-cardCustom rounded-2xl">
                   <div className="absolute left-[28px] top-[14px] bottom-[40px] w-0.5 bg-gray-200" />
                   <div className="space-y-0">
                     {timeline.map((item, idx) => (
