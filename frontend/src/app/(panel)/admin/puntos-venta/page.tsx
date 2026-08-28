@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { puntoVentaApi, empresaApi, type PuntoVenta, type Empresa, type Pagina } from "@/lib/endpoints";
 import { DataTable } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
@@ -21,6 +21,9 @@ export default function PuntosVentaPage() {
   const [page, setPage] = useState(1);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [filtroEmpresa, setFiltroEmpresa] = useState<number | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<PuntoVenta | null>(null);
@@ -37,6 +40,7 @@ export default function PuntosVentaPage() {
     try {
       const params: Record<string, unknown> = { page, size: 15 };
       if (filtroEmpresa) params.empresa_id = filtroEmpresa;
+      if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
       const res = await puntoVentaApi.listar(params);
       setData(res);
     } catch {
@@ -44,11 +48,20 @@ export default function PuntosVentaPage() {
     } finally {
       setCargando(false);
     }
-  }, [page, filtroEmpresa]);
+  }, [page, filtroEmpresa, busquedaDebounced]);
 
   useEffect(() => {
     empresaApi.listar({ size: 100 }).then((r) => setEmpresas(r.items)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setBusquedaDebounced(busqueda.trim());
+      setPage(1);
+    }, 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [busqueda]);
 
   useEffect(() => {
     cargar();
@@ -129,7 +142,25 @@ export default function PuntosVentaPage() {
           </Button>
         }
       />
-      <div className="flex">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:items-end justify-start">
+        <div className="relative flex-1 sm:max-w-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607"/></svg>
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre..."
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:font-regular placeholder-gray-300 focus:border-brand-500 focus:ring-1 focus:ring-brandCustom focus:bg-white outline-none transition-all"
+          />
+          {busqueda && (
+            <button
+              onClick={() => { setBusqueda(""); setBusquedaDebounced(""); setPage(1); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+            </button>
+          )}
+        </div>
         <Select
           label="Empresa"
           options={[

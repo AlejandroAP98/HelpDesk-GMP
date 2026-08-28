@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ticketApi, adminApi, empresaApi, type Ticket, type Empresa, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
 import type { Usuario } from "@/store/authStore";
@@ -88,6 +88,9 @@ export default function TicketsListPage() {
   const [filtroAgenteId, setFiltroAgenteId] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [agentes, setAgentes] = useState<Usuario[]>([]);
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
   const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
@@ -109,6 +112,15 @@ export default function TicketsListPage() {
   }, [esAdminOMesaAyuda]);
 
   useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setBusquedaDebounced(busqueda.trim());
+      setPage(1);
+    }, 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [busqueda]);
+
+  useEffect(() => {
     (async () => {
       setCargando(true);
       try {
@@ -121,6 +133,7 @@ export default function TicketsListPage() {
         if (orden === "fecha") params.orden = "fecha";
         if (filtroEmpresaId) params.empresa_id = filtroEmpresaId;
         if (filtroAgenteId) params.agente_id = filtroAgenteId;
+        if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
         const data = await ticketApi.listar(params);
         setTickets(data.items);
         setTotal(data.total);
@@ -132,7 +145,7 @@ export default function TicketsListPage() {
         setCargando(false);
       }
     })();
-  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId]);
+  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, busquedaDebounced]);
 
   const hayFiltrosFecha = fechaInicio || fechaFin;
   const limpiarFiltrosFecha = () => {
@@ -292,66 +305,86 @@ export default function TicketsListPage() {
               </button>
             </div>
           </div>
-          <div className="grid md:flex grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1">
-            <Select
-              label="Estado"
-              value={estado}
-              onChange={(e) => { setEstado(e.target.value); setPage(1); }}
-              options={ESTADOS_POR_VISTA[vista]}
-            />
-            <Select
-              label="Prioridad"
-              value={prioridad}
-              onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
-              options={PRIORIDADES}
-            />
-            {esAdminOMesaAyuda && (
-              <Select
-                label="Empresa"
-                value={filtroEmpresaId}
-                onChange={(e) => { setFiltroEmpresaId(e.target.value); setPage(1); }}
-                options={[{ value: "", label: "Todas" }, ...empresas.map((e) => ({ value: String(e.id), label: e.nombre }))]}
-              />
-            )}
-            {esAdminOMesaAyuda && (
-              <Select
-                label="Agente"
-                value={filtroAgenteId}
-                onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
-                options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
-              />
-            )}
-            <div className="flex flex-col">
-              <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
-                Desde
-              </label>
+          <div className="flex flex-col-reverse 2xl:flex-row w-full gap-2 justify-between">
+            <div className="relative flex sm:max-w-sm w-full 2xl:mt-4 self-start">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
               <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
-                className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por #ticket o titulo..."
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:font-regular placeholder-gray-300 focus:border-brand-500 focus:ring-1 focus:ring-brandCustom focus:bg-white outline-none transition-all"
               />
+              {busqueda && (
+                <button
+                  onClick={() => { setBusqueda(""); setBusquedaDebounced(""); setPage(1); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                </button>
+              )}
             </div>
-            <div className="flex flex-col">
-              <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
-                Hasta
-              </label>
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
-                className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+            <div className="grid xl:flex grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1 w-full xl:justify-end">
+              <Select
+                label="Estado"
+                value={estado}
+                onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+                options={ESTADOS_POR_VISTA[vista]}
               />
+              <Select
+                label="Prioridad"
+                value={prioridad}
+                onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
+                options={PRIORIDADES}
+              />
+              {esAdminOMesaAyuda && (
+                <Select
+                  label="Empresa"
+                  value={filtroEmpresaId}
+                  onChange={(e) => { setFiltroEmpresaId(e.target.value); setPage(1); }}
+                  options={[{ value: "", label: "Todas" }, ...empresas.map((e) => ({ value: String(e.id), label: e.nombre }))]}
+                />
+              )}
+              {esAdminOMesaAyuda && (
+                <Select
+                  label="Agente"
+                  value={filtroAgenteId}
+                  onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
+                  options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
+                />
+              )}
+              <div className="flex flex-col">
+                <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+                  Desde
+                </label>
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
+                  className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+                  Hasta
+                </label>
+                <input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
+                  className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+                />
+              </div>
+              <TotalBadge total={total} />
+              {hayFiltrosFecha && (
+                <button
+                  onClick={limpiarFiltrosFecha}
+                  className="text-xs self-end text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
+                >
+                  Limpiar fechas
+                </button>
+              )}
             </div>
-            <TotalBadge total={total} />
-            {hayFiltrosFecha && (
-              <button
-                onClick={limpiarFiltrosFecha}
-                className="text-xs self-end text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
-              >
-                Limpiar fechas
-              </button>
-            )}
           </div>
         </div>
         {cargando ? (

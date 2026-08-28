@@ -132,8 +132,8 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           {links.map((section, sectionIdx) => (
             <div key={sectionIdx}>
               {section.title && (
-                <div className="px-1 pt-2 pb-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60">
+                <div className="px-1.5 pt-2.5 pb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
                     {section.title}
                   </span>
                 </div>
@@ -150,9 +150,9 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
                     key={l.href}
                     href={l.href}
                     onClick={onClose}
-                    className={`flex items-center justify-start gap-2 px-2 py-2.5 text-xs font-light transition-all duration-300 border-t border-white/10 last:none ${
+                    className={`flex items-center justify-start gap-2 px-2 py-2.5 text-xs font-normal transition-all duration-300 border-b border-white/10 ${
                       active
-                        ? "bg-brandCustom text-white font-normal"
+                        ? "bg-brandCustom text-white font-semibold"
                         : "text-white hover:text-brandCustom hover:font-normal hover:bg-bgCustom"
                     }`}
                   >

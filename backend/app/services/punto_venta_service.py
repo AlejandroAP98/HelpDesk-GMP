@@ -35,6 +35,7 @@ async def listar(
     page: int = 1,
     size: int = 20,
     empresa_id: int | None = None,
+    q: str | None = None,
 ) -> Pagina[tuple[PuntoVenta, str | None]]:
     p = paginacion(page, size)
     base = select(PuntoVenta, Empresa.nombre.label("empresa_nombre")).outerjoin(
@@ -46,6 +47,12 @@ async def listar(
     if ef_empresa_id is not None:
         base = base.where(PuntoVenta.empresa_id == ef_empresa_id)
         count_base = count_base.where(PuntoVenta.empresa_id == ef_empresa_id)
+
+    if q and len(q.strip()) >= 2:
+        like = f"%{q.strip()}%"
+        filtro = PuntoVenta.nombre.ilike(like)
+        base = base.where(filtro)
+        count_base = count_base.where(filtro)
 
     total = (await db.execute(count_base)).scalar_one()
     rows = (

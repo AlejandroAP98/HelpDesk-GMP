@@ -36,11 +36,12 @@ async def listar(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     empresa_id: int | None = Query(None),
+    q: str | None = Query(None, description="Buscar por nombre"),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[PuntoVentaOut]:
     pagina = await punto_venta_service.listar(
-        current=current, db=db, page=page, size=size, empresa_id=empresa_id
+        current=current, db=db, page=page, size=size, empresa_id=empresa_id, q=q
     )
     return Pagina.of(
         [_to_out(pv, emp_nombre) for pv, emp_nombre in pagina.items],

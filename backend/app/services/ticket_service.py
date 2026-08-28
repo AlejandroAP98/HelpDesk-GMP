@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import tenant_filter
@@ -413,6 +413,7 @@ async def listar(
     fecha_inicio: date | None = None,
     fecha_fin: date | None = None,
     orden: str | None = None,
+    q: str | None = None,
 ) -> Pagina[tuple[Ticket, str | None, str | None]]:
     from datetime import datetime, time, timezone
 
@@ -463,6 +464,18 @@ async def listar(
         dt_fin = datetime.combine(fecha_fin, time.max, tzinfo=timezone.utc).replace(tzinfo=None)
         base = base.where(Ticket.fecha_creacion <= dt_fin)
         count_base = count_base.where(Ticket.fecha_creacion <= dt_fin)
+
+    if q and len(q.strip()) >= 2:
+        q_stripped = q.strip().lstrip("#")
+        if q_stripped and all(c in "0123456789abcdefABCDEF" for c in q_stripped) and len(q_stripped) <= 36:
+            filtro_id = cast(Ticket.id, String).ilike(f"{q_stripped}%")
+            base = base.where(filtro_id)
+            count_base = count_base.where(filtro_id)
+        else:
+            like = f"%{q.strip()}%"
+            filtro_titulo = Ticket.titulo.ilike(like)
+            base = base.where(filtro_titulo)
+            count_base = count_base.where(filtro_titulo)
 
     peso_prioridad = case(
         (Ticket.prioridad == "urgente", 1),
