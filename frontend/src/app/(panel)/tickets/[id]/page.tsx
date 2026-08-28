@@ -146,6 +146,13 @@ export default function TicketDetallePage() {
   const [agentes, setAgentes] = useState<Usuario[]>([]);
   const [agenteSel, setAgenteSel] = useState<string>("");
   const [reasignando, setReasignando] = useState(false);
+  const [campoCopiado, setCampoCopiado] = useState<string | null>(null);
+
+  const handleCopiar = useCallback((campo: string, valor: string) => {
+    navigator.clipboard.writeText(valor);
+    setCampoCopiado(campo);
+    setTimeout(() => setCampoCopiado(null), 1500);
+  }, []);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -442,8 +449,8 @@ export default function TicketDetallePage() {
                         <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Punto</dt>
                         <dd className="font-medium text-gray-700 text-[11px] truncate">{ticket.nombre_punto}</dd>
                       </div>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.nombre_punto!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
-                        <CopyInfoIcon/>
+                      <button type="button" onClick={() => handleCopiar("nombre_punto", ticket.nombre_punto!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "nombre_punto" ? "text-green-500" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
+                        <CopyInfoIcon copied={campoCopiado === "nombre_punto"}/>
                       </button>
                     </div>
                   )}
@@ -453,8 +460,8 @@ export default function TicketDetallePage() {
                         <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">IP PC(s)</dt>
                         <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.ip_pcs}</dd>
                       </div>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.ip_pcs!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
-                        <CopyInfoIcon />
+                      <button type="button" onClick={() => handleCopiar("ip_pcs", ticket.ip_pcs!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "ip_pcs" ? "text-green-500" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
+                        <CopyInfoIcon copied={campoCopiado === "ip_pcs"}/>
                       </button>
                     </div>
                   )}
@@ -464,8 +471,8 @@ export default function TicketDetallePage() {
                         <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">IP Antena</dt>
                         <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.ip_antena}</dd>
                       </div>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.ip_antena!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
-                        <CopyInfoIcon />
+                      <button type="button" onClick={() => handleCopiar("ip_antena", ticket.ip_antena!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "ip_antena" ? "text-green-500" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
+                        <CopyInfoIcon copied={campoCopiado === "ip_antena"}/>
                       </button>
                     </div>
                   )}
@@ -475,8 +482,8 @@ export default function TicketDetallePage() {
                         <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Máscara</dt>
                         <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.mascara_red}</dd>
                       </div>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.mascara_red!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
-                        <CopyInfoIcon />
+                      <button type="button" onClick={() => handleCopiar("mascara_red", ticket.mascara_red!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "mascara_red" ? "text-green-500" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
+                        <CopyInfoIcon copied={campoCopiado === "mascara_red"}/>
                       </button>
                     </div>
                   )}
@@ -486,8 +493,8 @@ export default function TicketDetallePage() {
                         <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Puerta de enlace</dt>
                         <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.puerta_enlace}</dd>
                       </div>
-                      <button type="button" onClick={() => navigator.clipboard.writeText(ticket.puerta_enlace!)} className="shrink-0 text-gray-400 hover:text-brandCustom transition-colors p-0.5" title="Copiar">
-                        <CopyInfoIcon />
+                      <button type="button" onClick={() => handleCopiar("puerta_enlace", ticket.puerta_enlace!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "puerta_enlace" ? "text-green-500" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
+                        <CopyInfoIcon copied={campoCopiado === "puerta_enlace"}/>
                       </button>
                     </div>
                   )}
