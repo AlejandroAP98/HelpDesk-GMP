@@ -14,6 +14,8 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import asyncio
+
 import httpx
 
 from app.core.config import settings
@@ -23,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 RESEND_API_URL = "https://api.resend.com/emails"
 _TIMEOUT = 10.0
+_MAX_RETRIES = 3
+_RETRY_DELAYS = [2.0, 4.0, 8.0]
 
 
 def _urgent_recipients() -> list[str]:
@@ -49,23 +53,47 @@ async def _send(to: list[str], subject: str, html: str, text: str | None = None)
         "Authorization": f"Bearer {settings.resend_api_key}",
         "Content-Type": "application/json",
     }
-    try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            r = await client.post(RESEND_API_URL, json=payload, headers=headers)
-        if r.status_code >= 400:
-            logger.warning(
-                "Resend rechazo email a=%s subject=%s status=%d body=%s",
-                to,
-                subject,
-                r.status_code,
-                r.text[:300],
-            )
+    last_exception: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+                r = await client.post(RESEND_API_URL, json=payload, headers=headers)
+            if r.status_code >= 400:
+                logger.warning(
+                    "Resend rechazo email a=%s subject=%s status=%d body=%s",
+                    to,
+                    subject,
+                    r.status_code,
+                    r.text[:300],
+                )
+                return False
+            logger.info("Email enviado via Resend a=%s subject=%s", to, subject)
+            return True
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            last_exception = exc
+            if attempt < _MAX_RETRIES:
+                delay = _RETRY_DELAYS[attempt]
+                logger.warning(
+                    "Intento %d/%d fallido para email a=%s: %s. Reintentando en %.1fs",
+                    attempt + 1,
+                    _MAX_RETRIES + 1,
+                    to,
+                    type(exc).__name__,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+        except Exception:
+            logger.exception("Error inesperado enviando email a=%s subject=%s", to, subject)
             return False
-        logger.info("Email enviado via Resend a=%s subject=%s", to, subject)
-        return True
-    except Exception:
-        logger.exception("Fallo envio email a=%s subject=%s", to, subject)
-        return False
+    if last_exception:
+        logger.error(
+            "Fallo definitivo envio email a=%s subject=%s tras %d intentos: %s",
+            to,
+            subject,
+            _MAX_RETRIES + 1,
+            last_exception,
+        )
+    return False
 
 
 def _ticket_url(ticket_id: UUID) -> str:

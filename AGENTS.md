@@ -377,6 +377,10 @@ Fase 18 completada: Emails transaccionales via Resend + exclusion de agentes de 
   Funciones: `send_ticket_created`, `send_ticket_closed`, `send_ticket_urgent`.
   Fire-and-forget via `asyncio.create_task` (no bloquea la respuesta HTTP).
   Si `RESEND_API_KEY` vacio, el servicio se desactiva silenciosamente.
+  Reintentos con backoff exponencial: 4 intentos max (delays 2s, 4s, 8s) solo
+  para errores de red (`httpx.ConnectError`, `httpx.TimeoutException`). Errores
+  4xx de la API no se reintentan. Previene bucles infinitos y consumo excesivo
+  de peticiones.
 - Backend `core/config.py`: settings `resend_api_key`, `resend_from_email`,
   `resend_urgent_recipients` (string CSV).
 - Backend `services/ticket_service.py`:

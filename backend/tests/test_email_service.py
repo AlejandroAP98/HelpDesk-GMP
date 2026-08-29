@@ -176,3 +176,78 @@ async def test_send_ticket_created_sin_email_cliente(monkeypatch):  # type: igno
     ticket = _fake_ticket()
     ok = await send_ticket_created(ticket, "")
     assert ok is False
+
+
+async def test_send_reintenta_en_connect_error(monkeypatch):  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    monkeypatch.setattr(email_service, "_RETRY_DELAYS", [0.01, 0.01, 0.01])
+    call_count = 0
+
+    class _ClientCM:
+        async def __aenter__(self):  # type: ignore[no-untyped-def]
+            return self
+
+        async def __aexit__(self, *a):  # type: ignore[no-untyped-def]
+            return None
+
+        async def post(self, url, **kwargs):  # type: ignore[no-untyped-def]
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                import httpx
+                raise httpx.ConnectError("connection failed")
+            return MagicMock(status_code=200, text="ok")
+
+    with patch.object(email_service.httpx, "AsyncClient", return_value=_ClientCM()):
+        ticket = _fake_ticket()
+        ok = await send_ticket_created(ticket, "cliente@ejemplo.com")
+    assert ok is True
+    assert call_count == 3
+
+
+async def test_send_no_reintenta_en_error_4xx(monkeypatch):  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    call_count = 0
+
+    class _ClientCM:
+        async def __aenter__(self):  # type: ignore[no-untyped-def]
+            return self
+
+        async def __aexit__(self, *a):  # type: ignore[no-untyped-def]
+            return None
+
+        async def post(self, url, **kwargs):  # type: ignore[no-untyped-def]
+            nonlocal call_count
+            call_count += 1
+            return MagicMock(status_code=422, text="validation error")
+
+    with patch.object(email_service.httpx, "AsyncClient", return_value=_ClientCM()):
+        ticket = _fake_ticket()
+        ok = await send_ticket_created(ticket, "cliente@ejemplo.com")
+    assert ok is False
+    assert call_count == 1
+
+
+async def test_send_falla_definitivo_tras_max_reintentos(monkeypatch):  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    monkeypatch.setattr(email_service, "_RETRY_DELAYS", [0.01, 0.01, 0.01])
+    call_count = 0
+
+    class _ClientCM:
+        async def __aenter__(self):  # type: ignore[no-untyped-def]
+            return self
+
+        async def __aexit__(self, *a):  # type: ignore[no-untyped-def]
+            return None
+
+        async def post(self, url, **kwargs):  # type: ignore[no-untyped-def]
+            nonlocal call_count
+            call_count += 1
+            import httpx
+            raise httpx.ConnectError("connection failed")
+
+    with patch.object(email_service.httpx, "AsyncClient", return_value=_ClientCM()):
+        ticket = _fake_ticket()
+        ok = await send_ticket_created(ticket, "cliente@ejemplo.com")
+    assert ok is False
+    assert call_count == 4
