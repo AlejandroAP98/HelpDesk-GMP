@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
-import { ticketApi, statsApi, reportesApi, empresaApi, type Ticket, type PrioridadTicket, type EstadoTicket, type ElementoInfraestructura, type Stats, type Empresa } from "@/lib/endpoints";
+import { ticketApi, statsApi, reportesApi, empresaApi, actividadApi, type Ticket, type PrioridadTicket, type EstadoTicket, type ElementoInfraestructura, type Stats, type Graficas, type Empresa } from "@/lib/endpoints";
 import { useWsTicketStore } from "@/store/wsTicketStore";
+import { useActividadStore } from "@/store/actividadStore";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { DataTable } from "@/components/ui/Table";
@@ -14,6 +15,8 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TicketCard } from "@/components/TicketCard";
+import { DonutChart } from "@/components/DonutChart";
+import { ActividadPanel } from "@/components/ActividadPanel";
 import NewTicketIcon from "../assets/icons/NewTicketIcon";
 import TicketIcon from "../assets/icons/TicketIcon";
 import TicketOpenedIcon from "../assets/icons/TicketOpenedIcon";
@@ -26,6 +29,34 @@ import AssingUserIcon from "../assets/icons/AssignUserIcon";
 type VistaMode = "cards" | "table";
 const VISTA_STORAGE_KEY = "tickets:viewMode";
 
+const ESTADO_DONUT_COLORS: Record<string, string> = {
+  abierto: "#007991",
+  asignado: "#824c71",
+  en_progreso: "#c8963e",
+  resuelto: "#60993e",
+};
+
+const ESTADO_DONUT_LABELS: Record<string, string> = {
+  abierto: "Abierto",
+  asignado: "Asignado",
+  en_progreso: "En Progreso",
+  resuelto: "Resuelto",
+};
+
+const PRIORIDAD_DONUT_COLORS: Record<string, string> = {
+  urgente: "#fe4a49",
+  alta: "#EB6534",
+  media: "#508484",
+  baja: "#7e7f83",
+};
+
+const PRIORIDAD_DONUT_LABELS: Record<string, string> = {
+  urgente: "Urgente",
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
+};
+
 function getInitialVistaMode(): VistaMode {
   if (typeof window === "undefined") return "cards";
   return window.localStorage.getItem(VISTA_STORAGE_KEY) === "table" ? "table" : "cards";
@@ -36,6 +67,7 @@ export default function PanelHomePage() {
   const [recientes, setRecientes] = useState<Ticket[]>([]);
   const [cargando, setCargando] = useState(true);
   const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0, en_progreso: 0, asignados: 0 });
+  const [graficas, setGraficas] = useState<Graficas | null>(null);
   const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
@@ -44,17 +76,21 @@ export default function PanelHomePage() {
   const [prioridad, setPrioridad] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [descargando, setDescargando] = useState(false);
+  const actividadItems = useActividadStore((s) => s.items);
+  const setActividadItems = useActividadStore((s) => s.setItems);
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       try {
-        const [ultimos, statsData] = await Promise.all([
+        const [ultimos, statsData, graficasData] = await Promise.all([
           ticketApi.listar({ size: 4 }),
           statsApi.obtener(),
+          statsApi.graficas(),
         ]);
         setRecientes(ultimos.items);
         setStats(statsData);
+        setGraficas(graficasData);
       } catch {
         setRecientes([]);
       } finally {
@@ -62,6 +98,12 @@ export default function PanelHomePage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") {
+      actividadApi.listar(20).then(setActividadItems).catch(() => {});
+    }
+  }, [usuario?.rol, setActividadItems]);
 
   const setOnTicketCreated = useWsTicketStore((s) => s.setOnTicketCreated);
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
@@ -198,17 +240,56 @@ export default function PanelHomePage() {
           )
         }
       />
-      <section className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fade-in">
+      <section className={`grid grid-cols-3 md:grid-cols-4 ${!esCliente ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fade-in`}>
         <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
-        {
+        {!esCliente && (
           stats.urgentes > 0 ? <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-pulse bg-redCustom shadow-lg shadow-red-400/70 " />
           : <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-scale-in bg-redCustom" />
-        }
+        )}
         <StatsCard label="Asignados" value={stats.asignados} icon={<AssingUserIcon />}  className="animate-scale-in bg-violetCustom" />
         <StatsCard label="En Progreso" value={stats.en_progreso} icon={<TicketProgressIcon />} className="animate-scale-in bg-yellowCustom" />
         <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />}  className="animate-scale-in bg-greenCustom" />
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
+      </section>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-cardCustom p-4 sm:p-6 rounded-2xl animate-fade-in">
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl ">
+          {(usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") && (
+            <ActividadPanel items={actividadItems} />
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4">
+          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Tickets pendientes por estado</p>
+          {graficas && graficas.no_cerrados_por_estado.length > 0 ? (
+            <DonutChart
+              data={graficas.no_cerrados_por_estado.map((e) => ({
+                label: ESTADO_DONUT_LABELS[e.estado] ?? e.estado,
+                value: e.cantidad,
+                color: ESTADO_DONUT_COLORS[e.estado] ?? "#9ca3af",
+              }))}
+              size={130}
+              centerLabel="pendientes"
+            />
+          ) : (
+            <p className="text-xs text-gray-400 py-8">Sin datos</p>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4">
+          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Tickets pendientes por prioridad</p>
+          {graficas && graficas.no_cerrados_por_prioridad.length > 0 ? (
+            <DonutChart
+              data={graficas.no_cerrados_por_prioridad.map((p) => ({
+                label: PRIORIDAD_DONUT_LABELS[p.prioridad] ?? p.prioridad,
+                value: p.cantidad,
+                color: PRIORIDAD_DONUT_COLORS[p.prioridad] ?? "#9ca3af",
+              }))}
+              size={130}
+              centerLabel="pendientes"
+            />
+          ) : (
+            <p className="text-xs text-gray-400 py-8">Sin datos</p>
+          )}
+        </div>
       </section>
       {!esAgente && (
         <section className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-5 flex flex-col gap-4">

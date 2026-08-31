@@ -26,6 +26,8 @@ from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
 from app.routers import puntos_venta as puntos_venta_router
+from app.routers import actividad as actividad_router
+from app.routers import evento as evento_router
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -109,6 +111,8 @@ app.include_router(metricas_router.router)
 app.include_router(reportes_router.router)
 app.include_router(respuestas_rapidas_router.router)
 app.include_router(puntos_venta_router.router)
+app.include_router(actividad_router.router)
+app.include_router(evento_router.router)
 app.include_router(ws_router.router)
 
 

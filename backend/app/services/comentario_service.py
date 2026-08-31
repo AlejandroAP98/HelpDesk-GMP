@@ -153,6 +153,16 @@ async def crear(
             "No se pudo publicar ticket:commented para ticket %s", ticket_id, exc_info=True
         )
 
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket_id,
+        tipo_evento="comment_added",
+        metadata={"es_nota_interna": data.es_nota_interna},
+    )
+
     return ComentarioOut.model_validate(
         {
             **{k: getattr(comentario, k) for k in comentario.__table__.columns.keys()},

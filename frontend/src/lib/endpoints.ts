@@ -117,6 +117,22 @@ export interface Stats {
   urgentes: number;
 }
 
+export interface GraficaItemEstado {
+  estado: string;
+  cantidad: number;
+}
+
+export interface GraficaItemPrioridad {
+  prioridad: string;
+  cantidad: number;
+}
+
+export interface Graficas {
+  cerrados_semana: number;
+  no_cerrados_por_estado: GraficaItemEstado[];
+  no_cerrados_por_prioridad: GraficaItemPrioridad[];
+}
+
 export interface MetricasTiempos {
   mttr_horas: number | null;
   tiempo_primera_respuesta_minutos: number | null;
@@ -216,6 +232,40 @@ export interface MetricasSLA {
   sla_objetivo_frt_horas: number;
   sla_objetivo_mttr_horas: number;
   por_empresa: SLAItem[];
+}
+
+export interface EventoCalendario {
+  id: string;
+  usuario_id: string;
+  ticket_id: string | null;
+  titulo: string;
+  descripcion: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
+  recordar_email: boolean;
+  minutos_antes: number;
+  email_enviado: boolean;
+  fecha_creacion: string;
+}
+
+export interface EventoCalendarioCreate {
+  titulo: string;
+  descripcion?: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
+  recordar_email?: boolean;
+  minutos_antes?: number;
+  ticket_id?: string | null;
+}
+
+export interface EventoCalendarioUpdate {
+  titulo?: string;
+  descripcion?: string | null;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  recordar_email?: boolean;
+  minutos_antes?: number;
+  ticket_id?: string | null;
 }
 
 export const authApi = {
@@ -374,6 +424,10 @@ export const statsApi = {
   obtener: async () => {
     const r = await api.get("/api/stats");
     return r.data as Stats;
+  },
+  graficas: async () => {
+    const r = await api.get("/api/stats/graficas");
+    return r.data as Graficas;
   },
 };
 
@@ -615,5 +669,49 @@ export const metricasApi = {
   sla: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/sla", { params });
     return r.data as MetricasSLA;
+  },
+};
+
+export const eventoApi = {
+  listar: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/eventos", { params });
+    return r.data as EventoCalendario[];
+  },
+  crear: async (data: EventoCalendarioCreate) => {
+    const r = await api.post("/api/eventos", data);
+    return r.data as EventoCalendario;
+  },
+  actualizar: async (id: string, data: EventoCalendarioUpdate) => {
+    const r = await api.patch(`/api/eventos/${id}`, data);
+    return r.data as EventoCalendario;
+  },
+  eliminar: async (id: string) => {
+    await api.delete(`/api/eventos/${id}`);
+  },
+};
+
+export type TipoActividad =
+  | "ticket_created"
+  | "ticket_assigned"
+  | "state_changed"
+  | "priority_changed"
+  | "ticket_reopened"
+  | "comment_added"
+  | "attachment_uploaded";
+
+export interface ActividadLog {
+  empresa_id: number;
+  usuario_id: string;
+  usuario_nombre: string;
+  ticket_id: string | null;
+  tipo_evento: TipoActividad;
+  metadata: Record<string, string>;
+  fecha: string;
+}
+
+export const actividadApi = {
+  listar: async (limit: number = 20) => {
+    const r = await api.get("/api/actividad", { params: { limit } });
+    return r.data as ActividadLog[];
   },
 };

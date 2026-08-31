@@ -342,6 +342,15 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
     await _enviar_emails_post_creacion(ticket, current, empresa_nombre)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_created",
+        metadata={"titulo": ticket.titulo, "prioridad": ticket.prioridad.value},
+    )
     return ticket
 
 
@@ -396,6 +405,15 @@ async def crear_admin(
     await _publicar_evento_ticket(ticket, "ticket:created", empresa_nombre)
     await _publicar_nuevo_ticket(ticket, empresa_nombre)
     await _enviar_emails_post_creacion(ticket, cliente, empresa_nombre)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=cliente.id,
+        usuario_nombre=cliente.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_created",
+        metadata={"titulo": ticket.titulo, "prioridad": ticket.prioridad.value},
+    )
     return ticket
 
 
@@ -647,6 +665,15 @@ async def _asignar_a(
     await _publicar_asignacion(ticket, empresa_nombre)
     if estado_anterior != EstadoTicket.asignado:
         await _publicar_cambio_estado(ticket, estado_anterior, empresa_nombre)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_assigned",
+        metadata={"agente_id": str(agente.id), "agente_nombre": agente.nombre},
+    )
     return ticket
 
 
@@ -736,6 +763,15 @@ async def cambiar_estado(
     await _publicar_cambio_estado(ticket, estado_anterior.value, empresa_nombre)
     if nuevo == EstadoTicket.resuelto:
         await _enviar_email_resolucion(ticket, db)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="state_changed",
+        metadata={"estado_anterior": estado_anterior.value, "estado_nuevo": nuevo.value},
+    )
     return ticket
 
 
@@ -776,6 +812,7 @@ async def cambiar_prioridad(
         raise PermisoDenegado("Solo el autor puede cambiar prioridad")
     if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
         raise PermisoDenegado("Solo el agente asignado puede cambiar la prioridad")
+    prioridad_anterior = ticket.prioridad
     ticket.prioridad = data.prioridad
     ticket.modificado_por_id = current.id
     await db.commit()
@@ -784,6 +821,15 @@ async def cambiar_prioridad(
         select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
     )).scalar_one_or_none()
     await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="priority_changed",
+        metadata={"prioridad_anterior": prioridad_anterior.value, "prioridad_nueva": data.prioridad.value},
+    )
     return ticket
 
 
@@ -808,4 +854,13 @@ async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket
     )).scalar_one_or_none()
     await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
     await _publicar_cambio_estado(ticket, EstadoTicket.cerrado, empresa_nombre)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_reopened",
+        metadata={},
+    )
     return ticket

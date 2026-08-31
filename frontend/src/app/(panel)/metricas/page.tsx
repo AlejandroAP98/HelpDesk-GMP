@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
-import { metricasApi, type MetricasTiempos, type MetricasVolumen, type MetricasInfraestructura, type MetricasRendimiento, type MetricasTiempoPorAgente, type MetricasReaperturas, type MetricasSLA } from "@/lib/endpoints";
+import { metricasApi, statsApi, type MetricasTiempos, type MetricasVolumen, type MetricasInfraestructura, type MetricasRendimiento, type MetricasTiempoPorAgente, type MetricasReaperturas, type MetricasSLA, type Graficas } from "@/lib/endpoints";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatsCard } from "@/components/ui/StatsCard";
+import { DonutChart } from "@/components/DonutChart";
 import TicketSolvedIcon from "@/app/assets/icons/TicketSolvedIcon";
 import Link from "next/link";
 
@@ -47,6 +48,34 @@ const ELEMENTO_LABELS: Record<string, string> = {
   punto_venta: "Punto de Venta",
 };
 
+const ESTADO_DONUT_COLORS: Record<string, string> = {
+  abierto: "#007991",
+  asignado: "#824c71",
+  en_progreso: "#c8963e",
+  resuelto: "#60993e",
+};
+
+const ESTADO_DONUT_LABELS: Record<string, string> = {
+  abierto: "Abierto",
+  asignado: "Asignado",
+  en_progreso: "En Progreso",
+  resuelto: "Resuelto",
+};
+
+const PRIORIDAD_DONUT_COLORS: Record<string, string> = {
+  urgente: "#fe4a49",
+  alta: "#EB6534",
+  media: "#508484",
+  baja: "#7e7f83",
+};
+
+const PRIORIDAD_DONUT_LABELS: Record<string, string> = {
+  urgente: "Urgente",
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
+};
+
 export default function MetricasPage() {
   const usuario = useAuthStore((s) => s.usuario);
   const router = useRouter();
@@ -60,6 +89,7 @@ export default function MetricasPage() {
   const [tiempoAgente, setTiempoAgente] = useState<MetricasTiempoPorAgente | null>(null);
   const [reaperturas, setReaperturas] = useState<MetricasReaperturas | null>(null);
   const [sla, setSla] = useState<MetricasSLA | null>(null);
+  const [graficas, setGraficas] = useState<Graficas | null>(null);
   
   const hayFiltros = fechaInicio || fechaFin;
 
@@ -77,7 +107,7 @@ export default function MetricasPage() {
         const params: Record<string, string> = {};
         if (fechaInicio) params.fecha_inicio = fechaInicio;
         if (fechaFin) params.fecha_fin = fechaFin;
-        const [t, v, i, r, ta, rp, sl] = await Promise.all([
+        const [t, v, i, r, ta, rp, sl, gf] = await Promise.all([
           metricasApi.tiempos(params),
           metricasApi.volumen(params),
           metricasApi.infraestructura(params),
@@ -85,6 +115,7 @@ export default function MetricasPage() {
           metricasApi.tiempoPorAgente(params),
           metricasApi.reaperturas(params),
           metricasApi.sla(params),
+          statsApi.graficas(),
         ]);
         setTiempos(t);
         setVolumen(v);
@@ -93,6 +124,7 @@ export default function MetricasPage() {
         setTiempoAgente(ta);
         setReaperturas(rp);
         setSla(sl);
+        setGraficas(gf);
       } catch {
         console.error("Error al cargar las métricas");
       } finally {
@@ -152,6 +184,45 @@ export default function MetricasPage() {
             )}
         </div>
       </div>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-cardCustom p-4 sm:p-6 rounded-2xl animate-fade-in">
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4 shadow-card">
+          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Solucionados esta semana</p>
+          <p className="text-5xl font-bold text-grayCustom animate-fade-in">{graficas?.cerrados_semana ?? 0}</p>
+        </div>
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4">
+          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Tickets pendientes por estado</p>
+          {graficas && graficas.no_cerrados_por_estado.length > 0 ? (
+            <DonutChart
+              data={graficas.no_cerrados_por_estado.map((e) => ({
+                label: ESTADO_DONUT_LABELS[e.estado] ?? e.estado,
+                value: e.cantidad,
+                color: ESTADO_DONUT_COLORS[e.estado] ?? "#9ca3af",
+              }))}
+              size={130}
+              centerLabel="pendientes"
+            />
+          ) : (
+            <p className="text-xs text-gray-400 py-8">Sin datos</p>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4">
+          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Tickets pendientes por prioridad</p>
+          {graficas && graficas.no_cerrados_por_prioridad.length > 0 ? (
+            <DonutChart
+              data={graficas.no_cerrados_por_prioridad.map((p) => ({
+                label: PRIORIDAD_DONUT_LABELS[p.prioridad] ?? p.prioridad,
+                value: p.cantidad,
+                color: PRIORIDAD_DONUT_COLORS[p.prioridad] ?? "#9ca3af",
+              }))}
+              size={130}
+              centerLabel="pendientes"
+            />
+          ) : (
+            <p className="text-xs text-gray-400 py-8">Sin datos</p>
+          )}
+        </div>
+      </section>
       
       <div className="space-y-6 bg-cardCustom rounded-2xl p-4 sm:p-6">
         {/* Sección 1: Tiempos */}

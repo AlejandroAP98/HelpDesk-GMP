@@ -145,6 +145,15 @@ async def subir(
     db.add(adjunto)
     await db.commit()
     await db.refresh(adjunto)
+    from app.services import actividad_service
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket_id,
+        tipo_evento="attachment_uploaded",
+        metadata={"nombre_archivo": file_name},
+    )
     return _to_out(adjunto)
 
 

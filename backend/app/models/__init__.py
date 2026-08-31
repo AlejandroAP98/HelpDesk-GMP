@@ -17,6 +17,7 @@ from app.models.tarea_pendiente import TareaPendiente
 from app.models.matriz_prioridad import MatrizPrioridad
 from app.models.respuesta_rapida import RespuestaRapida
 from app.models.punto_venta import PuntoVenta
+from app.models.evento_calendario import EventoCalendario
 
 __all__ = [
     "EstadoTicket",
@@ -36,4 +37,5 @@ __all__ = [
     "MatrizPrioridad",
     "RespuestaRapida",
     "PuntoVenta",
+    "EventoCalendario",
 ]

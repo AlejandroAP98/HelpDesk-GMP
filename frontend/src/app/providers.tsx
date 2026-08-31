@@ -6,6 +6,8 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useAuthStore } from "@/store/authStore";
 import { useUrgentStore } from "@/store/urgentStore";
 import { useWsTicketStore, type WsTicketEvent } from "@/store/wsTicketStore";
+import { useActividadStore } from "@/store/actividadStore";
+import type { ActividadLog } from "@/lib/endpoints";
 
 function WebSocketListener() {
   const token = useAuthStore((s) => s.token);
@@ -13,6 +15,7 @@ function WebSocketListener() {
   const addAlert = useUrgentStore((s) => s.addAlert);
   const setSend = useWsTicketStore((s) => s.setSend);
   const dispatch = useWsTicketStore((s) => s.dispatch);
+  const addActividad = useActividadStore((s) => s.addNewItem);
   const wsUrl =
     process.env.NEXT_PUBLIC_WS_URL ||
     (typeof window !== "undefined"
@@ -208,6 +211,11 @@ function WebSocketListener() {
               comentario_usuario: cm.usuario_nombre,
             });
           }
+        }
+      } else if (ev.type === "actividad:nueva") {
+        const actividad = (ev as unknown as { actividad: ActividadLog }).actividad;
+        if (actividad) {
+          addActividad(actividad);
         }
       }
     },
