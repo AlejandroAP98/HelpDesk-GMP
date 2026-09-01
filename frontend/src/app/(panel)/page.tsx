@@ -257,6 +257,12 @@ export default function PanelHomePage() {
           {(usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") && (
             <ActividadPanel items={actividadItems} />
           )}
+          {esCliente && (
+            <>
+              <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Solucionados esta semana</p>
+              <p className="text-5xl font-bold text-grayCustom animate-fade-in">{graficas?.cerrados_semana ?? 0}</p>
+            </>
+          )}
         </div>
         <div className="flex flex-col items-center justify-center bg-gray-50 rounded-2xl p-4">
           <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2">Tickets pendientes por estado</p>
