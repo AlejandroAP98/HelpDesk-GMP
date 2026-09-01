@@ -14,6 +14,7 @@ import html
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -122,7 +123,10 @@ async def enviar_recordatorios_eventos() -> int:
 
                 titulo_esc = html.escape(titulo or "")
                 descripcion_esc = html.escape(descripcion) if descripcion else None
-                fecha_str = fecha_inicio.strftime("%d/%m/%Y %H:%M")
+                
+                # Convertir fecha UTC a zona horaria local (America/Bogota)
+                fecha_local = fecha_inicio.astimezone(ZoneInfo("America/Bogota"))
+                fecha_str = fecha_local.strftime("%d/%m/%Y %H:%M")
 
                 html_mail = f"""
                 <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e2e8f0;">
