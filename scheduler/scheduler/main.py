@@ -136,7 +136,7 @@ async def enviar_recordatorios_eventos() -> int:
                         <tr><td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Evento:</td><td style="padding: 10px 0; text-align: right;"><strong style="color: #111827;">{titulo_esc}</strong></td></tr>
                         <tr><td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Fecha y hora:</td><td style="padding: 10px 0; text-align: right;">{fecha_str}</td></tr>
                     </table>
-                    {f'<p style="color: #374151; font-size: 14px;">{descripcion_esc}</p>' if descripcion_esc else ''}
+                    {f'<div style="margin-top: 20px; padding: 15px; background-color: #f9fafb; border-radius: 8px; border-left: 3px solid #007991;"><p style="color: #6b7280; font-size: 12px; font-weight: 500; margin: 0 0 8px 0;">Descripción:</p><p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{descripcion_esc}</p></div>' if descripcion_esc else ''}
                 </div>
                 """
 
