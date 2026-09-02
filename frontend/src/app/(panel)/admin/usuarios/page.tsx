@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { adminApi, empresaApi, type Empresa, type Pagina } from "@/lib/endpoints";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { adminApi, empresaApi, type Empresa } from "@/lib/endpoints";
 import type { Usuario, Rol } from "@/store/authStore";
+import { useCrudPage } from "@/hooks/useCrudPage";
+import { extractApiError } from "@/lib/errors";
 import { DataTable } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -11,10 +13,9 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AddUserIcon from "@/app/assets/icons/AddUserIcon";
-import { extractApiError } from "@/lib/errors";
 
 const ROLES: { value: string; label: string }[] = [
   { value: "cliente", label: "Cliente" },
@@ -38,24 +39,63 @@ interface UsuarioForm {
   empresa_id: number | null;
 }
 
-const formVacio: UsuarioForm = { nombre: "", email: "", password: "", rol: "cliente", empresa_id: null };
-
 export default function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
   const [filtroRol, setFiltroRol] = useState("");
   const [filtroEmpresa, setFiltroEmpresa] = useState("");
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<Usuario | null>(null);
-  const [form, setForm] = useState<UsuarioForm>(formVacio);
-  const [guardando, setGuardando] = useState(false);
-  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const filtros = useMemo(() => {
+    const f: Record<string, unknown> = {};
+    if (filtroRol) f.rol = filtroRol;
+    if (filtroEmpresa) f.empresa_id = Number(filtroEmpresa);
+    return f;
+  }, [filtroRol, filtroEmpresa]);
+
+  const crud = useCrudPage<Usuario, UsuarioForm, string>({
+    listar: (params) => adminApi.listarUsuarios(params),
+    crear: (form) =>
+      adminApi.crearUsuario({
+        nombre: form.nombre.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        rol: form.rol,
+        empresa_id: form.empresa_id,
+      }),
+    actualizar: (item, form) => {
+      const data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string } = {};
+      if (form.nombre.trim()) data.nombre = form.nombre.trim();
+      if (form.email.trim()) data.email = form.email.trim();
+      if (form.rol) data.rol = form.rol;
+      if (form.empresa_id !== null && form.empresa_id !== undefined) data.empresa_id = form.empresa_id;
+      if (form.password) data.password = form.password;
+      return adminApi.actualizarUsuario(item.id, data);
+    },
+    eliminar: (item) => adminApi.eliminarUsuario(item.id),
+    keyOf: (item) => item.id,
+    emptyForm: () => ({ nombre: "", email: "", password: "", rol: "cliente", empresa_id: null }),
+    toForm: (item) => ({
+      nombre: item.nombre,
+      email: item.email,
+      password: "",
+      rol: item.rol,
+      empresa_id: item.empresa_id,
+    }),
+    filtros,
+    errorFrom: extractApiError,
+    confirmarEliminar: () => confirm("¿Eliminar este usuario?"),
+    mensajes: {
+      cargar: "No se pudieron cargar los usuarios",
+      guardar: "Error al guardar",
+      eliminar: "No se pudo eliminar el usuario",
+    },
+  });
+  const {
+    items: usuarios, cargando, error, setError,
+    page, totalPages, setPage,
+    modalOpen, editando, form, setForm,
+    guardando, eliminandoKey,
+    abrirCrear, abrirEditar, cerrarModal, guardar, eliminar,
+  } = crud;
 
   const cargarEmpresas = useCallback(async () => {
     try {
@@ -65,100 +105,26 @@ export default function UsuariosPage() {
       console.error(e);
       setError("No se pudieron cargar las empresas");
     }
-  }, []);
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const params: Record<string, unknown> = { page, size: 15 };
-      if (filtroRol) params.rol = filtroRol;
-      if (filtroEmpresa) params.empresa_id = Number(filtroEmpresa);
-      const res: Pagina<Usuario> = await adminApi.listarUsuarios(params);
-      setUsuarios(res.items);
-      setTotalPages(res.pages);
-    } catch {
-      setError("No se pudieron cargar los usuarios");
-    } finally {
-      setCargando(false);
-    }
-  }, [page, filtroRol, filtroEmpresa]);
+  }, [setError]);
 
   useEffect(() => {
     cargarEmpresas();
   }, [cargarEmpresas]);
 
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
   const setField = <K extends keyof UsuarioForm>(key: K, value: UsuarioForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const abrirCrear = () => {
-    setEditando(null);
-    setForm(formVacio);
-    setModalOpen(true);
-  };
-
-  const abrirEditar = (u: Usuario) => {
-    setEditando(u);
-    setForm({
-      nombre: u.nombre,
-      email: u.email,
-      password: "",
-      rol: u.rol,
-      empresa_id: u.empresa_id,
-    });
-    setModalOpen(true);
-  };
-
-  const guardar = async () => {
+  const onGuardar = () => {
     if (guardando) return;
     if (!form.nombre.trim() || !form.email.trim()) return;
     if (!editando && !form.password) return;
-    setGuardando(true);
-    setError(null);
-    try {
-      if (editando) {
-        const data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string } = {};
-        if (form.nombre.trim()) data.nombre = form.nombre.trim();
-        if (form.email.trim()) data.email = form.email.trim();
-        if (form.rol) data.rol = form.rol;
-        if (form.empresa_id !== null && form.empresa_id !== undefined) data.empresa_id = form.empresa_id;
-        if (form.password) data.password = form.password;
-        await adminApi.actualizarUsuario(editando.id, data);
-      } else {
-        await adminApi.crearUsuario({
-          nombre: form.nombre.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          rol: form.rol,
-          empresa_id: form.empresa_id,
-        });
-      }
-      setModalOpen(false);
-      await cargar();
-    } catch (err: unknown) {
-      setError(extractApiError(err, "Error al guardar"));
-    } finally {
-      setGuardando(false);
-    }
+    guardar();
   };
 
-  const eliminar = async (id: string) => {
-    if (eliminandoId) return;
-    if (!confirm("¿Eliminar este usuario?")) return;
-    setEliminandoId(id);
-    setError(null);
-    try {
-      await adminApi.eliminarUsuario(id);
-      await cargar();
-    } catch (err: unknown) {
-      setError(extractApiError(err, "No se pudo eliminar el usuario"));
-    } finally {
-      setEliminandoId(null);
-    }
+  const onEliminar = (u: Usuario) => {
+    if (eliminandoKey) return;
+    eliminar(u);
   };
 
   const empresaOptions = empresas.map((e) => ({ value: String(e.id), label: e.nombre }));
@@ -248,8 +214,8 @@ export default function UsuariosPage() {
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={() => eliminar(u.id)}
-                      loading={eliminandoId === u.id}
+                      onClick={() => onEliminar(u)}
+                      loading={eliminandoKey === u.id}
                       className="py-1.5 sm:py-2 sm:text-[11px] text-[9px] px-3 text-xs bg-redCustom/90 hover:bg-redCustom"
                     >
                       Eliminar
@@ -271,63 +237,59 @@ export default function UsuariosPage() {
         </>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editando ? "Editar usuario" : "Nuevo usuario"}
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="Nombre"
-                value={form.nombre}
-                onChange={(e) => setField("nombre", e.target.value)}
-                placeholder="Nombre completo"
-                autoFocus
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
-                placeholder="correo@ejemplo.com"
-              />
-              <Input
-                label={editando ? "Nueva contraseña (dejar vacío para no cambiar)" : "Contraseña"}
-                type="password"
-                value={form.password}
-                onChange={(e) => setField("password", e.target.value)}
-                placeholder="••••••••"
-              />
-              <Select
-                label="Rol"
-                value={form.rol}
-                onChange={(e) => setField("rol", e.target.value as Rol)}
-                options={ROLES}
-              />
-              <Select
-                label="Empresa"
-                value={form.empresa_id !== null ? String(form.empresa_id) : ""}
-                onChange={(e) => setField("empresa_id", e.target.value ? Number(e.target.value) : null)}
-                options={empresaOptions}
-                placeholder="Sin empresa"
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={guardar}
-                  loading={guardando}
-                  disabled={!form.nombre.trim() || !form.email.trim() || (!editando && !form.password)}
-                >
-                  {editando ? "Guardar cambios" : "Crear usuario"}
-                </Button>
-              </div>
-            </div>
-          </Card>
+      <Modal open={modalOpen}>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editando ? "Editar usuario" : "Nuevo usuario"}
+        </h2>
+        <div className="space-y-4">
+          <Input
+            label="Nombre"
+            value={form.nombre}
+            onChange={(e) => setField("nombre", e.target.value)}
+            placeholder="Nombre completo"
+            autoFocus
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setField("email", e.target.value)}
+            placeholder="correo@ejemplo.com"
+          />
+          <Input
+            label={editando ? "Nueva contraseña (dejar vacío para no cambiar)" : "Contraseña"}
+            type="password"
+            value={form.password}
+            onChange={(e) => setField("password", e.target.value)}
+            placeholder="••••••••"
+          />
+          <Select
+            label="Rol"
+            value={form.rol}
+            onChange={(e) => setField("rol", e.target.value as Rol)}
+            options={ROLES}
+          />
+          <Select
+            label="Empresa"
+            value={form.empresa_id !== null ? String(form.empresa_id) : ""}
+            onChange={(e) => setField("empresa_id", e.target.value ? Number(e.target.value) : null)}
+            options={empresaOptions}
+            placeholder="Sin empresa"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={cerrarModal}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={onGuardar}
+              loading={guardando}
+              disabled={!form.nombre.trim() || !form.email.trim() || (!editando && !form.password)}
+            >
+              {editando ? "Guardar cambios" : "Crear usuario"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

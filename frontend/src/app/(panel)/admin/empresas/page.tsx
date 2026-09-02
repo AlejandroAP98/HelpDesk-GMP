@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { empresaApi, type Empresa } from "@/lib/endpoints";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { DataTable } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -9,85 +9,38 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AddFactoryIcon from "@/app/assets/icons/AddFactoryIcon";
 
+interface EmpresaForm {
+  nombre: string;
+}
+
 export default function EmpresasPage() {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<Empresa | null>(null);
-  const [nombre, setNombre] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const res = await empresaApi.listar({ page, size: 15 });
-      setEmpresas(res.items);
-      setTotalPages(res.pages);
-    } catch {
-      setError("No se pudieron cargar las empresas");
-    } finally {
-      setCargando(false);
-    }
-  }, [page]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  const abrirCrear = () => {
-    setEditando(null);
-    setNombre("");
-    setModalOpen(true);
-  };
-
-  const abrirEditar = (e: Empresa) => {
-    setEditando(e);
-    setNombre(e.nombre);
-    setModalOpen(true);
-  };
-
-  const guardar = async () => {
-    if (!nombre.trim()) return;
-    setGuardando(true);
-    setError(null);
-    try {
-      if (editando) {
-        await empresaApi.actualizar(editando.id, { nombre: nombre.trim() });
-      } else {
-        await empresaApi.crear({ nombre: nombre.trim() });
-      }
-      setModalOpen(false);
-      await cargar();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al guardar";
-      setError(msg);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar esta empresa? Los usuarios asociados perderán la referencia.")) return;
-    setEliminandoId(id);
-    setError(null);
-    try {
-      await empresaApi.eliminar(id);
-      await cargar();
-    } catch {
-      setError("No se pudo eliminar. Verifique que no tenga usuarios asociados.");
-    } finally {
-      setEliminandoId(null);
-    }
-  };
+  const crud = useCrudPage<Empresa, EmpresaForm, number>({
+    listar: (params) => empresaApi.listar(params),
+    crear: (form) => empresaApi.crear({ nombre: form.nombre.trim() }),
+    actualizar: (item, form) => empresaApi.actualizar(item.id, { nombre: form.nombre.trim() }),
+    eliminar: (item) => empresaApi.eliminar(item.id),
+    keyOf: (item) => item.id,
+    emptyForm: () => ({ nombre: "" }),
+    toForm: (item) => ({ nombre: item.nombre }),
+    confirmarEliminar: () =>
+      confirm("¿Eliminar esta empresa? Los usuarios asociados perderán la referencia."),
+    mensajes: {
+      cargar: "No se pudieron cargar las empresas",
+      guardar: "Error al guardar",
+      eliminar: "No se pudo eliminar. Verifique que no tenga usuarios asociados.",
+    },
+  });
+  const {
+    items: empresas, cargando, error,
+    page, totalPages, setPage,
+    modalOpen, editando, form, setForm,
+    guardando, eliminandoKey,
+    abrirCrear, abrirEditar, cerrarModal, guardar, eliminar,
+  } = crud;
 
   return (
     <div className="space-y-5">
@@ -136,8 +89,8 @@ export default function EmpresasPage() {
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={() => eliminar(e.id)}
-                      loading={eliminandoId === e.id}
+                      onClick={() => eliminar(e)}
+                      loading={eliminandoKey === e.id}
                       className="py-1.5 sm:py-2 sm:text-[11px] text-[9px] px-3 text-xs bg-redCustom/90 hover:bg-redCustom"
                     >
                       Eliminar
@@ -159,32 +112,28 @@ export default function EmpresasPage() {
         </>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editando ? "Editar empresa" : "Nueva empresa"}
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="Nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Nombre de la empresa"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={guardar} loading={guardando} disabled={!nombre.trim()}>
-                  {editando ? "Guardar cambios" : "Crear empresa"}
-                </Button>
-              </div>
-            </div>
-          </Card>
+      <Modal open={modalOpen}>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editando ? "Editar empresa" : "Nueva empresa"}
+        </h2>
+        <div className="space-y-4">
+          <Input
+            label="Nombre"
+            value={form.nombre}
+            onChange={(e) => setForm({ nombre: e.target.value })}
+            placeholder="Nombre de la empresa"
+            autoFocus
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={cerrarModal}>
+              Cancelar
+            </Button>
+            <Button onClick={guardar} loading={guardando} disabled={!form.nombre.trim()}>
+              {editando ? "Guardar cambios" : "Crear empresa"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

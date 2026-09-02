@@ -4,20 +4,19 @@ import { useEffect, useState, useCallback } from "react";
 import {
   categoriaApi,
   subcategoriaApi,
-  matrizPrioridadApi,
   type Categoria,
   type Subcategoria,
-  type MatrizPrioridadEntry,
   type ElementoInfraestructura,
   type PrioridadTicket,
 } from "@/lib/endpoints";
+import { useMatrizPrioridad } from "@/hooks/useMatrizPrioridad";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AddCagoryIcon from "@/app/assets/icons/AddCagoryIcon";
 import AddSubCategoryIcon from "@/app/assets/icons/AddSubCategoryIcon";
@@ -36,8 +35,6 @@ const PRIORIDADES: { value: PrioridadTicket; label: string; color: string }[] = 
   { value: "urgente", label: "Urgente", color: "bg-red-100 text-red-700" },
 ];
 
-type MatrizGrid = Record<number, Record<ElementoInfraestructura, PrioridadTicket>>;
-
 export default function CategoriasPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -49,10 +46,10 @@ export default function CategoriasPage() {
   const [subcategorias, setSubcategorias] = useState<Subcategoria[]>([]);
   const [cargandoSubs, setCargandoSubs] = useState(false);
 
-  const [matriz, setMatriz] = useState<MatrizGrid>({});
-  const [matrizOriginal, setMatrizOriginal] = useState<MatrizGrid>({});
-  const [guardandoMatriz, setGuardandoMatriz] = useState(false);
-  const [matrizModificada, setMatrizModificada] = useState(false);
+  const {
+    matriz, guardandoMatriz, matrizModificada,
+    cargarMatriz, limpiarMatriz, setPrioridadCelda, guardarMatriz,
+  } = useMatrizPrioridad();
 
   const [modalCatOpen, setModalCatOpen] = useState(false);
   const [editandoCat, setEditandoCat] = useState<Categoria | null>(null);
@@ -86,32 +83,11 @@ export default function CategoriasPage() {
     cargar();
   }, [cargar]);
 
-  const cargarMatriz = async (catId: number) => {
-    try {
-      const entries = await matrizPrioridadApi.listarPorCategoria(catId);
-      const grid: MatrizGrid = {};
-      for (const e of entries) {
-        if (!grid[e.subcategoria_id]) {
-          grid[e.subcategoria_id] = {} as Record<ElementoInfraestructura, PrioridadTicket>;
-        }
-        grid[e.subcategoria_id][e.elemento] = e.prioridad;
-      }
-      setMatriz(grid);
-      setMatrizOriginal(JSON.parse(JSON.stringify(grid)));
-      setMatrizModificada(false);
-    } catch {
-      setMatriz({});
-      setMatrizOriginal({});
-    }
-  };
-
   const toggleExpandir = async (catId: number) => {
     if (expandida === catId) {
       setExpandida(null);
       setSubcategorias([]);
-      setMatriz({});
-      setMatrizOriginal({});
-      setMatrizModificada(false);
+      limpiarMatriz();
       return;
     }
     setExpandida(catId);
@@ -129,41 +105,13 @@ export default function CategoriasPage() {
     }
   };
 
-  const setPrioridadCelda = (
-    subId: number,
-    elemento: ElementoInfraestructura,
-    prioridad: PrioridadTicket
-  ) => {
-    setMatriz((prev) => {
-      const next = { ...prev };
-      if (!next[subId]) {
-        next[subId] = {} as Record<ElementoInfraestructura, PrioridadTicket>;
-      }
-      next[subId] = { ...next[subId], [elemento]: prioridad };
-      return next;
-    });
-    setMatrizModificada(true);
-  };
-
-  const guardarMatriz = async () => {
+  const onGuardarMatriz = async () => {
     if (!expandida) return;
-    setGuardandoMatriz(true);
     setError(null);
     try {
-      const items: { subcategoria_id: number; elemento: ElementoInfraestructura; prioridad: PrioridadTicket }[] = [];
-      for (const subId of Object.keys(matriz).map(Number)) {
-        const row = matriz[subId];
-        for (const elem of Object.keys(row) as ElementoInfraestructura[]) {
-          items.push({ subcategoria_id: subId, elemento: elem, prioridad: row[elem] });
-        }
-      }
-      await matrizPrioridadApi.sincronizarCategoria(expandida, items);
-      setMatrizOriginal(JSON.parse(JSON.stringify(matriz)));
-      setMatrizModificada(false);
+      await guardarMatriz(expandida);
     } catch {
       setError("Error al guardar la matriz de prioridad");
-    } finally {
-      setGuardandoMatriz(false);
     }
   };
 
@@ -216,8 +164,7 @@ export default function CategoriasPage() {
       if (expandida === id) {
         setExpandida(null);
         setSubcategorias([]);
-        setMatriz({});
-        setMatrizOriginal({});
+        limpiarMatriz();
       }
       await cargar();
     } catch {
@@ -403,7 +350,7 @@ export default function CategoriasPage() {
                             </h4>
                             {matrizModificada && (
                               <Button
-                                onClick={guardarMatriz}
+                                onClick={onGuardarMatriz}
                                 loading={guardandoMatriz}
                                 className="text-xs py-1.5 px-3"
                               >
@@ -477,71 +424,63 @@ export default function CategoriasPage() {
         </>
       )}
 
-      {modalCatOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editandoCat ? "Editar categoría" : "Nueva categoría"}
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="Nombre"
-                value={catNombre}
-                onChange={(e) => setCatNombre(e.target.value)}
-                placeholder="Nombre de la categoría"
-                autoFocus
-              />
-              <Input
-                label="Descripción (opcional)"
-                value={catDesc}
-                onChange={(e) => setCatDesc(e.target.value)}
-                placeholder="Descripción breve"
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setModalCatOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={guardarCat} loading={guardandoCat} disabled={!catNombre.trim()}>
-                  {editandoCat ? "Guardar cambios" : "Crear categoría"}
-                </Button>
-              </div>
-            </div>
-          </Card>
+      <Modal open={modalCatOpen}>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editandoCat ? "Editar categoría" : "Nueva categoría"}
+        </h2>
+        <div className="space-y-4">
+          <Input
+            label="Nombre"
+            value={catNombre}
+            onChange={(e) => setCatNombre(e.target.value)}
+            placeholder="Nombre de la categoría"
+            autoFocus
+          />
+          <Input
+            label="Descripción (opcional)"
+            value={catDesc}
+            onChange={(e) => setCatDesc(e.target.value)}
+            placeholder="Descripción breve"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setModalCatOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={guardarCat} loading={guardandoCat} disabled={!catNombre.trim()}>
+              {editandoCat ? "Guardar cambios" : "Crear categoría"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
 
-      {modalSubOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editandoSub ? "Editar subcategoría" : "Nueva subcategoría"}
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="Nombre"
-                value={subNombre}
-                onChange={(e) => setSubNombre(e.target.value)}
-                placeholder="Nombre de la subcategoría"
-                autoFocus
-              />
-              <Input
-                label="Descripción (opcional)"
-                value={subDesc}
-                onChange={(e) => setSubDesc(e.target.value)}
-                placeholder="Descripción breve"
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setModalSubOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={guardarSub} loading={guardandoSub} disabled={!subNombre.trim()}>
-                  {editandoSub ? "Guardar cambios" : "Crear subcategoría"}
-                </Button>
-              </div>
-            </div>
-          </Card>
+      <Modal open={modalSubOpen}>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editandoSub ? "Editar subcategoría" : "Nueva subcategoría"}
+        </h2>
+        <div className="space-y-4">
+          <Input
+            label="Nombre"
+            value={subNombre}
+            onChange={(e) => setSubNombre(e.target.value)}
+            placeholder="Nombre de la subcategoría"
+            autoFocus
+          />
+          <Input
+            label="Descripción (opcional)"
+            value={subDesc}
+            onChange={(e) => setSubDesc(e.target.value)}
+            placeholder="Descripción breve"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setModalSubOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={guardarSub} loading={guardandoSub} disabled={!subNombre.trim()}>
+              {editandoSub ? "Guardar cambios" : "Crear subcategoría"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-interface Column<T> {
+export interface Column<T> {
   key: string;
   header: string;
   cell: (row: T) => ReactNode;

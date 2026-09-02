@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { puntoVentaApi, empresaApi, type PuntoVenta, type Empresa, type Pagina } from "@/lib/endpoints";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { puntoVentaApi, empresaApi, type PuntoVenta, type Empresa } from "@/lib/endpoints";
+import { useCrudPage } from "@/hooks/useCrudPage";
 import { DataTable } from "@/components/ui/Table";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -10,45 +11,74 @@ import { ErrorMessage } from "@/components/ui/ErrorMessage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AddSedeIcon from "@/app/assets/icons/AddSedeIcon";
 
+interface PuntoVentaForm {
+  empresaId: number | null;
+  nombre: string;
+  direccion: string;
+  ciudad: string;
+  activo: boolean;
+}
+
 export default function PuntosVentaPage() {
-  const [data, setData] = useState<Pagina<PuntoVenta> | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [filtroEmpresa, setFiltroEmpresa] = useState<number | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaDebounced, setBusquedaDebounced] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<PuntoVenta | null>(null);
-  const [nombre, setNombre] = useState("");
-  const [empresaId, setEmpresaId] = useState<number | null>(null);
-  const [direccion, setDireccion] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [activo, setActivo] = useState(true);
-  const [guardando, setGuardando] = useState(false);
-  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
+  const filtros = useMemo(() => {
+    const f: Record<string, unknown> = {};
+    if (filtroEmpresa) f.empresa_id = filtroEmpresa;
+    if (busquedaDebounced.length >= 2) f.q = busquedaDebounced;
+    return f;
+  }, [filtroEmpresa, busquedaDebounced]);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const params: Record<string, unknown> = { page, size: 15 };
-      if (filtroEmpresa) params.empresa_id = filtroEmpresa;
-      if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
-      const res = await puntoVentaApi.listar(params);
-      setData(res);
-    } catch {
-      setError("No se pudieron cargar los puntos de venta");
-    } finally {
-      setCargando(false);
-    }
-  }, [page, filtroEmpresa, busquedaDebounced]);
+  const crud = useCrudPage<PuntoVenta, PuntoVentaForm, number>({
+    listar: (params) => puntoVentaApi.listar(params),
+    crear: (form) =>
+      puntoVentaApi.crear({
+        empresa_id: form.empresaId!,
+        nombre: form.nombre.trim(),
+        direccion: form.direccion.trim() || undefined,
+        ciudad: form.ciudad.trim() || undefined,
+      }),
+    actualizar: (item, form) =>
+      puntoVentaApi.actualizar(item.id, {
+        nombre: form.nombre.trim(),
+        direccion: form.direccion.trim() || undefined,
+        ciudad: form.ciudad.trim() || undefined,
+        activo: form.activo,
+      }),
+    eliminar: (item) => puntoVentaApi.eliminar(item.id),
+    keyOf: (item) => item.id,
+    emptyForm: () => ({ empresaId: null, nombre: "", direccion: "", ciudad: "", activo: true }),
+    toForm: (item) => ({
+      empresaId: item.empresa_id,
+      nombre: item.nombre,
+      direccion: item.direccion || "",
+      ciudad: item.ciudad || "",
+      activo: item.activo,
+    }),
+    filtros,
+    confirmarEliminar: () => confirm("¿Eliminar este punto de venta?"),
+    mensajes: {
+      cargar: "No se pudieron cargar los puntos de venta",
+      guardar: "Error al guardar",
+      eliminar: "No se pudo eliminar.",
+    },
+  });
+  const {
+    cargando, error,
+    page, totalPages, setPage,
+    modalOpen, editando, form, setForm,
+    guardando, eliminandoKey,
+    abrirCrear, abrirEditar, cerrarModal, guardar, eliminar,
+  } = crud;
+  const items = crud.items;
 
   useEffect(() => {
     empresaApi.listar({ size: 100 }).then((r) => setEmpresas(r.items)).catch(() => {});
@@ -61,74 +91,15 @@ export default function PuntosVentaPage() {
       setPage(1);
     }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [busqueda]);
+  }, [busqueda, setPage]);
 
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  const abrirCrear = () => {
-    setEditando(null);
-    setNombre("");
-    setEmpresaId(null);
-    setDireccion("");
-    setCiudad("");
-    setActivo(true);
-    setModalOpen(true);
+  const setField = <K extends keyof PuntoVentaForm>(key: K, value: PuntoVentaForm[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const abrirEditar = (pv: PuntoVenta) => {
-    setEditando(pv);
-    setNombre(pv.nombre);
-    setEmpresaId(pv.empresa_id);
-    setDireccion(pv.direccion || "");
-    setCiudad(pv.ciudad || "");
-    setActivo(pv.activo);
-    setModalOpen(true);
-  };
-
-  const guardar = async () => {
-    if (!nombre.trim() || !empresaId) return;
-    setGuardando(true);
-    setError(null);
-    try {
-      if (editando) {
-        await puntoVentaApi.actualizar(editando.id, {
-          nombre: nombre.trim(),
-          direccion: direccion.trim() || undefined,
-          ciudad: ciudad.trim() || undefined,
-          activo,
-        });
-      } else {
-        await puntoVentaApi.crear({
-          empresa_id: empresaId,
-          nombre: nombre.trim(),
-          direccion: direccion.trim() || undefined,
-          ciudad: ciudad.trim() || undefined,
-        });
-      }
-      setModalOpen(false);
-      await cargar();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al guardar";
-      setError(msg);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar este punto de venta?")) return;
-    setEliminandoId(id);
-    setError(null);
-    try {
-      await puntoVentaApi.eliminar(id);
-      await cargar();
-    } catch {
-      setError("No se pudo eliminar.");
-    } finally {
-      setEliminandoId(null);
-    }
+  const onGuardar = () => {
+    if (!form.nombre.trim() || !form.empresaId) return;
+    guardar();
   };
 
   return (
@@ -178,9 +149,9 @@ export default function PuntosVentaPage() {
 
       {error && <ErrorMessage message={error} />}
 
-      {cargando || !data ? (
+      {cargando ? (
         <LoadingState />
-      ) : data.items.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState message="No hay puntos de venta registrados." />
       ) : (
         <>
@@ -240,8 +211,8 @@ export default function PuntosVentaPage() {
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={() => eliminar(pv.id)}
-                      loading={eliminandoId === pv.id}
+                      onClick={() => eliminar(pv)}
+                      loading={eliminandoKey === pv.id}
                       className="py-1.5 sm:py-2 sm:text-[11px] text-[9px] px-3 text-xs bg-redCustom/90 hover:bg-redCustom"
                     >
                       Eliminar
@@ -250,76 +221,72 @@ export default function PuntosVentaPage() {
                 ),
               },
             ]}
-            data={data.items}
+            data={items}
             keyExtractor={(pv: PuntoVenta) => String(pv.id)}
             minWidth="min-w-[700px]"
           />
           <Pagination
             page={page}
-            totalPages={data.pages}
+            totalPages={totalPages}
             onPrev={() => setPage((p) => Math.max(1, p - 1))}
             onNext={() => setPage((p) => p + 1)}
           />
         </>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md mx-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {editando ? "Editar punto de venta" : "Nuevo punto de venta"}
-            </h2>
-            <div className="space-y-4">
-              <Select
-                label="Empresa"
-                value={empresaId ? String(empresaId) : ""}
-                onChange={(e) => setEmpresaId(Number(e.target.value) || null)}
-                placeholder="Seleccione..."
-                disabled={!!editando}
-                options={empresas.map((e) => ({ value: String(e.id), label: e.nombre }))}
+      <Modal open={modalOpen}>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editando ? "Editar punto de venta" : "Nuevo punto de venta"}
+        </h2>
+        <div className="space-y-4">
+          <Select
+            label="Empresa"
+            value={form.empresaId ? String(form.empresaId) : ""}
+            onChange={(e) => setField("empresaId", Number(e.target.value) || null)}
+            placeholder="Seleccione..."
+            disabled={!!editando}
+            options={empresas.map((e) => ({ value: String(e.id), label: e.nombre }))}
+          />
+          <Input
+            label="Nombre"
+            value={form.nombre}
+            onChange={(e) => setField("nombre", e.target.value)}
+            placeholder="Nombre del punto de venta"
+            autoFocus
+          />
+          <Input
+            label="Ciudad"
+            value={form.ciudad}
+            onChange={(e) => setField("ciudad", e.target.value)}
+            placeholder="Ej: Bucaramanga"
+          />
+          <Input
+            label="Direccion"
+            value={form.direccion}
+            onChange={(e) => setField("direccion", e.target.value)}
+            placeholder="Direccion completa"
+          />
+          {editando && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.activo}
+                onChange={(e) => setField("activo", e.target.checked)}
+                className="rounded border-gray-300 text-brand-600 focus:ring-brandCustom"
               />
-              <Input
-                label="Nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Nombre del punto de venta"
-                autoFocus
-              />
-              <Input
-                label="Ciudad"
-                value={ciudad}
-                onChange={(e) => setCiudad(e.target.value)}
-                placeholder="Ej: Bucaramanga"
-              />
-              <Input
-                label="Direccion"
-                value={direccion}
-                onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Direccion completa"
-              />
-              {editando && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={activo}
-                    onChange={(e) => setActivo(e.target.checked)}
-                    className="rounded border-gray-300 text-brand-600 focus:ring-brandCustom"
-                  />
-                  <span className="text-sm text-gray-700">Activo</span>
-                </label>
-              )}
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={() => setModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={guardar} loading={guardando} disabled={!nombre.trim() || !empresaId}>
-                  {editando ? "Guardar cambios" : "Crear punto"}
-                </Button>
-              </div>
-            </div>
-          </Card>
+              <span className="text-sm text-gray-700">Activo</span>
+            </label>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={cerrarModal}>
+              Cancelar
+            </Button>
+            <Button onClick={onGuardar} loading={guardando} disabled={!form.nombre.trim() || !form.empresaId}>
+              {editando ? "Guardar cambios" : "Crear punto"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

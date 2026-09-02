@@ -25,8 +25,15 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
         <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
           {ticket.elemento_afectado.replace("_", " ") || "Elemento Desconocido"}
         </span>
-        <span className={` ${!ticket.agente_nombre ? "text-red-500" : "text-white"} uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit`}>
-          {ticket.agente_nombre || "SIN ASIGNAR"}
+        <span className="text-[10px] text-white pr-2">
+          {new Date(ticket.fecha_creacion).toLocaleString(undefined, {
+            timeZone: "America/Bogota", hour12: false,
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       </div>
       <div className="h-full space-y-1 flex-1 px-4">
@@ -38,7 +45,7 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
           >
             {ticket.titulo}
           </Link>
-          <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[9px]">#{ticket.id.split("-")[0]}</span>
+            <span className="text-gray-500 uppercase transition-colors line-clamp-2 text-[10px]">#{ticket.id.split("-")[0]}</span>
         </div>
         <div className="flex flex-col text-start h-full w-full pb-2">
           <span className="text-gray-500 transition-colors line-clamp-2 text-xs">
@@ -52,15 +59,8 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
           <PrioridadBadge prioridad={ticket.prioridad} estado={ticket.estado} />
         </div>
         <div className="flex items-center gap-1">
-          <span className="font-mono text-[10px] text-gray-500">
-            {new Date(ticket.fecha_creacion).toLocaleString(undefined, {
-              timeZone: "America/Bogota",
-              day: "2-digit",
-              month: "2-digit",
-              year: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+          <span className={` ${!ticket.agente_nombre ? "text-redCustom" : "text-brandCustom"} uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit`}>
+            {ticket.agente_nombre || "SIN ASIGNAR"}
           </span>
         </div>
       </div>

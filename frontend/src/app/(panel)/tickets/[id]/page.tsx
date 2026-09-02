@@ -1,31 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { useWsTicketStore } from "@/store/wsTicketStore";
 import {
-  adjuntoApi,
-  comentarioApi,
-  ticketApi,
-  adminApi,
-  type Adjunto,
   type Comentario,
-  type ElementoInfraestructura,
   type EstadoTicket,
   type HistorialEstado,
   type PrioridadTicket,
-  type Ticket,
+  type ElementoInfraestructura,
 } from "@/lib/endpoints";
-import type { Usuario } from "@/store/authStore";
+import { useTicketDetail } from "@/hooks/useTicketDetail";
+import { getTicketTimeline } from "@/lib/ticketTimeline";
 import { EstadoBadge, PrioridadBadge, PRIORIDADES, prioridadLabels, estadoStyles } from "@/components/Badges";
 import UserCommentsIcon from "@/app/assets/icons/UserCommentsIcon";
 import ChangeStatusIcon from "@/app/assets/icons/ChangeStatusIcon";
 import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
-import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { AdjuntosGallery } from "@/components/AdjuntosGallery";
 import { QuickReplies } from "@/components/QuickReplies";
+import { LoadMoreButton } from "@/components/ui/LoadMoreButton";
+import { CopyField } from "@/components/ui/CopyField";
 import BackIcon from "@/app/assets/icons/BackIcon";
 
 const elementoLabels: Record<ElementoInfraestructura, string> = {
@@ -35,326 +29,24 @@ const elementoLabels: Record<ElementoInfraestructura, string> = {
   punto_venta: "Punto de venta",
 };
 
-function formatDuration(ms: number): string {
-  const totalMin = Math.floor(ms / 60000);
-  const hours = Math.floor(totalMin / 60);
-  const minutes = totalMin % 60;
-  const days = Math.floor(hours / 24);
-  const remHours = hours % 24;
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (remHours > 0) parts.push(`${remHours}h`);
-  if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
-  return parts.join(" ");
-}
-
-function parseTicketDate(d: string | null | undefined): Date | null {
-  if (!d) return null;
-  const date = new Date(d);
-  return isNaN(date.getTime()) ? null : date;
-}
-
-interface TimeLineItem {
-  label: string;
-  subtitle: string;
-  date: Date | null;
-  duration?: string;
-  color: string;
-  dotColor: string;
-  icon: React.ReactNode;
-}
-
-function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
-  const creacion = parseTicketDate(ticket.fecha_creacion);
-  const asignacion = parseTicketDate(ticket.fecha_asignacion);
-  const primeraResp = parseTicketDate(ticket.fecha_primera_respuesta);
-  const resolucion = parseTicketDate(ticket.fecha_resolucion);
-
-  const fmt = (d: Date) => d.toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-
-  const items: TimeLineItem[] = [
-    {
-      label: "Ticket creado",
-      subtitle: creacion ? fmt(creacion) : "Pendiente",
-      date: creacion,
-      color: "bg-blue-500",
-      dotColor: "border-blue-500 text-blue-600 bg-blue-50",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-pencil-plus" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M4 20h4L18.5 9.5a2.828 2.828 0 1 0-4-4L4 16zm9.5-13.5 4 4M16 19h6m-3-3v6"/></svg>
-      ),
-    },
-    {
-      label: "Asignado a agente",
-      subtitle: asignacion ? fmt(asignacion) : "Sin asignar",
-      date: asignacion,
-      duration: creacion && asignacion ? formatDuration(asignacion.getTime() - creacion.getTime()) : undefined,
-      color: "bg-violet-500",
-      dotColor: asignacion ? "border-violet-500 text-violet-600 bg-violet-50" : "border-gray-300 text-gray-300 bg-gray-50",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-      ),
-    },
-    {
-      label: "Primera respuesta",
-      subtitle: primeraResp ? fmt(primeraResp) : "Sin respuesta",
-      date: primeraResp,
-      duration: creacion && primeraResp ? formatDuration(primeraResp.getTime() - creacion.getTime()) : undefined,
-      color: "bg-yellow-500",
-      dotColor: primeraResp ? "border-yellow-500 text-yellow-600 bg-yellow-50" : "border-gray-300 text-gray-300 bg-gray-50",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      ),
-    },
-    {
-      label: "Resuelto",
-      subtitle: resolucion ? fmt(resolucion) : "Sin resolver",
-      date: resolucion,
-      duration: creacion && resolucion ? formatDuration(resolucion.getTime() - creacion.getTime()) : undefined,
-      color: "bg-green-500",
-      dotColor: resolucion ? "border-green-500 text-green-600 bg-green-50" : "border-gray-300 text-gray-300 bg-gray-50",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      ),
-    },
-  ];
-  return items;
-}
-
 export default function TicketDetallePage() {
   const params = useParams();
   const router = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
   const ticketId = String(params.id);
 
-  const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
-  const setOnTicketCommented = useWsTicketStore((s) => s.setOnTicketCommented);
-
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [comentarios, setComentarios] = useState<Comentario[]>([]);
-  const [adjuntos, setAdjuntos] = useState<Adjunto[]>([]);
-  const [historial, setHistorial] = useState<HistorialEstado[]>([]);
-  const [nuevoComentario, setNuevoComentario] = useState("");
-  const [esNotaInterna, setEsNotaInterna] = useState(false);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [comentariosPage, setComentariosPage] = useState(1);
-  const [comentariosTotalPages, setComentariosTotalPages] = useState(1);
-  const [adjuntosPage, setAdjuntosPage] = useState(1);
-  const [adjuntosTotalPages, setAdjuntosTotalPages] = useState(1);
-  const [historialPage, setHistorialPage] = useState(1);
-  const [historialTotalPages, setHistorialTotalPages] = useState(1);
-  const [agentes, setAgentes] = useState<Usuario[]>([]);
-  const [agenteSel, setAgenteSel] = useState<string>("");
-  const [reasignando, setReasignando] = useState(false);
-  const [campoCopiado, setCampoCopiado] = useState<string | null>(null);
-
-  const handleCopiar = useCallback((campo: string, valor: string) => {
-    navigator.clipboard.writeText(valor);
-    setCampoCopiado(campo);
-    setTimeout(() => setCampoCopiado(null), 1500);
-  }, []);
-
-  const cargar = useCallback(async () => {
-    setError(null);
-    try {
-      const [t, cs, as, hs] = await Promise.all([
-        ticketApi.obtener(ticketId),
-        comentarioApi.listar(ticketId, { page: 1, size: 20 }),
-        adjuntoApi.listar(ticketId, { page: 1, size: 20 }),
-        ticketApi.historial(ticketId, { page: 1, size: 20 }),
-      ]);
-      setTicket(t);
-      setComentarios(cs.items);
-      setComentariosTotalPages(cs.pages);
-      setComentariosPage(1);
-      setAdjuntos(as.items);
-      setAdjuntosTotalPages(as.pages);
-      setAdjuntosPage(1);
-      setHistorial(hs.items);
-      setHistorialTotalPages(hs.pages);
-      setHistorialPage(1);
-    } catch {
-      setError("No se pudo cargar el ticket");
-    } finally {
-      setCargando(false);
-    }
-  }, [ticketId]);
-
-  const cargarMasComentarios = async () => {
-    const nextPage = comentariosPage + 1;
-    if (nextPage > comentariosTotalPages) return;
-    try {
-      const data = await comentarioApi.listar(ticketId, { page: nextPage, size: 20 });
-      setComentarios((prev) => [...prev, ...data.items]);
-      setComentariosPage(nextPage);
-      setComentariosTotalPages(data.pages);
-    } catch {
-      console.error("No se pudo cargar mas comentarios");
-    }
-  };
-
-  const cargarMasAdjuntos = async () => {
-    const nextPage = adjuntosPage + 1;
-    if (nextPage > adjuntosTotalPages) return;
-    try {
-      const data = await adjuntoApi.listar(ticketId, { page: nextPage, size: 20 });
-      setAdjuntos((prev) => [...prev, ...data.items]);
-      setAdjuntosPage(nextPage);
-      setAdjuntosTotalPages(data.pages);
-    } catch {
-      console.error("No se pudo cargar mas adjuntos");
-    }
-  };
-
-  const cargarMasHistorial = async () => {
-    const nextPage = historialPage + 1;
-    if (nextPage > historialTotalPages) return;
-    try {
-      const data = await ticketApi.historial(ticketId, { page: nextPage, size: 20 });
-      setHistorial((prev) => [...prev, ...data.items]);
-      setHistorialPage(nextPage);
-      setHistorialTotalPages(data.pages);
-    } catch {
-      console.error("No se pudo cargar mas historial");
-    }
-  };
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  useEffect(() => {
-    if ((usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") && ticket?.agente_id) {
-      Promise.all([
-        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
-        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
-      ]).then(([agentes, mesas]) => {
-        setAgentes([...agentes.items, ...mesas.items]);
-      }).catch(() => {});
-    }
-  }, [usuario?.rol, ticket?.agente_id]);
-
-  useEffect(() => {
-    setOnTicketUpdated((ev) => {
-      if (ev.ticket_id === ticketId) {
-        setTicket((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            estado: ev.estado as EstadoTicket,
-            prioridad: ev.prioridad as PrioridadTicket,
-            agente_id: ev.agente_id,
-            fecha_actualizacion: ev.fecha_actualizacion,
-          };
-        });
-      }
-    });
-
-    setOnTicketCommented((ev) => {
-      if (ev.ticket_id !== ticketId) return;
-      if (ev.es_nota_interna && usuario?.rol === "cliente") return;
-      setComentarios((prev) => {
-        const existe = prev.some((c) => c.id === ev.comentario_id);
-        if (existe) return prev;
-        return [
-          ...prev,
-          {
-            id: ev.comentario_id,
-            ticket_id: ev.ticket_id,
-            usuario_id: ev.usuario_id,
-            usuario_nombre: ev.usuario_nombre,
-            contenido: ev.contenido,
-            es_nota_interna: ev.es_nota_interna,
-            fecha_creacion: ev.fecha_creacion,
-          },
-        ];
-      });
-    });
-
-    return () => {
-      setOnTicketUpdated(null);
-      setOnTicketCommented(null);
-    };
-  }, [ticketId, usuario?.rol, setOnTicketUpdated, setOnTicketCommented]);
-  const enviarComentario = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevoComentario.trim()) return;
-    try {
-      await comentarioApi.crear(ticketId, {
-        contenido: nuevoComentario,
-        es_nota_interna: esNotaInterna,
-      });
-      setNuevoComentario("");
-      setEsNotaInterna(false);
-      await cargar();
-    } catch {
-      setError("No se pudo agregar el comentario");
-    }
-  };
-
-  const cambiarEstado = async (estado: EstadoTicket) => {
-    try {
-      await ticketApi.cambiarEstado(ticketId, estado);
-      await cargar();
-    } catch {
-      setError("Transicion invalida");
-    }
-  };
-
-  const cerrar = async () => {
-    try {
-      await ticketApi.cerrar(ticketId);
-      await cargar();
-    } catch {
-      setError("No se pudo cerrar el ticket");
-    }
-  };
-
-  const reabrir = async () => {
-    try {
-      await ticketApi.reabrir(ticketId);
-      await cargar();
-    } catch {
-      setError("No se pudo reabrir el ticket");
-    }
-  };
-
-  const asignarme = async () => {
-    try {
-      await ticketApi.asignarme(ticketId);
-      await cargar();
-    } catch {
-      setError("No se pudo autoasignar el ticket");
-    }
-  };
-
-  const reasignar = async () => {
-    if (!agenteSel) return;
-    setReasignando(true);
-    setError(null);
-    try {
-      await ticketApi.asignar(ticketId, agenteSel);
-      setAgenteSel("");
-      await cargar();
-    } catch {
-      setError("No se pudo reasignar el ticket");
-    } finally {
-      setReasignando(false);
-    }
-  };
-
-  const setPrioridad = async (p: PrioridadTicket) => {
-    try {
-      await ticketApi.cambiarPrioridad(ticketId, p);
-      await cargar();
-    } catch {
-      setError("No se pudo cambiar prioridad");
-    }
-  };
+  const {
+    ticket, comentarios, adjuntos, historial,
+    nuevoComentario, setNuevoComentario,
+    esNotaInterna, setEsNotaInterna,
+    cargando, error, setError,
+    comentariosPage, comentariosTotalPages, cargarMasComentarios,
+    adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
+    historialPage, historialTotalPages, cargarMasHistorial,
+    agentes, agenteSel, setAgenteSel, reasignando, reasignar,
+    handleCopiar, campoCopiado,
+    enviarComentario, cambiarEstado, cerrar, reabrir, asignarme, setPrioridad, cargar,
+  } = useTicketDetail(ticketId);
 
   if (cargando) return (
     <LoadingState />
@@ -437,66 +129,61 @@ export default function TicketDetallePage() {
                 <h1 className="text-xl font-semibold tracking-tight text-gray-900 break-words">{ticket.titulo}</h1>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{ticket.descripcion}</p>
               </div>
-              
+
             </div>
             {(ticket.ip_pcs || ticket.ip_antena || ticket.mascara_red || ticket.puerta_enlace || ticket.nombre_punto) && (
               <div className="sm:mt-8 mt-4 px-4 pb-2 ">
                 <span className="text-xs font-medium text-gray-600 tracking-wider mb-2 block">Información adicional</span>
                 <dl className="grid grid-cols-2 sm:grid-cols-4 sm:gap-4 gap-1">
                   {ticket.nombre_punto && (
-                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
-                      <div className="min-w-0 p-2">
-                        <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Punto</dt>
-                        <dd className="font-medium text-gray-700 text-[11px] truncate">{ticket.nombre_punto}</dd>
-                      </div>
-                      <button type="button" onClick={() => handleCopiar("nombre_punto", ticket.nombre_punto!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "nombre_punto" ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
-                        <CopyInfoIcon copied={campoCopiado === "nombre_punto"}/>
-                      </button>
-                    </div>
+                    <CopyField
+                      label="Punto"
+                      value={ticket.nombre_punto}
+                      fieldKey="nombre_punto"
+                      copied={campoCopiado}
+                      onCopy={handleCopiar}
+                      innerClassName="p-2"
+                    />
                   )}
                   {ticket.ip_pcs && (
-                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">IP PC(s)</dt>
-                        <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.ip_pcs}</dd>
-                      </div>
-                      <button type="button" onClick={() => handleCopiar("ip_pcs", ticket.ip_pcs!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "ip_pcs" ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
-                        <CopyInfoIcon copied={campoCopiado === "ip_pcs"}/>
-                      </button>
-                    </div>
+                    <CopyField
+                      label="IP PC(s)"
+                      value={ticket.ip_pcs}
+                      fieldKey="ip_pcs"
+                      copied={campoCopiado}
+                      onCopy={handleCopiar}
+                      mono
+                    />
                   )}
                   {ticket.ip_antena && (
-                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">IP Antena</dt>
-                        <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.ip_antena}</dd>
-                      </div>
-                      <button type="button" onClick={() => handleCopiar("ip_antena", ticket.ip_antena!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "ip_antena" ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
-                        <CopyInfoIcon copied={campoCopiado === "ip_antena"}/>
-                      </button>
-                    </div>
+                    <CopyField
+                      label="IP Antena"
+                      value={ticket.ip_antena}
+                      fieldKey="ip_antena"
+                      copied={campoCopiado}
+                      onCopy={handleCopiar}
+                      mono
+                    />
                   )}
                   {ticket.mascara_red && (
-                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Máscara</dt>
-                        <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.mascara_red}</dd>
-                      </div>
-                      <button type="button" onClick={() => handleCopiar("mascara_red", ticket.mascara_red!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "mascara_red" ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
-                        <CopyInfoIcon copied={campoCopiado === "mascara_red"}/>
-                      </button>
-                    </div>
+                    <CopyField
+                      label="Máscara"
+                      value={ticket.mascara_red}
+                      fieldKey="mascara_red"
+                      copied={campoCopiado}
+                      onCopy={handleCopiar}
+                      mono
+                    />
                   )}
                   {ticket.puerta_enlace && (
-                    <div className="bg-borderCustom/20 border border-gray-100 rounded-xl sm:px-2 px-1 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <dt className="text-[10px] text-gray-500 font-normal tracking-wider mb-0.5">Puerta de enlace</dt>
-                        <dd className="font-medium font-mono text-gray-700 text-[11px] truncate">{ticket.puerta_enlace}</dd>
-                      </div>
-                      <button type="button" onClick={() => handleCopiar("puerta_enlace", ticket.puerta_enlace!)} className={`shrink-0 transition-colors p-0.5 ${campoCopiado === "puerta_enlace" ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`} title="Copiar">
-                        <CopyInfoIcon copied={campoCopiado === "puerta_enlace"}/>
-                      </button>
-                    </div>
+                    <CopyField
+                      label="Puerta de enlace"
+                      value={ticket.puerta_enlace}
+                      fieldKey="puerta_enlace"
+                      copied={campoCopiado}
+                      onCopy={handleCopiar}
+                      mono
+                    />
                   )}
                 </dl>
               </div>
@@ -637,18 +324,13 @@ export default function TicketDetallePage() {
                     )}
                   </div>
                   <p className="sm:text-sm text-xs pl-2 whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
-                  
+
                 </div>
               ))}
             </div>
 
             {comentariosPage < comentariosTotalPages && (
-              <button
-                onClick={cargarMasComentarios}
-                className="w-full text-center text-sm font-normal text-brand-600 hover:text-brand-700 py-2 transition-colors"
-              >
-                Cargar mas comentarios...
-              </button>
+              <LoadMoreButton onClick={cargarMasComentarios} label="Cargar mas comentarios..." />
             )}
             {!estaCerrado && (
               <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
@@ -701,12 +383,7 @@ export default function TicketDetallePage() {
                 onError={setError}
               />
               {adjuntosPage < adjuntosTotalPages && (
-                <button
-                  onClick={cargarMasAdjuntos}
-                  className="w-full text-center text-sm font-normal text-brand-600 hover:text-brand-700 py-2 transition-colors"
-                >
-                  Cargar mas adjuntos...
-                </button>
+                <LoadMoreButton onClick={cargarMasAdjuntos} label="Cargar mas adjuntos..." />
               )}
             </div>
           </section>
@@ -718,11 +395,11 @@ export default function TicketDetallePage() {
               if (!hasAnyDate) return null;
               return (
                 <div className="relative border border-gray-100 shadow-card p-3 bg-cardCustom rounded-2xl">
-                  <div className="absolute left-[28px] top-[14px] bottom-[40px] w-0.5 bg-gray-200" />
+                  <div className="absolute left-[24px] top-[14px] bottom-[40px] w-0.5 bg-gray-200" />
                   <div className="space-y-0">
                     {timeline.map((item, idx) => (
                       <div key={item.label} className="relative flex gap-3 opacity-0 animate-fade-in" style={{ animationDelay: `${idx * 80}ms`, animationFillMode: "forwards" }}>
-                        <div className={`relative z-10 w-[28px] h-[28px] rounded-full border-2 flex items-center justify-center shrink-0 ${item.dotColor}`}>
+                        <div className={`relative z-10 w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0 ${item.dotColor}`}>
                           {item.icon}
                         </div>
                         <div className="flex-1 min-w-0 pb-2">
@@ -734,7 +411,7 @@ export default function TicketDetallePage() {
                               </span>
                             )}
                           </div>
-                          <p className={`text-[10px] mt-1 ${item.date ? "text-gray-500" : "text-gray-300"}`}>{item.subtitle}</p>
+                          <p className={`text-[10px] ${item.date ? "text-gray-500" : "text-gray-300"}`}>{item.subtitle}</p>
                         </div>
                       </div>
                     ))}
@@ -779,12 +456,7 @@ export default function TicketDetallePage() {
                 </div>
               )}
               {historialPage < historialTotalPages && (
-                <button
-                  onClick={cargarMasHistorial}
-                  className="w-full text-center text-sm font-normal text-brand-600 hover:text-brand-700 py-2 transition-colors"
-                >
-                  Cargar mas historial...
-                </button>
+                <LoadMoreButton onClick={cargarMasHistorial} label="Cargar mas historial..." />
               )}
             </div>
           </section>

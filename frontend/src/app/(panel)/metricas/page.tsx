@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
-import { metricasApi, statsApi, type MetricasTiempos, type MetricasVolumen, type MetricasInfraestructura, type MetricasRendimiento, type MetricasTiempoPorAgente, type MetricasReaperturas, type MetricasSLA, type Graficas } from "@/lib/endpoints";
+import { useMetricas } from "@/hooks/useMetricas";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { DonutChart } from "@/components/DonutChart";
 import TicketSolvedIcon from "@/app/assets/icons/TicketSolvedIcon";
 import Link from "next/link";
+import { ESTADO_DONUT_COLORS, ESTADO_DONUT_LABELS, PRIORIDAD_DONUT_COLORS, PRIORIDAD_DONUT_LABELS } from "@/lib/chartConstants";
 
 const ESTADO_COLORS: Record<string, string> = {
   abierto: "bg-blue-500",
@@ -48,90 +47,12 @@ const ELEMENTO_LABELS: Record<string, string> = {
   punto_venta: "Punto de Venta",
 };
 
-const ESTADO_DONUT_COLORS: Record<string, string> = {
-  abierto: "#007991",
-  asignado: "#824c71",
-  en_progreso: "#c8963e",
-  resuelto: "#60993e",
-};
-
-const ESTADO_DONUT_LABELS: Record<string, string> = {
-  abierto: "Abierto",
-  asignado: "Asignado",
-  en_progreso: "En Progreso",
-  resuelto: "Resuelto",
-};
-
-const PRIORIDAD_DONUT_COLORS: Record<string, string> = {
-  urgente: "#fe4a49",
-  alta: "#EB6534",
-  media: "#508484",
-  baja: "#7e7f83",
-};
-
-const PRIORIDAD_DONUT_LABELS: Record<string, string> = {
-  urgente: "Urgente",
-  alta: "Alta",
-  media: "Media",
-  baja: "Baja",
-};
-
 export default function MetricasPage() {
-  const usuario = useAuthStore((s) => s.usuario);
-  const router = useRouter();
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [cargando, setCargando] = useState(true);
-  const [tiempos, setTiempos] = useState<MetricasTiempos | null>(null);
-  const [volumen, setVolumen] = useState<MetricasVolumen | null>(null);
-  const [infra, setInfra] = useState<MetricasInfraestructura | null>(null);
-  const [rendimiento, setRendimiento] = useState<MetricasRendimiento | null>(null);
-  const [tiempoAgente, setTiempoAgente] = useState<MetricasTiempoPorAgente | null>(null);
-  const [reaperturas, setReaperturas] = useState<MetricasReaperturas | null>(null);
-  const [sla, setSla] = useState<MetricasSLA | null>(null);
-  const [graficas, setGraficas] = useState<Graficas | null>(null);
-  
-  const hayFiltros = fechaInicio || fechaFin;
-
-  useEffect(() => {
-    if (usuario && usuario.rol !== "administrador" && usuario.rol !== "mesa_ayuda") {
-      router.replace("/");
-    }
-  }, [usuario, router]);
-
-  useEffect(() => {
-    if (usuario?.rol !== "administrador" && usuario?.rol !== "mesa_ayuda") return;
-    (async () => {
-      setCargando(true);
-      try {
-        const params: Record<string, string> = {};
-        if (fechaInicio) params.fecha_inicio = fechaInicio;
-        if (fechaFin) params.fecha_fin = fechaFin;
-        const [t, v, i, r, ta, rp, sl, gf] = await Promise.all([
-          metricasApi.tiempos(params),
-          metricasApi.volumen(params),
-          metricasApi.infraestructura(params),
-          metricasApi.rendimientoAgente(params),
-          metricasApi.tiempoPorAgente(params),
-          metricasApi.reaperturas(params),
-          metricasApi.sla(params),
-          statsApi.graficas(),
-        ]);
-        setTiempos(t);
-        setVolumen(v);
-        setInfra(i);
-        setRendimiento(r);
-        setTiempoAgente(ta);
-        setReaperturas(rp);
-        setSla(sl);
-        setGraficas(gf);
-      } catch {
-        console.error("Error al cargar las métricas");
-      } finally {
-        setCargando(false);
-      }
-    })();
-  }, [usuario?.rol, fechaInicio, fechaFin]);
+  const {
+    usuario, fechaInicio, setFechaInicio, fechaFin, setFechaFin,
+    cargando, hayFiltros, limpiarFiltros,
+    tiempos, volumen, infra, rendimiento, tiempoAgente, reaperturas, sla, graficas,
+  } = useMetricas();
 
   if (usuario?.rol !== "administrador" && usuario?.rol !== "mesa_ayuda") return null;
   if (cargando) return <LoadingState />;
@@ -141,11 +62,6 @@ export default function MetricasPage() {
   const maxEmpresa = Math.max(1, ...(volumen?.top_empresas.map((e) => e.cantidad) ?? [1]));
   const maxElemento = Math.max(1, ...(infra?.por_elemento.map((e) => e.cantidad) ?? [1]));
   const maxUbicacion = Math.max(1, ...(infra?.top_ubicaciones.map((u) => u.cantidad) ?? [1]));
-
-  const limpiarFiltros = () => {
-    setFechaInicio("");
-    setFechaFin("");
-  };
 
   return (
     <div className="space-y-6">

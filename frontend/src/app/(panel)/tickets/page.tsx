@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ticketApi, adminApi, empresaApi, type Ticket, type Empresa, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
-import type { Usuario } from "@/store/authStore";
-import { useWsTicketStore } from "@/store/wsTicketStore";
-import { useAuthStore } from "@/store/authStore";
-import { EstadoBadge, PrioridadBadge, TotalBadge } from "@/components/Badges";
+import { useTicketsList } from "@/hooks/useTicketsList";
+import type { Ticket, VistaTicket } from "@/lib/endpoints";
+import { TotalBadge } from "@/components/Badges";
 import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/Table";
+import { ViewModeToggle } from "@/components/ui/ViewModeToggle";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TicketCard } from "@/components/TicketCard";
+import { buildTicketTableColumns, TICKET_LISTADO_FECHA } from "@/components/tickets/ticketTableColumns";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
-
 
 const ESTADOS: { value: string; label: string }[] = [
   { value: "todos", label: "Todos" },
@@ -56,178 +54,26 @@ const ESTADOS_POR_VISTA: Record<VistaTicket, { value: string; label: string }[]>
   todos: ESTADOS,
 };
 
-type VistaMode = "cards" | "table";
-type OrdenMode = "prioridad" | "fecha";
-const VISTA_STORAGE_KEY = "tickets:viewMode";
-const ORDEN_STORAGE_KEY = "tickets:ordenMode";
-
-function getInitialVistaMode(): VistaMode {
-  if (typeof window === "undefined") return "cards";
-  return window.localStorage.getItem(VISTA_STORAGE_KEY) === "table" ? "table" : "cards";
-}
-
-function getInitialOrdenMode(): OrdenMode {
-  if (typeof window === "undefined") return "prioridad";
-  return window.localStorage.getItem(ORDEN_STORAGE_KEY) === "fecha" ? "fecha" : "prioridad";
-}
+const columnasListado = buildTicketTableColumns({
+  tituloClass: "font-medium text-gray-800 text-sm capitalize",
+  descripcionMax: 60,
+  fechaOpts: TICKET_LISTADO_FECHA,
+  prioridadConEstado: true,
+  asignadoDestacar: true,
+});
 
 export default function TicketsListPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
-  const [estado, setEstado] = useState("todos");
-  const [prioridad, setPrioridad] = useState("todas");
-  const [vista, setVista] = useState<VistaTicket>("activos");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [cargando, setCargando] = useState(true);
-  const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
-  const [orden, setOrden] = useState<OrdenMode>(getInitialOrdenMode);
-  const [filtroEmpresaId, setFiltroEmpresaId] = useState("");
-  const [filtroAgenteId, setFiltroAgenteId] = useState("");
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [agentes, setAgentes] = useState<Usuario[]>([]);
-  const [busqueda, setBusqueda] = useState("");
-  const [busquedaDebounced, setBusquedaDebounced] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
-  const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
-  const usuario = useAuthStore((s) => s.usuario);
-
-  const esAdminOMesaAyuda = usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda";
-
-  useEffect(() => {
-    if (esAdminOMesaAyuda) {
-      Promise.all([
-        empresaApi.listar({ size: 100 }),
-        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
-        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
-      ]).then(([empresasRes, agentesRes, mesasRes]) => {
-        setEmpresas(empresasRes.items);
-        setAgentes([...agentesRes.items, ...mesasRes.items]);
-      }).catch(() => {});
-    }
-  }, [esAdminOMesaAyuda]);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setBusquedaDebounced(busqueda.trim());
-      setPage(1);
-    }, 350);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [busqueda]);
-
-  useEffect(() => {
-    (async () => {
-      setCargando(true);
-      try {
-        const params: Record<string, unknown> = { page, size: 12 };
-        if (vista !== "todos") params.vista = vista;
-        if (estado !== "todos") params.estado = estado;
-        if (prioridad !== "todas") params.prioridad = prioridad;
-        if (fechaInicio) params.fecha_inicio = fechaInicio;
-        if (fechaFin) params.fecha_fin = fechaFin;
-        if (orden === "fecha") params.orden = "fecha";
-        if (filtroEmpresaId) params.empresa_id = filtroEmpresaId;
-        if (filtroAgenteId) params.agente_id = filtroAgenteId;
-        if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
-        const data = await ticketApi.listar(params);
-        setTickets(data.items);
-        setTotal(data.total);
-        setTotalPages(data.pages);
-      } catch {
-        setTickets([]);
-        setTotal(0);
-      } finally {
-        setCargando(false);
-      }
-    })();
-  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, busquedaDebounced]);
-
-  const hayFiltrosFecha = fechaInicio || fechaFin;
-  const limpiarFiltrosFecha = () => {
-    setFechaInicio("");
-    setFechaFin("");
-    setPage(1);
-  };
-
-  useEffect(() => {
-    setOnTicketUpdated((ev) => {
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.id === ev.ticket_id
-            ? {
-                ...t,
-                estado: ev.estado as EstadoTicket,
-                prioridad: ev.prioridad as PrioridadTicket,
-                agente_id: ev.agente_id,
-                fecha_actualizacion: ev.fecha_actualizacion,
-              }
-            : t
-        )
-      );
-    });
-
-    setOnTicketAssigned((ev) => {
-      if (ev.agente_id !== usuario?.id) return;
-      setTickets((prev) => {
-        if (prev.some((t) => t.id === ev.ticket_id)) return prev;
-        const nuevo: Ticket = {
-          id: ev.ticket_id,
-          empresa_id: ev.empresa_id,
-          empresa_nombre: ev.empresa_nombre ?? null,
-          titulo: ev.titulo,
-          descripcion: "",
-          categoria_id: 0,
-          subcategoria_id: 0,
-          elemento_afectado: "punto_venta",
-          ip_pcs: null,
-          ip_antena: null,
-          mascara_red: null,
-          puerta_enlace: null,
-          nombre_punto: null,
-          prioridad: ev.prioridad as PrioridadTicket,
-          estado: ev.estado as EstadoTicket,
-          cliente_id: ev.cliente_id ?? "",
-          agente_id: ev.agente_id,
-          modificado_por_id: null,
-          modificado_por_nombre: null,
-          fecha_creacion: ev.fecha_actualizacion,
-          fecha_actualizacion: ev.fecha_actualizacion,
-        };
-        return [nuevo, ...prev];
-      });
-    });
-
-    return () => {
-      setOnTicketUpdated(null);
-      setOnTicketAssigned(null);
-    };
-  }, [setOnTicketUpdated, setOnTicketAssigned, usuario?.id]);
-
-  const cambiarVista = (nueva: VistaTicket) => {
-    setVista(nueva);
-    setEstado("todos");
-    setPage(1);
-  };
-
-  const cambiarModo = (modo: VistaMode) => {
-    setViewMode(modo);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(VISTA_STORAGE_KEY, modo);
-    }
-  };
-
-  const cambiarOrden = () => {
-    const nuevoOrden = orden === "prioridad" ? "fecha" : "prioridad";
-    setOrden(nuevoOrden);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(ORDEN_STORAGE_KEY, nuevoOrden);
-    }
-  };
+  const {
+    tickets, total, totalPages, page, setPage,
+    estado, setEstado, prioridad, setPrioridad, vista,
+    fechaInicio, setFechaInicio, fechaFin, setFechaFin,
+    cargando, viewMode, orden,
+    filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
+    empresas, agentes, busqueda, setBusqueda,
+    hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda,
+    cambiarVista, cambiarModo, cambiarOrden,
+    usuario, esAdminOMesaAyuda,
+  } = useTicketsList();
 
   return (
     <div className="flex flex-col h-full min-h-[calc(100dvh-7rem)] justify-between gap-2">
@@ -249,7 +95,7 @@ export default function TicketsListPage() {
               </Link>
             ) : undefined
           }
-        />  
+        />
         <div className="flex gap-4 flex-col-reverse justify-between">
           <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
             <div className="flex items-center gap-1">
@@ -280,30 +126,7 @@ export default function TicketsListPage() {
                   )}
             </button>
             </div>
-            <div className="flex w-fit border-b border-brandCustom/50 bg-grayCustom/10 rounded-lg h-fit self-end gap-1">
-              <button
-                onClick={() => cambiarModo("cards")}
-                title="Vista tarjetas"
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === "cards"
-                    ? "bg-brandCustom text-white"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-layout-grid" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
-              </button>
-              <button
-                onClick={() => cambiarModo("table")}
-                title="Vista tabla"
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === "table"
-                    ? "bg-brandCustom text-white"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-table" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-              </button>
-            </div>
+            <ViewModeToggle value={viewMode} onChange={cambiarModo} />
           </div>
           <div className="flex flex-col-reverse 2xl:flex-row w-full gap-2 justify-between">
             <div className="relative flex sm:max-w-sm w-full 2xl:mt-4 self-start">
@@ -317,7 +140,7 @@ export default function TicketsListPage() {
               />
               {busqueda && (
                 <button
-                  onClick={() => { setBusqueda(""); setBusquedaDebounced(""); setPage(1); }}
+                  onClick={limpiarBusqueda}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
@@ -395,77 +218,7 @@ export default function TicketsListPage() {
           <EmptyState message="No hay tickets para estos filtros." />
         ) : viewMode === "table" ? (
         <DataTable
-          columns={[
-            {
-              key: "ticket_number",
-              header: "# Ticket",
-              cell: (t: Ticket) => (
-                <Link
-                  href={`/tickets/${t.id}`}
-                  title={`Ver ticket: ${t.titulo}`}
-                  className="font-normal text-xs text-gray-500 hover:text-brandCustom transition-colors uppercase"
-                >
-                  #{t.id.split('-')[0].toUpperCase()}
-                </Link>
-              ),
-            },
-            {
-              key: "titulo",
-              header: "Información",
-              cell: (t: Ticket) => (
-                <Link
-                  href={`/tickets/${t.id}`}
-                  title={`Ver ticket: ${t.titulo}`}
-                  className="flex flex-col gap-0.5 hover:text-brandCustom transition-colors"
-                >
-                  <span className="font-medium text-gray-800 text-sm capitalize">
-                    {t.titulo.length > 30 ? `${t.titulo.substring(0, 30)}...` : t.titulo}
-                  </span>
-                  <span className="text-gray-500 text-[10px] line-clamp-1">
-                    {t.descripcion.length > 60 ? `${t.descripcion.substring(0, 60)}...` : t.descripcion}
-                  </span>
-                  <span className="text-gray-400 text-[9px] mt-0.5">
-                    {new Date(t.fecha_creacion).toLocaleDateString(undefined, {
-                      timeZone: "America/Bogota",
-                      day: "2-digit",
-                      month: "short",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </Link>
-              ),
-            },
-            {
-              key: "empresa_nombre",
-              header: "Empresa",
-              cell: (t: Ticket) => (
-                <span className="text-gray-500 sm:text-xs text-[10px]">
-                  {t.empresa_nombre}
-                </span>
-              ),
-            },
-            {
-              key: "estado",
-              header: "Estado",
-              cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
-            },
-            {
-              key: "prioridad",
-              header: "Prioridad",
-              cell: (t: Ticket) => <PrioridadBadge prioridad={t.prioridad} estado={t.estado} />,
-            },
-            {
-              key: "asignado",
-              header: "Asignado",
-              cell: (t: Ticket) => (
-                <span className={`text-gray-500 sm:text-xs text-[10px] ${!t.agente_nombre ? "text-redCustom" : "text-bgSiderBar"}`}>
-                  {t.agente_nombre ? t.agente_nombre : "Sin asignar"}
-                </span>
-              ),
-            },
-          ]}
+          columns={columnasListado}
           data={tickets}
           keyExtractor={(t: Ticket) => t.id}
         />
