@@ -20,6 +20,7 @@ from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
 
 MAX_BYTES = 10 * 1024 * 1024
+MAX_ADJUNTOS_POR_TICKET = 20
 ALLOWED_MIME_TYPES: frozenset[str] = frozenset({"image/jpeg", "image/png", "image/webp"})
 ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".webp"})
 
@@ -108,6 +109,16 @@ async def subir(
 
     if len(data) > MAX_BYTES:
         raise Conflicto(f"Archivo excede {MAX_BYTES // (1024 * 1024)} MB")
+
+    total_adjuntos = (
+        await db.execute(
+            select(func.count(Adjunto.id)).where(Adjunto.ticket_id == ticket_id)
+        )
+    ).scalar_one()
+    if total_adjuntos >= MAX_ADJUNTOS_POR_TICKET:
+        raise Conflicto(
+            f"El ticket alcanzó el límite de {MAX_ADJUNTOS_POR_TICKET} adjuntos"
+        )
 
     normalized_mime = (content_type or "").split(";", 1)[0].strip().lower()
     if normalized_mime not in ALLOWED_MIME_TYPES:

@@ -12,27 +12,37 @@ from app.schemas import DatetimeUTC
 
 class TicketCreate(BaseModel):
     titulo: str = Field(..., min_length=1, max_length=150)
-    descripcion: str = Field(..., min_length=1)
+    descripcion: str = Field(..., min_length=1, max_length=10000)
     categoria_id: int = Field(..., ge=1)
     subcategoria_id: int = Field(..., ge=1)
     elemento_afectado: ElementoInfraestructura
-    ip_pcs: str | None = None
-    ip_antena: str | None = None
-    mascara_red: str | None = None
-    puerta_enlace: str | None = None
-    nombre_punto: str | None = None
+    ip_pcs: str | None = Field(None, max_length=255)
+    ip_antena: str | None = Field(None, max_length=255)
+    mascara_red: str | None = Field(None, max_length=255)
+    puerta_enlace: str | None = Field(None, max_length=255)
+    nombre_punto: str | None = Field(None, max_length=255)
+
+
+class TicketAdminCreate(TicketCreate):
+    """Creacion de tickets por admin/mesa_ayuda a nombre de un cliente.
+
+    El staff elige la empresa y el cliente (de esa empresa) en cuyo nombre
+    se registra el ticket (ej. reporte recibido por telefono/WhatsApp)."""
+
+    empresa_id: int = Field(..., ge=1)
+    cliente_id: UUID
 
 
 class TicketUpdate(BaseModel):
     titulo: str | None = Field(None, min_length=1, max_length=150)
-    descripcion: str | None = None
+    descripcion: str | None = Field(None, min_length=1, max_length=10000)
     categoria_id: int | None = Field(None, ge=1)
     prioridad: PrioridadTicket | None = None
-    ip_pcs: str | None = None
-    ip_antena: str | None = None
-    mascara_red: str | None = None
-    puerta_enlace: str | None = None
-    nombre_punto: str | None = None
+    ip_pcs: str | None = Field(None, max_length=255)
+    ip_antena: str | None = Field(None, max_length=255)
+    mascara_red: str | None = Field(None, max_length=255)
+    puerta_enlace: str | None = Field(None, max_length=255)
+    nombre_punto: str | None = Field(None, max_length=255)
 
 
 class EstadoUpdate(BaseModel):

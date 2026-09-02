@@ -32,8 +32,9 @@ async def _resolve_implicated_user_ids(
 ) -> list[UUID]:
     """Usuarios que deben recibir la notificacion de un nuevo comentario.
 
-    - Comentario publico: cliente del ticket + agente asignado.
-    - Nota interna: agente asignado + admins de la empresa (cliente NUNCA la recibe).
+    - Comentario publico: cliente del ticket + agente asignado + admins
+      de la empresa (o admins globales).
+    - Nota interna: agente asignado + admins (cliente NUNCA la recibe).
     - El autor del comentario se excluye para no notificarse a si mismo.
     """
     implicated: set[UUID] = set()
@@ -41,16 +42,15 @@ async def _resolve_implicated_user_ids(
         implicated.add(ticket.cliente_id)
     if ticket.agente_id is not None:
         implicated.add(ticket.agente_id)
-    if es_nota_interna:
-        admin_rows = await db.execute(
-            select(Usuario.id).where(
-                Usuario.rol == RolUsuario.administrador.value,
-                (Usuario.empresa_id == ticket.empresa_id)
-                | (Usuario.empresa_id.is_(None)),
-            )
+    admin_rows = await db.execute(
+        select(Usuario.id).where(
+            Usuario.rol == RolUsuario.administrador.value,
+            (Usuario.empresa_id == ticket.empresa_id)
+            | (Usuario.empresa_id.is_(None)),
         )
-        for (uid,) in admin_rows.all():
-            implicated.add(uid)
+    )
+    for (uid,) in admin_rows.all():
+        implicated.add(uid)
     implicated.discard(current.id)
     return list(implicated)
 

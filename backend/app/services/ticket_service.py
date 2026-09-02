@@ -21,6 +21,7 @@ from app.schemas.ticket import (
     EstadoUpdate,
     HistorialEstadoOut,
     PrioridadUpdate,
+    TicketAdminCreate,
     TicketCreate,
     TicketDetalle,
     TicketUpdate,
@@ -158,11 +159,31 @@ async def _publicar_urgente_si_corresponde(ticket: Ticket, empresa_nombre: str |
 
 
 async def _publicar_evento_ticket(ticket: Ticket, event_type: str, empresa_nombre: str | None = None) -> None:
-    from app.websockets.pubsub import publish_broadcast
+    """Publica un evento de ticket SOLO a los implicados (aislamiento multi-tenant).
+
+    Destinatarios: roles internos (mesa_ayuda/administrador, que por diseño ven
+    todas las empresas) + usuario cliente del ticket + agente asignado.
+    Nunca se hace broadcast global: un cliente no debe recibir eventos de
+    tickets de otras empresas.
+    """
+    from app.websockets.pubsub import publish_to_roles, publish_to_users
 
     payload = _ticket_payload(ticket, event_type, empresa_nombre)
+    targets: list[UUID] = []
+    if ticket.cliente_id:
+        targets.append(ticket.cliente_id)
+    if ticket.agente_id:
+        targets.append(ticket.agente_id)
     try:
-        await publish_broadcast(event=payload)
+        await publish_to_roles(
+            roles=[
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
+            event=payload,
+        )
+        if targets:
+            await publish_to_users(targets, event=payload)
         _logger.info(
             "Evento %s publicado para ticket %s (empresa=%s)",
             event_type,
@@ -176,13 +197,27 @@ async def _publicar_evento_ticket(ticket: Ticket, event_type: str, empresa_nombr
 
 
 async def _publicar_cambio_estado(ticket: Ticket, estado_anterior: str, empresa_nombre: str | None = None) -> None:
-    from app.websockets.pubsub import publish_broadcast
+    """Publica ticket:state_changed solo a implicados + roles internos."""
+    from app.websockets.pubsub import publish_to_roles, publish_to_users
 
     payload = _ticket_payload(ticket, "ticket:state_changed", empresa_nombre)
     payload["estado_anterior"] = estado_anterior
     payload["estado_nuevo"] = ticket.estado.value
+    targets: list[UUID] = []
+    if ticket.cliente_id:
+        targets.append(ticket.cliente_id)
+    if ticket.agente_id:
+        targets.append(ticket.agente_id)
     try:
-        await publish_broadcast(event=payload)
+        await publish_to_roles(
+            roles=[
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
+            event=payload,
+        )
+        if targets:
+            await publish_to_users(targets, event=payload)
         _logger.info(
             "Evento ticket:state_changed publicado para ticket %s: %s -> %s",
             ticket.id,
@@ -355,12 +390,18 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
 
 
 async def crear_admin(
-    data: TicketCreate,
-    empresa_id: int,
-    cliente_id: UUID,
+    data: TicketAdminCreate,
+    current: Usuario,
     db: AsyncSession,
 ) -> Ticket:
-    """Admin crea ticket a nombre de un cliente y empresa especificos."""
+    """Admin/mesa_ayuda crea un ticket a nombre de un cliente de una empresa.
+
+    Usado cuando el cliente reporta por telefono/WhatsApp o para trabajo
+    interno de la empresa propia. El cliente elegido debe existir, tener
+    rol cliente y pertenecer a la empresa indicada.
+    """
+    empresa_id = data.empresa_id
+    cliente_id = data.cliente_id
     cliente = (
         await db.execute(
             select(Usuario).where(
@@ -393,7 +434,7 @@ async def crear_admin(
         nombre_punto=data.nombre_punto,
         prioridad=prioridad,
         estado=EstadoTicket.abierto,
-        modificado_por_id=None,
+        modificado_por_id=current.id,
     )
     db.add(ticket)
     await db.commit()
@@ -408,11 +449,15 @@ async def crear_admin(
     from app.services import actividad_service
     await actividad_service.registrar(
         empresa_id=ticket.empresa_id,
-        usuario_id=cliente.id,
-        usuario_nombre=cliente.nombre,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
         ticket_id=ticket.id,
         tipo_evento="ticket_created",
-        metadata={"titulo": ticket.titulo, "prioridad": ticket.prioridad.value},
+        metadata={
+            "titulo": ticket.titulo,
+            "prioridad": ticket.prioridad.value,
+            "creado_por_staff": True,
+        },
     )
     return ticket
 

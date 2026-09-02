@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { evictAllAdjuntoBlobs } from "@/lib/adjuntoBlob";
 
 export type Rol = "cliente" | "agente" | "mesa_ayuda" | "administrador";
 
@@ -41,7 +42,10 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           usuario: state.usuario ? { ...state.usuario, ...u } : null,
         })),
-      logout: () => set({ token: null, refreshToken: null, usuario: null }),
+      logout: () => {
+        evictAllAdjuntoBlobs();
+        set({ token: null, refreshToken: null, usuario: null });
+      },
       hasRole: (...roles) => {
         const u = get().usuario;
         return !!u && roles.includes(u.rol);

@@ -303,6 +303,10 @@ export const ticketApi = {
     const r = await api.post("/api/tickets", data);
     return r.data as Ticket;
   },
+  crearAdmin: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; empresa_id: number; cliente_id: string; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null }) => {
+    const r = await api.post("/api/tickets/admin", data);
+    return r.data as Ticket;
+  },
   asignar: async (id: string, agente_id: string) => {
     const r = await api.post(`/api/tickets/${id}/asignar`, { agente_id });
     return r.data as Ticket;

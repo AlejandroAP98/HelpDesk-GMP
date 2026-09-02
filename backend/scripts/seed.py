@@ -13,6 +13,7 @@ import sys
 from sqlalchemy import func, select, text
 
 from app.core.database import AsyncSessionLocal
+from app.models.empresa import Empresa
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
 from app.models.categoria import Categoria
@@ -183,6 +184,19 @@ async def run(reset: bool = False) -> None:
         await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
         await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
+
+        empresa_interna = (
+            await db.execute(
+                select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)")
+            )
+        ).scalar_one_or_none()
+        if empresa_interna is None:
+            db.add(Empresa(nombre="GMP Redes (Interna)"))
+            await db.commit()
+            print("Empresa interna creada: GMP Redes (Interna)")
+        else:
+            print(f"Empresa interna ya existe: id={empresa_interna.id}")
+
         await db.commit()
 
         await _seed_matriz_prioridad(db)

@@ -601,7 +601,7 @@ async def test_admin_puede_reasignar_ticket_en_progreso_200(client, db_session):
         headers=auth_header(tok_a1),
         json={"estado": "en_progreso"},
     )
-    assert r5.status_code == 403
+    assert r5.status_code == 404
 
     r6 = await client.patch(
         f"/api/tickets/{tid}/estado",
@@ -1230,3 +1230,127 @@ async def test_urgente_no_notifica_a_agente(client, db_session, monkeypatch):  #
     assert RolUsuario.agente.value not in captured["roles"]
     assert RolUsuario.mesa_ayuda.value in captured["roles"]
     assert RolUsuario.administrador.value in captured["roles"]
+
+
+# ---------------------------------------------------------------------------
+# Creacion de tickets por staff (admin/mesa_ayuda) a nombre de un cliente
+# ---------------------------------------------------------------------------
+
+
+async def _seed_staff_scenario(db_session) -> None:  # type: ignore[no-untyped-def]
+    await seed_empresa(db_session, pk=1, nombre="Demo")
+    await seed_empresa(db_session, pk=2, nombre="Otra")
+    await seed_usuario(
+        db_session,
+        email="c1@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="c2@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=2,
+    )
+    await seed_usuario(
+        db_session,
+        email="admin@test.com",
+        password="Password12345",
+        rol="administrador",
+    )
+    await seed_usuario(
+        db_session,
+        email="mesa@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="Sub")
+
+
+def _ticket_admin_body(cliente_id: str, **overrides) -> dict:
+    base = {
+        "titulo": "T staff",
+        "descripcion": "Reportado por telefono",
+        "categoria_id": 1,
+        "subcategoria_id": 1,
+        "elemento_afectado": "punto_venta",
+        "empresa_id": 1,
+        "cliente_id": cliente_id,
+    }
+    base.update(overrides)
+    return base
+
+
+async def test_admin_crea_ticket_a_nombre_de_cliente(client, db_session):  # type: ignore[no-untyped-def]
+    await _seed_staff_scenario(db_session)
+    tok_admin = await login_token(client, "admin@test.com", "Password12345")
+    cliente = await get_usuario_by_email(db_session, "c1@test.com")
+
+    r = await client.post(
+        "/api/tickets/admin",
+        headers=auth_header(tok_admin),
+        json=_ticket_admin_body(str(cliente.id)),
+    )
+    assert r.status_code == 201, r.text
+    t = r.json()
+    assert t["empresa_id"] == 1
+    assert t["cliente_id"] == str(cliente.id)
+    assert t["estado"] == "abierto"
+    assert t["modificado_por_id"] is not None
+
+
+async def test_mesa_ayuda_crea_ticket_a_nombre_de_cliente(client, db_session):  # type: ignore[no-untyped-def]
+    await _seed_staff_scenario(db_session)
+    tok_mesa = await login_token(client, "mesa@test.com", "Password12345")
+    cliente = await get_usuario_by_email(db_session, "c1@test.com")
+
+    r = await client.post(
+        "/api/tickets/admin",
+        headers=auth_header(tok_mesa),
+        json=_ticket_admin_body(str(cliente.id)),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["cliente_id"] == str(cliente.id)
+
+
+async def test_cliente_no_puede_usar_endpoint_admin_403(client, db_session):  # type: ignore[no-untyped-def]
+    await _seed_staff_scenario(db_session)
+    tok_c = await login_token(client, "c1@test.com", "Password12345")
+    cliente = await get_usuario_by_email(db_session, "c1@test.com")
+
+    r = await client.post(
+        "/api/tickets/admin",
+        headers=auth_header(tok_c),
+        json=_ticket_admin_body(str(cliente.id)),
+    )
+    assert r.status_code == 403
+
+
+async def test_cliente_ajeno_a_empresa_404(client, db_session):  # type: ignore[no-untyped-def]
+    """cliente_id de otra empresa -> 404 (no se valida pertenencia)."""
+    await _seed_staff_scenario(db_session)
+    tok_admin = await login_token(client, "admin@test.com", "Password12345")
+    cliente_otra = await get_usuario_by_email(db_session, "c2@test.com")
+
+    r = await client.post(
+        "/api/tickets/admin",
+        headers=auth_header(tok_admin),
+        json=_ticket_admin_body(str(cliente_otra.id), empresa_id=1),
+    )
+    assert r.status_code == 404
+
+
+async def test_empresa_inexistente_404(client, db_session):  # type: ignore[no-untyped-def]
+    await _seed_staff_scenario(db_session)
+    tok_admin = await login_token(client, "admin@test.com", "Password12345")
+    cliente = await get_usuario_by_email(db_session, "c1@test.com")
+
+    r = await client.post(
+        "/api/tickets/admin",
+        headers=auth_header(tok_admin),
+        json=_ticket_admin_body(str(cliente.id), empresa_id=999),
+    )
+    assert r.status_code == 404

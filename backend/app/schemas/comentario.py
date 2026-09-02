@@ -9,7 +9,7 @@ from app.schemas import DatetimeUTC
 
 
 class ComentarioCreate(BaseModel):
-    contenido: str = Field(..., min_length=1)
+    contenido: str = Field(..., min_length=1, max_length=5000)
     es_nota_interna: bool = False
 
 

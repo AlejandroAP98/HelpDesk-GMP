@@ -24,6 +24,7 @@ async def run():
         await db.execute(text("INSERT INTO empresas (id, nombre) VALUES (1, 'Susuerte SA')"))
         await db.execute(text("INSERT INTO empresas (id, nombre) VALUES (2, 'Apostar SA')"))
         await db.execute(text("INSERT INTO empresas (id, nombre) VALUES (4, 'Facilisimo')"))
+        await db.execute(text("INSERT INTO empresas (id, nombre) VALUES (5, 'GMP Redes (Interna)')"))
         await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.commit()
 

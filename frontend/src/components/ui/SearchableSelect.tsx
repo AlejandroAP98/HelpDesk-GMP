@@ -161,7 +161,7 @@ export function SearchableSelect({
           onFocus={handleFocus}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-xl border  bg-gray-50 text-gray-700 px-2.5 py-2 sm:text-sm text-[11px] focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+          className="w-full rounded-xl border bg-white text-gray-700 px-2.5 py-2.5 text-xs sm:text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
           autoComplete="off"
         />
         {loading && (
@@ -217,7 +217,7 @@ export function SearchableSelect({
                   selectOption(opt.value);
                 }}
                 onMouseEnter={() => setHighlightIndex(idx)}
-                className={`px-4 py-2.5 cursor-pointer transition-colors capitalize text-xs sm:text-sm border-b border-gray-200 last:border-b-0 ${
+                className={`px-4 py-2.5 cursor-pointer transition-colors capitalize text-xs border-b border-gray-200 last:border-b-0 ${
                   idx === highlightIndex || String(opt.value) === String(value ?? "")
                     ? "bg-gray-100 text-primary-600"
                     : "text-gray-700 hover:bg-gray-100"
@@ -227,7 +227,7 @@ export function SearchableSelect({
               >
                 <span>{capitalize(opt.label)}</span>
                 {opt.sublabel && (
-                  <span className="text-gray-300 ml-1.5 text-xs sm:text-sm">({opt.sublabel})</span>
+                  <span className="text-gray-400 ml-1.5 text-xs ">({opt.sublabel})</span>
                 )}
               </li>
             ))

@@ -1,6 +1,7 @@
 """Utilidades de seguridad: hashing bcrypt y JWT (acceso + refresh)."""
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 import bcrypt
 from jose import JWTError, jwt
@@ -46,10 +47,10 @@ def create_access_token(sub: str, extra: dict[str, Any] | None = None) -> str:
 
 
 def create_refresh_token(sub: str) -> str:
-    jti = _create_token(
-        sub, REFRESH_SUBJECT, timedelta(days=settings.refresh_token_expire_days)
+    extra = {"jti": uuid4().hex}
+    return _create_token(
+        sub, REFRESH_SUBJECT, timedelta(days=settings.refresh_token_expire_days), extra
     )
-    return jti
 
 
 def decode_token(token: str) -> dict[str, Any]:

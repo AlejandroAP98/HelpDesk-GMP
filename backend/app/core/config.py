@@ -57,9 +57,24 @@ class Settings(BaseSettings):
         return self.app_env == "dev"
 
 
+_DEFAULT_JWT_SECRET = "cambia_esta_cadena_por_un_valor_largo_y_aleatorio_de_64_bytes"
+_DEFAULT_MINIO_SECRET = "helpdesk12345"
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.app_env == "prod":
+        if s.jwt_secret == _DEFAULT_JWT_SECRET or len(s.jwt_secret) < 32:
+            raise RuntimeError(
+                "JWT_SECRET inseguro en prod: usa un valor aleatorio de al menos 32 chars "
+                "(python -c \"import secrets; print(secrets.token_urlsafe(64))\")"
+            )
+        if s.minio_secret_key == _DEFAULT_MINIO_SECRET:
+            raise RuntimeError(
+                "MINIO_SECRET_KEY inseguro en prod: cambia la credencial por defecto"
+            )
+    return s
 
 
 settings = get_settings()

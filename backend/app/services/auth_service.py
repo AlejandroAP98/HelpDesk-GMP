@@ -1,4 +1,5 @@
 """Servicio de autenticacion: registro, login, refresh, cambio de password."""
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -110,12 +111,45 @@ async def refresh(refresh_token: str, db: AsyncSession) -> Token:
     usuario_id = payload.get("sub")
     if not usuario_id:
         raise TokenInvalido()
+    jti = payload.get("jti")
+    if jti:
+        try:
+            from app.core.redis import redis_client
+
+            if await redis_client.exists(f"helpdesk:refresh_bl:{jti}"):
+                raise TokenInvalido("Refresh token revocado")
+        except TokenInvalido:
+            raise
+        except Exception:
+            pass
     usuario = (
         await db.execute(select(Usuario).where(Usuario.id == usuario_id))
     ).scalar_one_or_none()
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
     return await _issue_tokens(usuario)
+
+
+async def revocar_refresh_token(refresh_token: str) -> None:
+    """Agrega el jti del refresh token a la blacklist de Redis hasta su expiracion.
+    Fail-open: si Redis no esta disponible, el token simplemente no se revoca."""
+    try:
+        payload = decode_refresh_token(refresh_token)
+    except Exception:
+        return
+    jti = payload.get("jti")
+    if not jti:
+        return
+    exp = payload.get("exp")
+    ttl = 60
+    if isinstance(exp, (int, float)):
+        ttl = max(int(exp - datetime.now(timezone.utc).timestamp()), 60)
+    try:
+        from app.core.redis import redis_client
+
+        await redis_client.setex(f"helpdesk:refresh_bl:{jti}", ttl, "1")
+    except Exception:
+        pass
 
 
 async def cambiar_password(

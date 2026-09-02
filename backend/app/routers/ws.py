@@ -47,7 +47,8 @@ async def _resolve_user(token: str, db: AsyncSession) -> Usuario:
 
 
 async def _can_access_ticket(usuario: Usuario, ticket_id: UUID, db: AsyncSession) -> bool:
-    """Valida si un usuario tiene acceso a un ticket para suscripcion WS."""
+    """Valida si un usuario tiene acceso a un ticket para suscripcion WS.
+    Misma semantica que `ticket_service.obtener` (tenant_filter + restriccion agente)."""
     from sqlalchemy import select
 
     ticket = (
@@ -56,14 +57,15 @@ async def _can_access_ticket(usuario: Usuario, ticket_id: UUID, db: AsyncSession
     if ticket is None:
         return False
     rol = usuario.rol.value if hasattr(usuario.rol, "value") else usuario.rol
-    if rol == RolUsuario.administrador.value:
-        if usuario.empresa_id is None:
-            return True
-        return ticket.empresa_id == usuario.empresa_id
-    if rol == RolUsuario.mesa_ayuda.value:
+    if rol in (RolUsuario.administrador.value, RolUsuario.mesa_ayuda.value):
+        return True
+    if rol == RolUsuario.agente.value:
         return ticket.agente_id == usuario.id
     if rol == RolUsuario.cliente.value:
-        return ticket.empresa_id == usuario.empresa_id
+        return (
+            usuario.empresa_id is not None
+            and ticket.empresa_id == usuario.empresa_id
+        )
     return False
 
 

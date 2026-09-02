@@ -7,12 +7,15 @@ import {
   subcategoriaApi,
   ticketApi,
   puntoVentaApi,
+  empresaApi,
+  adminApi,
   type Categoria,
   type Subcategoria,
   type ElementoInfraestructura,
   type PuntoVenta,
+  type Empresa,
 } from "@/lib/endpoints";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, type Usuario } from "@/store/authStore";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -64,10 +67,37 @@ export default function NuevoTicketPage() {
   const [puntosVenta, setPuntosVenta] = useState<PuntoVenta[]>([]);
   const [puntoVentaId, setPuntoVentaId] = useState<number | null>(null);
   const usuario = useAuthStore((s) => s.usuario);
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const esStaff = hasRole("administrador", "mesa_ayuda");
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [clientes, setClientes] = useState<Usuario[]>([]);
+  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const [clienteId, setClienteId] = useState<string | null>(null);
 
   useEffect(() => {
     categoriaApi.listar().then((r) => setCategorias(r.items)).catch(() => setCategorias([]));
   }, []);
+
+  useEffect(() => {
+    if (esStaff) {
+      empresaApi
+        .listar({ size: 100 })
+        .then((r) => setEmpresas(r.items))
+        .catch(() => setEmpresas([]));
+    }
+  }, [esStaff]);
+
+  useEffect(() => {
+    setClienteId(null);
+    if (esStaff && empresaId) {
+      adminApi
+        .listarUsuarios({ empresa_id: empresaId, rol: "cliente", size: 100 })
+        .then((r) => setClientes(r.items))
+        .catch(() => setClientes([]));
+    } else {
+      setClientes([]);
+    }
+  }, [esStaff, empresaId]);
 
   useEffect(() => {
     if (categoriaId) {
@@ -83,16 +113,17 @@ export default function NuevoTicketPage() {
   }, [categoriaId]);
 
   useEffect(() => {
-    if (elemento === "punto_venta" && usuario?.empresa_id) {
+    const empresaEfectiva = esStaff ? empresaId : usuario?.empresa_id;
+    if (elemento === "punto_venta" && empresaEfectiva) {
       puntoVentaApi
-        .listarPorEmpresa(usuario.empresa_id)
+        .listarPorEmpresa(empresaEfectiva)
         .then((r) => setPuntosVenta(r))
         .catch(() => setPuntosVenta([]));
     } else {
       setPuntosVenta([]);
     }
     setPuntoVentaId(null);
-  }, [elemento, usuario?.empresa_id]);
+  }, [elemento, esStaff, empresaId, usuario?.empresa_id]);
 
   const toggleCampo = (key: CampoRedKey) => {
     setCamposActivos((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -107,6 +138,14 @@ export default function NuevoTicketPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (esStaff && !empresaId) {
+      setError("Seleccione la empresa");
+      return;
+    }
+    if (esStaff && !clienteId) {
+      setError("Seleccione el cliente a nombre de quien se crea el ticket");
+      return;
+    }
     if (!categoriaId) {
       setError("Seleccione una categoría");
       return;
@@ -125,7 +164,7 @@ export default function NuevoTicketPage() {
       const nombrePunto = elemento === "punto_venta" && puntoVentaId
         ? puntosVenta.find((pv) => pv.id === puntoVentaId)?.nombre ?? null
         : null;
-      await ticketApi.crear({
+      const base = {
         titulo,
         descripcion,
         categoria_id: categoriaId,
@@ -136,7 +175,12 @@ export default function NuevoTicketPage() {
         mascara_red: camposActivos.mascara_red ? valoresCampos.mascara_red || null : null,
         puerta_enlace: camposActivos.puerta_enlace ? valoresCampos.puerta_enlace || null : null,
         nombre_punto: nombrePunto,
-      });
+      };
+      if (esStaff && empresaId && clienteId) {
+        await ticketApi.crearAdmin({ ...base, empresa_id: empresaId, cliente_id: clienteId });
+      } else {
+        await ticketApi.crear(base);
+      }
       router.replace("/tickets");
     } catch {
       setError("Error al crear el ticket");
@@ -152,6 +196,34 @@ export default function NuevoTicketPage() {
       />
       <form onSubmit={submit} className="space-y-5 mt-4">
         <Card >
+          {esStaff && (
+            <div className="grid grid-cols-2 gap-4 mt-5 mb-4 border-b border-gray-100 pb-4">
+              <Select
+                label="Empresa"
+                value={empresaId ?? ""}
+                onChange={(e) => setEmpresaId(Number(e.target.value) || null)}
+                placeholder="Seleccione..."
+                options={empresas.map((emp) => ({ value: String(emp.id), label: emp.nombre }))}
+              />
+              <div className="flex flex-col">
+                <span className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+                  Cliente
+                </span>
+                <SearchableSelect
+                  value={clienteId}
+                  onChange={(v) => setClienteId(v || null)}
+                  placeholder={empresaId ? "Buscar cliente..." : "Seleccione una empresa primero"}
+                  emptyMessage="No se encontraron clientes"
+                  disabled={!empresaId}
+                  options={clientes.map((cl) => ({
+                    value: cl.id,
+                    label: cl.nombre,
+                    sublabel: cl.email,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5 items-start mb-4 ">
             <Select
               label="Categoría"
@@ -180,7 +252,7 @@ export default function NuevoTicketPage() {
             />
             {elemento === "punto_venta" && (
               <div className="flex flex-col gap-1">
-                <span className="sm:text-xs text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+                <span className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
                   Punto de venta
                 </span>
                 <SearchableSelect
@@ -196,7 +268,9 @@ export default function NuevoTicketPage() {
                 />
               </div>
             )}
-          </div>  
+          </div>
+          <div className="mb-4 border-b border-gray-200 pb-4">
+          </div>
           <Input
             label="Titulo"
             type="text"
@@ -206,7 +280,6 @@ export default function NuevoTicketPage() {
             onChange={(e) => setTitulo(e.target.value)}
             placeholder="Escriba un titulo descriptivo"
           />
-
           <div className="mt-5">
             <Textarea
               label="Descripcion"
@@ -218,7 +291,7 @@ export default function NuevoTicketPage() {
             />
           </div>
           <section className="mt-5 border border-gray-200 rounded-xl p-4">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 block">
+            <span className="sm:text-xs text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-3 block">
             Información de red (opcional)
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -229,10 +302,10 @@ export default function NuevoTicketPage() {
                   id={campo.key}
                   checked={camposActivos[campo.key]}
                   onChange={() => toggleCampo(campo.key)}
-                  className="w-4 h-4 rounded sm:text-xs text-[11px] border-gray-300 text-brand-600 focus:ring-brandCustom"
+                  className="w-4 h-4 rounded sm:text-xs text-[10px] border-gray-300 text-brand-600 focus:ring-brandCustom"
                 />
                 <div className="flex gap-4 w-full">
-                  <label htmlFor={campo.key} className="text-nowrap self-center sm:text-xs text-[11px] font-normal text-gray-600 cursor-pointer select-none">
+                  <label htmlFor={campo.key} className="text-nowrap self-center sm:text-xs text-[10px] font-normal text-gray-600 cursor-pointer select-none">
                     {campo.label}
                   </label>
                   {camposActivos[campo.key] && (

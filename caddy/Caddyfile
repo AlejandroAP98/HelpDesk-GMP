@@ -5,6 +5,17 @@
 :80 {
 	encode gzip zstd
 
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
@@ -17,11 +28,6 @@
 
 	handle /ws {
 		reverse_proxy backend:8000
-	}
-
-	handle /minio/* {
-		uri strip_prefix /minio
-		reverse_proxy minio:9001
 	}
 
 	handle {
@@ -32,6 +38,18 @@
 helpdesk.local {
 	encode gzip zstd
 
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
@@ -44,11 +62,6 @@ helpdesk.local {
 
 	handle /ws {
 		reverse_proxy backend:8000
-	}
-
-	handle /minio/* {
-		uri strip_prefix /minio
-		reverse_proxy minio:9001
 	}
 
 	handle {

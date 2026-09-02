@@ -7,7 +7,7 @@ from app.schemas.usuario import RefreshRequest, Token, UsuarioOut
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class RegistroRequest(BaseModel):

@@ -1,11 +1,12 @@
 """Endpoints REST de autenticacion."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_admin
+from app.core.rate_limit import enforce_rate_limit
 from app.models.usuario import Usuario
 from app.schemas.auth import (
     CambiarPasswordRequest,
@@ -20,8 +21,17 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def registrar_cliente(data: RegistroRequest, db: AsyncSession = Depends(get_db)) -> Token:
+async def registrar_cliente(
+    data: RegistroRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> Token:
     """Registro publico de clientes. Crea usuario con rol 'cliente' vinculado a empresa."""
+    ip = request.client.host if request.client else "desconocida"
+    await enforce_rate_limit(
+        f"helpdesk:rl:register:{ip}", max_intentos=10, ventana_segundos=3600,
+        mensaje="Demasiados registros desde esta IP. Intentalo mas tarde.",
+    )
     return await auth_service.registrar_cliente(data, db)
 
 
@@ -36,7 +46,14 @@ async def registrar_interno(
 
 
 @router.post("/login", response_model=Token)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token:
+async def login(data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)) -> Token:
+    ip = request.client.host if request.client else "desconocida"
+    await enforce_rate_limit(
+        f"helpdesk:rl:login:{ip}:{data.email.lower()}",
+        max_intentos=10,
+        ventana_segundos=900,
+        mensaje="Demasiados intentos de inicio de sesion. Espera 15 minutos.",
+    )
     return await auth_service.login(data, db)
 
 
@@ -74,7 +91,10 @@ async def cambiar_password(
 @router.post("/logout", response_model=Mensaje)
 async def logout(
     current: Annotated[Usuario, Depends(get_current_user)],
-    _: RefreshRequest = None,
+    data: RefreshRequest | None = None,
 ) -> Mensaje:
-    # TODO Fase 4+: revocar refresh en blacklist de Redis.
+    """Revoca el refresh token (blacklist Redis) si el cliente lo envia.
+    El access token sigue valido hasta expirar (max 30 min)."""
+    if data and data.refresh_token:
+        await auth_service.revocar_refresh_token(data.refresh_token)
     return Mensaje(detail="Sesion cerrada. Elimine el token del cliente.")

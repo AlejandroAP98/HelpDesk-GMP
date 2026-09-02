@@ -55,6 +55,16 @@ CSV_HEADER = [
     "estados",
 ]
 
+_CSV_DANGEROUS_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: str) -> str:
+    """Neutraliza CSV formula injection: prefija celdas que Excel podria
+    interpretar como formula (=, +, -, @)."""
+    if value.startswith(_CSV_DANGEROUS_PREFIXES):
+        return f"'{value}"
+    return value
+
 
 async def _cargar_historial(
     db: AsyncSession,
@@ -131,13 +141,13 @@ async def _generar_csv(
             writer.writerow(
                 [
                     str(ticket.id),
-                    empresa_nombre,
-                    categoria_nombre,
-                    subcategoria_nombre,
+                    _csv_safe(empresa_nombre),
+                    _csv_safe(categoria_nombre),
+                    _csv_safe(subcategoria_nombre),
                     ticket.elemento_afectado.value,
-                    ticket.titulo,
-                    ticket.descripcion,
-                    agente_nombre,
+                    _csv_safe(ticket.titulo),
+                    _csv_safe(ticket.descripcion),
+                    _csv_safe(agente_nombre),
                     ticket.estado.value,
                     fc.isoformat() if fc else "",
                     fa.isoformat() if fa else "",

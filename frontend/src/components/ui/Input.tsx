@@ -31,7 +31,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 
 export function Textarea({ label, className = "", ...props }: TextareaProps) {
   return (
-    <label className="flex flex-col gap-2">
+    <label className="flex flex-col gap-2 px-1">
       {label && (
         <span className="sm:text-xs text-[10px] font-medium text-gray-500 uppercase tracking-wider block">
           {label}

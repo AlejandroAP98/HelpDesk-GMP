@@ -84,7 +84,7 @@ async def listar_por_empresa(
 
 
 async def obtener(
-    punto_venta_id: int, current: Usuario, db: AsyncSession
+    punto_venta_id: int, current: Usuario | None, db: AsyncSession
 ) -> PuntoVenta:
     pv = (
         await db.execute(
@@ -93,9 +93,10 @@ async def obtener(
     ).scalar_one_or_none()
     if pv is None:
         raise RecursoNoEncontrado(f"Punto de venta {punto_venta_id} no existe")
-    tf = tenant_filter(current)
-    if "empresa_id" in tf and pv.empresa_id != tf["empresa_id"]:
-        raise RecursoNoEncontrado(f"Punto de venta {punto_venta_id} no existe")
+    if current is not None:
+        tf = tenant_filter(current)
+        if "empresa_id" in tf and pv.empresa_id != tf["empresa_id"]:
+            raise RecursoNoEncontrado(f"Punto de venta {punto_venta_id} no existe")
     return pv
 
 
@@ -127,7 +128,7 @@ async def crear(data: PuntoVentaCreate, db: AsyncSession) -> PuntoVenta:
 async def actualizar(
     punto_venta_id: int, data: PuntoVentaUpdate, db: AsyncSession
 ) -> PuntoVenta:
-    pv = await obtener(punto_venta_id, db)
+    pv = await obtener(punto_venta_id, None, db)
     for field in ("nombre", "direccion", "ciudad", "activo"):
         val = getattr(data, field)
         if val is not None:
@@ -138,6 +139,6 @@ async def actualizar(
 
 
 async def eliminar(punto_venta_id: int, db: AsyncSession) -> None:
-    pv = await obtener(punto_venta_id, db)
+    pv = await obtener(punto_venta_id, None, db)
     await db.delete(pv)
     await db.commit()

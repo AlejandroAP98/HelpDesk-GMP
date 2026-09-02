@@ -20,10 +20,13 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
     >
       <div className="flex items-center justify-between gap-2 bg-brandCustom/95 p-1 rounded-t-[0.6rem]">
         <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-          {ticket.empresa_nombre}
+          {ticket.empresa_nombre || "Empresa Desconocida"}
         </span>
         <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-          {ticket.elemento_afectado.replace("_", " ")}
+          {ticket.elemento_afectado.replace("_", " ") || "Elemento Desconocido"}
+        </span>
+        <span className={` ${!ticket.agente_nombre ? "text-red-500" : "text-white"} uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit`}>
+          {ticket.agente_nombre || "SIN ASIGNAR"}
         </span>
       </div>
       <div className="h-full space-y-1 flex-1 px-4">

@@ -19,6 +19,7 @@ from app.schemas.ticket import (
     EstadoUpdate,
     HistorialEstadoOut,
     PrioridadUpdate,
+    TicketAdminCreate,
     TicketCreate,
     TicketDetalle,
     TicketOut,
@@ -128,6 +129,18 @@ async def crear(
     current: Usuario = Depends(get_current_user),
 ) -> TicketOut:
     ticket = await ticket_service.crear(data, current, db)
+    return await _ticket_to_out(ticket, db)
+
+
+@router.post("/admin", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
+async def crear_admin(
+    data: TicketAdminCreate,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_mesa_ayuda),
+) -> TicketOut:
+    """Admin/mesa_ayuda crea un ticket a nombre de un cliente de una empresa
+    (reporte telefonico/WhatsApp o trabajo interno de la empresa propia)."""
+    ticket = await ticket_service.crear_admin(data, current, db)
     return await _ticket_to_out(ticket, db)
 
 

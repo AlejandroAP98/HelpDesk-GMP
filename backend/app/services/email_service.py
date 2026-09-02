@@ -10,6 +10,7 @@ Eventos que disparan email:
 """
 from __future__ import annotations
 
+import html
 import logging
 from typing import Any
 from uuid import UUID
@@ -100,17 +101,22 @@ def _ticket_url(ticket_id: UUID) -> str:
     return f"https://soporte.gmpredes.online/tickets/{ticket_id}"
 
 
+def _esc(value: str | None) -> str:
+    """Escapa texto controlado por el usuario para insertarlo en HTML del email."""
+    return html.escape(value or "", quote=True)
+
+
 def _render_ticket_created(ticket: Ticket, cliente_email: str) -> tuple[str, str]:
-    subject = f"[Soporte GMP] Ticket #{str(ticket.id)[:8].upper()} recibido: {ticket.titulo}"
+    subject = f"[Soporte GMP] Ticket #{str(ticket.id)[:8].upper()} recibido: {_esc(ticket.titulo)}"
     html = f"""
     <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
         <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px;">
             <img src="https://soporte.gmpredes.online/icon-192.png" alt="GMP Redes" height="40" style="height: 40px; width: auto; max-height: 40px; display: block; border: 0; outline: none; text-decoration: none;" onerror="this.onerror=null; this.src='https://placehold.co/120x32/2563eb/ffffff?text=GMP+Redes';">
         </div>
         <h2 style="color: #007991; margin-top: 0; font-size: 24px; font-weight: 700; margin-bottom: 16px;">Tu ticket fue recibido</h2>
-        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {cliente_email}</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {_esc(cliente_email)}</p>
         <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">Registramos tu solicitud de soporte. Ingresa al sistema para dar seguimiento al mismo o hablar con el técnico asignado.</p>
-        
+
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">ID: </td>
@@ -118,7 +124,7 @@ def _render_ticket_created(ticket: Ticket, cliente_email: str) -> tuple[str, str
             </tr>
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Título: </td>
-            <td style="padding: 10px 0; text-align: right;"><strong style="color: #111827; text-transform: capitalize;">{ticket.titulo}</strong></td>
+            <td style="padding: 10px 0; text-align: right;"><strong style="color: #111827; text-transform: capitalize;">{_esc(ticket.titulo)}</strong></td>
             </tr>
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Prioridad: </td>
@@ -139,16 +145,16 @@ def _render_ticket_created(ticket: Ticket, cliente_email: str) -> tuple[str, str
 
 
 def _render_ticket_resolved(ticket: Ticket, cliente_email: str) -> tuple[str, str]:
-    subject = f"[Soporte GMP] Ticket #{str(ticket.id)[:8].upper()} resuelto: {ticket.titulo}"
+    subject = f"[Soporte GMP] Ticket #{str(ticket.id)[:8].upper()} resuelto: {_esc(ticket.titulo)}"
     html = f"""
     <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 28px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
          <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 2px;">
             <img src="https://soporte.gmpredes.online/icon-192.png" alt="GMP Redes" height="40" style="height: 40px; width: auto; max-height: 40px; display: block; border: 0; outline: none; text-decoration: none;" onerror="this.onerror=null; this.src='https://placehold.co/120x32/2563eb/ffffff?text=GMP+Redes';">
         </div>
         <h2 style="color: #60993e; margin-top: 0; font-size: 24px; font-weight: 700; margin-bottom: 16px;">Tu ticket ha sido resuelto</h2>
-        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {cliente_email}</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">Hola, {_esc(cliente_email)}</p>
         <p style="color: #374151; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">El equipo de soporte ha marcado tu ticket como resuelto. Puedes cerrarlo si todo está en orden, si no es así puedes escribir nuevamente al equipo de soporte para reabrirlo y continuar recibiendo asistencia.</p>
-        
+
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">ID: </td>
@@ -156,7 +162,7 @@ def _render_ticket_resolved(ticket: Ticket, cliente_email: str) -> tuple[str, st
             </tr>
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Título: </td>
-            <td style="padding: 10px 0; text-align: right;"><strong style="color: #111827; text-transform: capitalize;">{ticket.titulo}</strong></td>
+            <td style="padding: 10px 0; text-align: right;"><strong style="color: #111827; text-transform: capitalize;">{_esc(ticket.titulo)}</strong></td>
             </tr>
             <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 10px 0; color: #6b7280; font-weight: 500;">Prioridad: </td>
@@ -179,16 +185,16 @@ def _render_ticket_resolved(ticket: Ticket, cliente_email: str) -> tuple[str, st
 def _render_ticket_urgent(
     ticket: Ticket, empresa_nombre: str | None
 ) -> tuple[str, str]:
-    empresa = empresa_nombre or "?"
-    subject = f"[URGENTE] Nuevo ticket en {empresa}: {ticket.titulo}"
+    empresa = _esc(empresa_nombre) or "?"
+    subject = f"[URGENTE] Nuevo ticket en {empresa_nombre or '?'}: {ticket.titulo}"
     html = f"""
     <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; border-left: 4px solid #dc2626; padding-left: 16px;  background-color: #ffffff;">
       <h2 style="color: #dc2626;">Ticket urgente recibido</h2>
       <p style="color: #000;">Se creo un ticket con prioridad <strong>URGENTE</strong> en la empresa <strong>{empresa}</strong>.</p>
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
         <tr><td style="padding: 6px 0; color: #6b7280;">ID: </td><td><code style="color: #000; text-transform: uppercase;">#{str(ticket.id).split("-")[0]}</code></td></tr>
-        <tr><td style="padding: 6px 0; color: #6b7280;">Título: </td><td style="color: #000;"><strong>{ticket.titulo}</strong></td></tr>
-        <tr><td style="padding: 6px 0; color: #6b7280;">Descripción: </td><td style="color: #000;" >{ticket.descripcion[:300]}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Título: </td><td style="color: #000;"><strong>{_esc(ticket.titulo)}</strong></td></tr>
+        <tr><td style="padding: 6px 0; color: #6b7280;">Descripción: </td><td style="color: #000;" >{_esc(ticket.descripcion[:300])}</td></tr>
       </table>
       <p style="margin-top: 24px;">
         <a href="{_ticket_url(ticket.id)}" style="background: #dc2626; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">Ver ticket</a>
