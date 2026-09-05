@@ -126,6 +126,9 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        NEXT_PUBLIC_WHATSAPP_NUMERO: ${NEXT_PUBLIC_WHATSAPP_NUMERO:-}
+        NEXT_PUBLIC_CONTACTO_EMAIL: ${NEXT_PUBLIC_CONTACTO_EMAIL:-}
     restart: unless-stopped
     env_file:
       - .env

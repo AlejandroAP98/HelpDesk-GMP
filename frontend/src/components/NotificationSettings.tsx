@@ -168,7 +168,7 @@ export default function NotificationSettings() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       {/* Seccion: Notificaciones push */}
       {state === "unsupported" ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-5">

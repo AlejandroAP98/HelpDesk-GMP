@@ -14,6 +14,7 @@ import FactoryIcon from "@/app/assets/icons/FactoryIcon";
 import CheckSquareIcon from "@/app/assets/icons/CheckSquareIcon";
 import MetricsIcon from "@/app/assets/icons/MetricsIcon";
 import SedesIcon from "@/app/assets/icons/SedesIcon";
+import { whatsappUrl, mailtoUrl, contactoEmail } from "@/lib/contacto";
 import logo from "../app/assets/logo-white.svg";
 
 interface NavItem {
@@ -167,39 +168,70 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           ))}
         </nav>
 
-        <div className="bg-brandCustom/20 p-2">
-          <div>
-            <p className="font-medium text-white truncate text-xs">{usuario?.nombre}</p>
-            <p className="text-white/80 truncate text-xs mt-0.5">{usuario?.email}</p>
+        <div className="bg-brandCustom/20">
+          {(whatsappUrl || mailtoUrl) && (
+            <div>
+              <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">Contactenos</span>
+              <div className="mt-1 flex flex-col gap-0.5">
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-2 py-2 text-[11px] text-white/90 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-brand-whatsapp shrink-0" viewBox="0 0 24 24"><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+                    WhatsApp
+                  </a>
+                )}
+                {mailtoUrl && (
+                  <a
+                    href={mailtoUrl}
+                    onClick={onClose}
+                    title={contactoEmail ?? undefined}
+                    className="flex items-center gap-2 px-2 py-2 text-[11px] text-white/90 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-mail shrink-0" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"/><path d="M3 7l9 6l9 -6"/></svg>
+                    <span className="truncate">Correo</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="mb-1 px-2">
+             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50">usuario</span>
+          </div>
+          {(onOpenNotifications || onOpenPassword) && (
+            <div className="flex flex-col gap-0.5">
+              {onOpenPassword && (
+                <button
+                  onClick={onOpenPassword}
+                  className="flex items-center gap-2 px-2 py-2 text-[11px] text-white/90 hover:bg-white/10 hover:text-white transition-colors text-left"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-password-user shrink-0" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 17v4m-2-1 4-2m-4 0 4 2m-9-3v4m-2-1 4-2m-4 0 4 2m12-3v4m-2-1 4-2m-4 0 4 2M9 6a3 3 0 1 0 6 0 3 3 0 0 0-6 0m-2 8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2"/></svg>
+                  <span className="truncate">Cambiar contraseña</span>
+                </button>
+              )}
+              {onOpenNotifications && (
+                <button
+                  onClick={onOpenNotifications}
+                  className="flex items-center gap-2 px-2 py-2 text-[11px] text-white/90 hover:bg-white/10 hover:text-white transition-colors text-left"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-bell-ringing shrink-0" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M10 5a2 2 0 0 1 4 0 7 7 0 0 1 4 6v3a4 4 0 0 0 2 3H4a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6M9 17v1a3 3 0 0 0 6 0v-1m6-10.273A11.05 11.05 0 0 0 18.206 3M3 6.727A11.05 11.05 0 0 1 5.792 3"/></svg>
+                  <span className="truncate">Notificaciones</span>
+                </button>
+              )}
+            </div>
+          )}
+          <div className="my-3 px-2.5">
             <Button
               onClick={handleLogout}
               variant="secondary"
-              className="mt-4 w-full text-xs"
+              className="w-full text-xs"
             >
               Cerrar sesion
             </Button>
-            {(onOpenNotifications || onOpenPassword) && (
-              <div className="mt-2 flex gap-2">
-                {onOpenPassword && (
-                  <button
-                    onClick={onOpenPassword}
-                    title="Cambiar contraseña"
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-normal text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-password-user" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M12 17v4m-2-1 4-2m-4 0 4 2m-9-3v4m-2-1 4-2m-4 0 4 2m12-3v4m-2-1 4-2m-4 0 4 2M9 6a3 3 0 1 0 6 0 3 3 0 0 0-6 0m-2 8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2"/></svg>
-                  </button>
-                )}
-                {onOpenNotifications && (
-                  <button
-                    title="Notificaciones"
-                    onClick={onOpenNotifications}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl p-2 text-xs font-normal text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-bell-ringing" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M10 5a2 2 0 0 1 4 0 7 7 0 0 1 4 6v3a4 4 0 0 0 2 3H4a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6M9 17v1a3 3 0 0 0 6 0v-1m6-10.273A11.05 11.05 0 0 0 18.206 3M3 6.727A11.05 11.05 0 0 1 5.792 3"/></svg>
-                  </button>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </aside>

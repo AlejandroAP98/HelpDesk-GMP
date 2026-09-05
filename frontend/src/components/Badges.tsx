@@ -8,34 +8,61 @@ export const prioridadLabels: Record<string, string> = {
 };
 
 export const estadoStyles: Record<string, string> = {
-  abierto: "bg-blueCustom/20 text-blueCustom border-blueCustom/50",
-  asignado: "bg-violetCustom/20 text-violetCustom border-violetCustom/50",
-  en_progreso: "bg-yellowCustom/20 text-yellowCustom border-yellowCustom/50",
-  resuelto: "bg-greenCustom/20 text-greenCustom border-greenCustom/50",
-  cerrado: "bg-grayCustom/20 text-grayCustom border-grayCustom/50",
+  abierto: "text-blueCustom",
+  asignado: "text-violetCustom",
+  en_progreso: "text-yellowCustom",
+  resuelto: "text-greenCustom",
+  cerrado: "text-grayCustom",
 };
 
 const prioridadStyles: Record<string, string> = {
-  baja: "text-gray-400 bg-gray-300/5 px-2 py-1 font-normal",
-  media: "text-gray-600 bg-gray-500/5 px-2 py-1 font-normal",
-  alta: "text-orange-600 bg-orange-300/5 px-2 py-1 font-medium",
-  urgente: "bg-redCustom/5 text-redCustom border-redCustom font-semibold px-2 py-0.5 rounded-md",
+  baja: "text-gray-500 bg-gray-200/30 font-normal",
+  media: "text-gray-600 bg-gray-300/60 font-normal",
+  alta: "text-white bg-orange-500/70 font-medium",
+  urgente: "text-white bg-redCustom/80 font-medium",
 };
+const estadoPorcentaje: Record<string, number> = {
+  abierto: 0,
+  asignado: 25,
+  en_progreso: 50,
+  resuelto: 75,
+  cerrado: 100,
+};
+
+const porcentajeRellenos: Record<number, string> = {
+  25: "M21 12a9 9 0 0 0-9-9m0 0v9h9",
+  50: "M12 21a9 9 0 0 0 0-18m0 0v18",
+  75: "M3 12a9 9 0 1 0 9-9m0 0v9H3",
+  100: "M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0",
+};
+
 export function EstadoBadge({ estado }: { estado: string }) {
+  const pct = estadoPorcentaje[estado];
   return (
-    <span className={`inline-flex text-nowrap rounded-md sm:px-2.5 px-1 py-1 sm:text-[11px] text-[9px] font-medium tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
-      {estado.replace("_", " ")}
+    <span className={`inline-flex items-center gap-1 px-1.5 bg-brandCustom/5 text-nowrap rounded-md py-1 sm:text-[11px] text-[9px] font-medium tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
+      {pct !== undefined && (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#508484" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className={`icon icon-tabler icons-tabler-outline icon-tabler-percentage-${pct}`} viewBox="0 0 24 24">
+          <path fill="none" stroke="none" d="M0 0h24v24H0z" />
+          {pct > 0 && pct < 100 && <path fill="#508484" stroke="none" d={porcentajeRellenos[pct]} />}
+          {pct === 100
+            ? <path fill="#508484" stroke="none" d={porcentajeRellenos[100]} />
+            : <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />}
+        </svg>
+      )}
+      <span title={`Progreso del ticket ${pct}%`} >{estado.replace("_", " ")}</span>
     </span>
   );
 }
 
 export function PrioridadBadge({ prioridad, estado= "" }: { prioridad: string, estado?: string  }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-lg sm:px-2.5 uppercase px-1 py-1 sm:text-[11px] text-[9px] font-medium  ${prioridadStyles[prioridad] ?? ""}`}>
+    <span
+      className={`inline-flex items-center gap-1 uppercase sm:text-[11px] text-[9px] ${prioridadStyles[prioridad] ?? ""} [clip-path:polygon(0_0,8px_50%,0_100%,calc(100%_-_10px)_100%,100%_50%,calc(100%_-_10px)_0)]`}
+    >
       {prioridad === "urgente" && estado !== "cerrado" &&  (
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-redCustom animate-pulse" />
+        <span className="inline-block w-1.5 h-1.5 bg-white animate-pulse" />
       )}
-      {prioridadLabels[prioridad] ?? prioridad}
+      <span className="w-full text-center sm:px-3 py-0.5 px-2.5">{prioridadLabels[prioridad] ?? prioridad}</span>
     </span>
   );
 }

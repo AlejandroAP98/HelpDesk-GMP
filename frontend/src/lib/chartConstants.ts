@@ -14,9 +14,9 @@ export const ESTADO_DONUT_LABELS: Record<string, string> = {
 
 export const PRIORIDAD_DONUT_COLORS: Record<string, string> = {
   urgente: "#fe4a49",
-  alta: "#EB6534",
-  media: "#508484",
-  baja: "#7e7f83",
+  alta: "#f97316",
+  media: "#d1d5db",
+  baja: "#e5e7eb",
 };
 
 export const PRIORIDAD_DONUT_LABELS: Record<string, string> = {

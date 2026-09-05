@@ -11,11 +11,11 @@ import Link from "next/link";
 import { ESTADO_DONUT_COLORS, ESTADO_DONUT_LABELS, PRIORIDAD_DONUT_COLORS, PRIORIDAD_DONUT_LABELS } from "@/lib/chartConstants";
 
 const ESTADO_COLORS: Record<string, string> = {
-  abierto: "bg-blue-500",
-  asignado: "bg-violet-500",
-  en_progreso: "bg-yellow-500",
-  resuelto: "bg-green-500",
-  cerrado: "bg-gray-500",
+  abierto: "bg-blueCustom",
+  asignado: "bg-violetCustom",
+  en_progreso: "bg-yellowCustom",
+  resuelto: "bg-greenCustom",
+  cerrado: "bg-grayCustom",
 };
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -28,9 +28,9 @@ const ESTADO_LABELS: Record<string, string> = {
 
 const PRIORIDAD_COLORS: Record<string, string> = {
   urgente: "bg-redCustom",
-  alta: "bg-yellowCustom",
-  media: "bg-blueCustom",
-  baja: "bg-grayCustom",
+  alta: "bg-orange-500",
+  media: "bg-gray-500",
+  baja: "bg-gray-300",
 };
 
 const PRIORIDAD_LABELS: Record<string, string> = {
@@ -271,7 +271,7 @@ export default function MetricasPage() {
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-accentCustom transition-all duration-500"
+                        className="h-full rounded-full bg-grayCustom transition-all duration-500"
                         style={{ width: `${(item.cantidad / maxElemento) * 100}%` }}
                       />
                     </div>
@@ -298,7 +298,7 @@ export default function MetricasPage() {
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-redCustom transition-all duration-500"
+                        className="h-full rounded-full bg-grayCustom transition-all duration-500"
                         style={{ width: `${(item.cantidad / maxUbicacion) * 100}%` }}
                       />
                     </div>
