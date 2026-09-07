@@ -74,7 +74,7 @@ export function buildTicketTableColumns({
       header: "Prioridad",
       cell: (t: Ticket) =>
         prioridadConEstado
-          ? <PrioridadBadge prioridad={t.prioridad} estado={t.estado} />
+          ? <PrioridadBadge prioridad={t.prioridad} />
           : <PrioridadBadge prioridad={t.prioridad} />,
     },
     {
