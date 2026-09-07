@@ -56,7 +56,7 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
       <div className="bg-brandCustom/5 px-4 py-2 rounded-b-[0.6rem] flex items-center justify-between gap-2 sm:text-xs text-[10px]">
         <div className="flex items-center gap-2">
           <EstadoBadge estado={ticket.estado} />
-          <PrioridadBadge prioridad={ticket.prioridad} estado={ticket.estado} />
+          <PrioridadBadge prioridad={ticket.prioridad} />
         </div>
         <div className="flex items-center gap-1">
           <span className={` ${!ticket.agente_nombre ? "text-redCustom" : "text-brandCustom"} uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit`}>

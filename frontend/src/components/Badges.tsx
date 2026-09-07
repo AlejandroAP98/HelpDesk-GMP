@@ -54,15 +54,12 @@ export function EstadoBadge({ estado }: { estado: string }) {
   );
 }
 
-export function PrioridadBadge({ prioridad, estado= "" }: { prioridad: string, estado?: string  }) {
+export function PrioridadBadge({ prioridad }: { prioridad: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 uppercase sm:text-[11px] text-[9px] ${prioridadStyles[prioridad] ?? ""} [clip-path:polygon(0_0,8px_50%,0_100%,calc(100%_-_10px)_100%,100%_50%,calc(100%_-_10px)_0)]`}
-    >
-      {prioridad === "urgente" && estado !== "cerrado" &&  (
-        <span className="inline-block w-1.5 h-1.5 bg-white animate-pulse" />
-      )}
-      <span className="w-full text-center sm:px-3 py-0.5 px-2.5">{prioridadLabels[prioridad] ?? prioridad}</span>
+      className={`inline-flex items-center justify-center gap-1 uppercase sm:text-[10px] text-[9px] ${prioridadStyles[prioridad] ?? ""} [clip-path:polygon(10px_0,100%_0,calc(100%_-_8px)_50%,100%_100%,10px_100%,0_50%)]`}
+      >
+      <span className="w-full h-full text-center px-2.5 py-0.5">{prioridadLabels[prioridad] ?? prioridad}</span>
     </span>
   );
 }

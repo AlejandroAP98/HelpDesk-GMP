@@ -120,8 +120,8 @@ export default function TicketDetallePage() {
               </div>
             </dl>
             <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-2">
-              <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0 " >
-                <span className="font-medium text-gray-500 tracking-wide font-mono uppercase text-[11px]">#{ticket.id.split("-")[0]}</span>
+              <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0" >
+                <span className="font-medium text-gray-500 tracking-wide font-mono uppercase text-xs">#{ticket.id.split("-")[0]}</span>
                 <EstadoBadge estado={ticket.estado} />
                 <PrioridadBadge prioridad={ticket.prioridad} />
               </div>
