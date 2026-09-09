@@ -67,11 +67,11 @@ backup_redis() {
     ${COMPOSE_CMD} exec -T redis redis-cli BGSAVE >/dev/null 2>&1
     sleep 2
     docker run --rm \
+        --user "$(id -u):$(id -g)" \
         -v "helpdesk-gmp_redis_data:/data:ro" \
         -v "${BACKUP_DIR}/redis":/backup \
-        alpine cp /data/dump.rdb /backup/dump.rdb 2>/dev/null || {
+        alpine sh -c "cp /data/dump.rdb /backup/dump.rdb && gzip /backup/dump.rdb" 2>/dev/null || {
             warn "Redis sin datos persistidos"; return 0; }
-    gzip "${BACKUP_DIR}/redis/dump.rdb"
     log "Redis OK: $(du -sh ${BACKUP_DIR}/redis/dump.rdb.gz | cut -f1)"
 }
 
