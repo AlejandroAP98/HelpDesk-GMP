@@ -61,14 +61,46 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod u
 ### Backup y Restore
 
 ```bash
-# Backup completo (PostgreSQL + MinIO + Redis + .env)
+# Backup completo (PostgreSQL + MinIO + Redis + .env) + subir a Google Drive
 ./scripts/backup.sh
 
-# Restaurar backup
+# Backup sin subir a Drive
+./scripts/backup.sh --no-upload
+
+# Restaurar backup local
 ./scripts/backup.sh --restore YYYYMMDD_HHMMSS
 
-# Cron de backup diario a las 3am:
-# 0 3 * * * /opt/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+# Listar backups en Google Drive
+./scripts/backup.sh --list-remote
+
+# Restaurar desde Google Drive
+./scripts/backup.sh --restore-gdrive YYYYMMDD_HHMMSS
+
+# Cron de backup diario a las 3am (con subida a Drive):
+# 0 3 * * * /home/gmp/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+```
+
+**Configuracion de rclone (una vez):**
+
+```bash
+# Instalar rclone
+sudo apt install rclone -y
+
+# Configurar remote de Google Drive
+rclone config
+# 1. n (nuevo remote)
+# 2. Nombre: gdrive
+# 3. Tipo: drive (Google Drive)
+# 4. client_id/client_secret: vacio (usar defaults)
+# 5. scope: 1 (acceso completo)
+# 6. Dejar resto por defecto
+# 7. Abrir URL de autorizacion en navegador
+# 8. Pegar codigo de verificacion
+
+# Variables configurables en backup.sh:
+#   GDRIVE_REMOTE=gdrive          # nombre del remote en rclone
+#   GDRIVE_FOLDER=HelpDesk-GMP-Backups  # carpeta en Drive
+#   GDRIVE_KEEP_DAYS=30           # dias de retencion en Drive
 ```
 
 ### Sincronizacion de sedes (Supabase -> HelpDesk)

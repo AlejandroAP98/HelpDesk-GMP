@@ -3,11 +3,16 @@
 # HelpDesk-GMP - Backup script para PostgreSQL, MinIO y Redis
 # =============================================================================
 # Uso:
-#   ./scripts/backup.sh                    # Backup completo
-#   ./scripts/backup.sh --restore 20240115_030000  # Restaurar backup
+#   ./scripts/backup.sh                          # Backup completo (+ subir a Drive)
+#   ./scripts/backup.sh --no-upload              # Backup sin subir a Drive
+#   ./scripts/backup.sh --restore 20240115_030000 # Restaurar backup local
+#   ./scripts/backup.sh --list-remote            # Listar backups en Google Drive
+#   ./scripts/backup.sh --restore-gdrive 20240115_030000  # Restaurar desde Drive
 #
 # Cron (diario 3am):
 #   0 3 * * * /ruta/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+#
+# Requiere: rclone configurado con remote "gdrive" (ver AGENTS.md)
 # =============================================================================
 
 set -euo pipefail
@@ -18,6 +23,10 @@ COMPOSE_PROD="${PROJECT_DIR}/docker-compose.prod.yml"
 COMPOSE_CMD="docker compose -f ${COMPOSE_BASE} -f ${COMPOSE_PROD} --profile prod"
 BACKUP_ROOT="${BACKUP_ROOT:-/backups/helpdesk}"
 KEEP_DAYS="${KEEP_DAYS:-7}"
+GDRIVE_REMOTE="${GDRIVE_REMOTE:-gdrive}"
+GDRIVE_FOLDER="${GDRIVE_FOLDER:-HelpDesk-GMP-Backups}"
+GDRIVE_KEEP_DAYS="${GDRIVE_KEEP_DAYS:-30}"
+UPLOAD="${UPLOAD:-true}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 BACKUP_DIR="${BACKUP_ROOT}/${TIMESTAMP}"
 
@@ -91,6 +100,120 @@ check_disk_space() {
     fi
 }
 
+check_rclone() {
+    if ! command -v rclone &>/dev/null; then
+        warn "rclone no instalado - saltando subida a Google Drive"
+        return 1
+    fi
+    if ! rclone listremotes 2>/dev/null | grep -q "^${GDRIVE_REMOTE}:$"; then
+        warn "Remote '${GDRIVE_REMOTE}' no configurado en rclone - saltando subida"
+        return 1
+    fi
+    return 0
+}
+
+upload_to_gdrive() {
+    if ! check_rclone; then return 0; fi
+
+    log "Subiendo backup a Google Drive..."
+    local remote_path="${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/${TIMESTAMP}"
+
+    if rclone copy "${BACKUP_DIR}" "${remote_path}" --progress --stats-one-line 2>&1; then
+        log "Google Drive OK: ${remote_path}"
+    else
+        error "Error subiendo a Google Drive"
+        return 1
+    fi
+}
+
+cleanup_gdrive_backups() {
+    if ! check_rclone; then return 0; fi
+
+    log "Limpiando backups en Drive mayores a ${GDRIVE_KEEP_DAYS} dias..."
+    local cutoff_date
+    cutoff_date=$(date -d "-${GDRIVE_KEEP_DAYS} days" +%Y%m%d 2>/dev/null || date -v-"${GDRIVE_KEEP_DAYS}"d +%Y%m%d 2>/dev/null)
+
+    if [ -z "$cutoff_date" ]; then
+        warn "No se pudo calcular fecha de corte para Drive"
+        return 0
+    fi
+
+    local folders_to_delete
+    folders_to_delete=$(rclone lsd "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/" 2>/dev/null | awk '{print $NF}' | while read -r folder; do
+        folder_date=$(echo "$folder" | cut -d'_' -f1)
+        if [ "$folder_date" -lt "$cutoff_date" ] 2>/dev/null; then
+            echo "$folder"
+        fi
+    done)
+
+    local count=0
+    while IFS= read -r folder; do
+        [ -z "$folder" ] && continue
+        rclone purge "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/${folder}" 2>/dev/null && count=$((count + 1))
+    done <<< "$folders_to_delete"
+
+    if [ "$count" -gt 0 ]; then
+        log "Eliminados ${count} backups antiguos de Drive"
+    fi
+}
+
+list_gdrive_backups() {
+    if ! check_rclone; then return 1; fi
+
+    log "Backups en Google Drive:"
+    rclone lsd "${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/" 2>/dev/null | awk '{print "  " $NF " (" $4 " " $5 ")"}' || echo "  (vacio)"
+}
+
+restore_from_gdrive() {
+    local restore_date="$1"
+
+    if ! check_rclone; then
+        error "rclone no disponible para restaurar desde Drive"
+        exit 1
+    fi
+
+    local remote_path="${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/${restore_date}"
+    local restore_dir="${BACKUP_ROOT}/${restore_date}"
+
+    if ! rclone lsd "${remote_path}" &>/dev/null; then
+        error "No existe backup en Drive para fecha: ${restore_date}"
+        exit 1
+    fi
+
+    warn "=== RESTAURANDO BACKUP DE GOOGLE DRIVE: ${restore_date} ==="
+    warn "Esto descargara el backup y sobreescribira los datos actuales."
+    read -p "Continuar? (s/N): " confirm
+    if [ "$confirm" != "s" ] && [ "$confirm" != "S" ]; then
+        log "Cancelado"; exit 0
+    fi
+
+    mkdir -p "${restore_dir}"
+    log "Descargando desde Drive..."
+    rclone copy "${remote_path}" "${restore_dir}" --progress --stats-one-line
+
+    log "Restaurando PostgreSQL..."
+    if [ -f "${restore_dir}/postgres/dump.sql.gz" ]; then
+        gunzip -c "${restore_dir}/postgres/dump.sql.gz" | \
+            ${COMPOSE_CMD} exec -T postgres psql \
+                -U "${POSTGRES_USER:-helpdesk}" \
+                -d "${POSTGRES_DB:-helpdesk}" --quiet
+        log "PostgreSQL restaurado"
+    fi
+
+    if [ -f "${restore_dir}/minio/minio_data.tar.gz" ]; then
+        log "Restaurando MinIO..."
+        ${COMPOSE_CMD} stop minio
+        docker run --rm \
+            -v "helpdesk-gmp_minio_data:/data" \
+            -v "${restore_dir}/minio":/backup \
+            alpine sh -c "rm -rf /data/* && tar xzf /backup/minio_data.tar.gz -C /"
+        ${COMPOSE_CMD} start minio
+        log "MinIO restaurado"
+    fi
+
+    log "=== RESTAURACION DESDE DRIVE COMPLETADA ==="
+}
+
 restore_backup() {
     local restore_date="$1"
     local restore_dir="${BACKUP_ROOT}/${restore_date}"
@@ -131,12 +254,26 @@ restore_backup() {
 }
 
 main() {
-    if [ "${1:-}" = "--restore" ]; then
-        if [ -z "${2:-}" ]; then
-            error "Uso: $0 --restore YYYYMMDD_HHMMSS"; exit 1
-        fi
-        restore_backup "$2"; exit 0
-    fi
+    case "${1:-}" in
+        --restore)
+            if [ -z "${2:-}" ]; then
+                error "Uso: $0 --restore YYYYMMDD_HHMMSS"; exit 1
+            fi
+            restore_backup "$2"; exit 0
+            ;;
+        --restore-gdrive)
+            if [ -z "${2:-}" ]; then
+                error "Uso: $0 --restore-gdrive YYYYMMDD_HHMMSS"; exit 1
+            fi
+            restore_from_gdrive "$2"; exit 0
+            ;;
+        --list-remote)
+            list_gdrive_backups; exit 0
+            ;;
+        --no-upload)
+            UPLOAD=false
+            ;;
+    esac
 
     log "=== INICIO BACKUP HelpDesk-GMP ${TIMESTAMP} ==="
     mkdir -p "${BACKUP_ROOT}"
@@ -153,6 +290,11 @@ main() {
   \"hostname\": \"$(hostname)\",
   \"components\": [\"postgres\", \"minio\", \"redis\", \"env\"]
 }" > "${BACKUP_DIR}/manifest.json"
+
+    if [ "$UPLOAD" = true ]; then
+        upload_to_gdrive
+        cleanup_gdrive_backups
+    fi
 
     cleanup_old_backups
     log "=== BACKUP COMPLETADO: $(du -sh ${BACKUP_DIR} | cut -f1) en ${BACKUP_DIR} ==="
