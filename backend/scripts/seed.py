@@ -114,19 +114,21 @@ async def run(reset: bool = False) -> None:
                 print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
         await db.commit()
 
-        await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
-
         empresa_interna = (
             await db.execute(
                 select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)")
             )
         ).scalar_one_or_none()
         if empresa_interna is None:
-            db.add(Empresa(nombre="GMP Redes (Interna)"))
+            empresa_interna = Empresa(nombre="GMP Redes (Interna)")
+            db.add(empresa_interna)
             await db.commit()
-            print("Empresa interna creada: GMP Redes (Interna)")
+            await db.refresh(empresa_interna)
+            print(f"Empresa interna creada: id={empresa_interna.id}")
         else:
             print(f"Empresa interna ya existe: id={empresa_interna.id}")
+
+        empresa_demo_id = empresa_interna.id
 
         admin = (await db.execute(select(Usuario).where(Usuario.email == ADMIN_DEMO["email"]))).scalar_one_or_none()
         if admin is None:
@@ -148,12 +150,13 @@ async def run(reset: bool = False) -> None:
         for demo_user in AGENTES_DEMO + MESA_AYUDA_DEMO + CLIENTES_DEMO:
             user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
             if user_db is None:
+                eid = empresa_demo_id if demo_user["empresa_id"] is not None else None
                 user_db = Usuario(
                     nombre=demo_user["nombre"],
                     email=demo_user["email"],
                     password_hash=hash_password(demo_user["password"]),
                     rol=demo_user["rol"],
-                    empresa_id=demo_user["empresa_id"],
+                    empresa_id=eid,
                 )
                 db.add(user_db)
                 await db.commit()
@@ -195,6 +198,7 @@ async def run(reset: bool = False) -> None:
                 else:
                     print(f"  Subcategoría ya existe: id={sub_db.id} nombre={sub_db.nombre!r}")
 
+        await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
         await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
 
