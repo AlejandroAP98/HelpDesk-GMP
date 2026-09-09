@@ -46,3 +46,5 @@ Thumbs.db
 # ---------- MinIO / datos locales ----------
 minio_data/
 pg_data/
+
+archify/

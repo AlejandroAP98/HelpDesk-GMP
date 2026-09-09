@@ -114,6 +114,20 @@ async def run(reset: bool = False) -> None:
                 print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
         await db.commit()
 
+        await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
+
+        empresa_interna = (
+            await db.execute(
+                select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)")
+            )
+        ).scalar_one_or_none()
+        if empresa_interna is None:
+            db.add(Empresa(nombre="GMP Redes (Interna)"))
+            await db.commit()
+            print("Empresa interna creada: GMP Redes (Interna)")
+        else:
+            print(f"Empresa interna ya existe: id={empresa_interna.id}")
+
         admin = (await db.execute(select(Usuario).where(Usuario.email == ADMIN_DEMO["email"]))).scalar_one_or_none()
         if admin is None:
             admin = Usuario(
@@ -181,21 +195,8 @@ async def run(reset: bool = False) -> None:
                 else:
                     print(f"  Subcategoría ya existe: id={sub_db.id} nombre={sub_db.nombre!r}")
 
-        await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
         await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
         await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
-
-        empresa_interna = (
-            await db.execute(
-                select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)")
-            )
-        ).scalar_one_or_none()
-        if empresa_interna is None:
-            db.add(Empresa(nombre="GMP Redes (Interna)"))
-            await db.commit()
-            print("Empresa interna creada: GMP Redes (Interna)")
-        else:
-            print(f"Empresa interna ya existe: id={empresa_interna.id}")
 
         await db.commit()
 
