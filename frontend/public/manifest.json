@@ -1,6 +1,6 @@
 {
-  "name": "HelpDesk-GMP",
-  "short_name": "HelpDesk",
+  "name": "GMP Helpdesk",
+  "short_name": "GMP Helpdesk",
   "description": "Sistema de gestion de tickets de soporte tecnico GMP",
   "start_url": "/",
   "scope": "/",
