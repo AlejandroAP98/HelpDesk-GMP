@@ -169,7 +169,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
         </nav>
 
         <div className="bg-brandCustom/20">
-          {(whatsappUrl || mailtoUrl) && (
+          {(whatsappUrl || mailtoUrl) && rol !== "agente" && rol !== "mesa_ayuda" && (
             <div>
               <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">Contactenos</span>
               <div className="mt-1 flex flex-col gap-0.5">
