@@ -4,6 +4,7 @@
 # =============================================================================
 # Uso:
 #   ./scripts/backup.sh                          # Backup completo (+ subir a Drive)
+#                                                 # Drive excluye: MinIO (imagenes)
 #   ./scripts/backup.sh --no-upload              # Backup sin subir a Drive
 #   ./scripts/backup.sh --restore 20240115_030000 # Restaurar backup local
 #   ./scripts/backup.sh --list-remote            # Listar backups en Google Drive
@@ -115,10 +116,12 @@ check_rclone() {
 upload_to_gdrive() {
     if ! check_rclone; then return 0; fi
 
-    log "Subiendo backup a Google Drive..."
+    log "Subiendo backup a Google Drive (sin MinIO)..."
     local remote_path="${GDRIVE_REMOTE}:${GDRIVE_FOLDER}/${TIMESTAMP}"
 
-    if rclone copy "${BACKUP_DIR}" "${remote_path}" --progress --stats-one-line 2>&1; then
+    if rclone copy "${BACKUP_DIR}" "${remote_path}" \
+        --exclude "minio/**" \
+        --progress --stats-one-line 2>&1; then
         log "Google Drive OK: ${remote_path}"
     else
         error "Error subiendo a Google Drive"
@@ -209,6 +212,8 @@ restore_from_gdrive() {
             alpine sh -c "rm -rf /data/* && tar xzf /backup/minio_data.tar.gz -C /"
         ${COMPOSE_CMD} start minio
         log "MinIO restaurado"
+    else
+        warn "MinIO no incluido en backup de Drive - adjuntos no restaurados"
     fi
 
     log "=== RESTAURACION DESDE DRIVE COMPLETADA ==="
@@ -288,7 +293,8 @@ main() {
   \"timestamp\": \"${TIMESTAMP}\",
   \"date\": \"$(date -Iseconds)\",
   \"hostname\": \"$(hostname)\",
-  \"components\": [\"postgres\", \"minio\", \"redis\", \"env\"]
+  \"components\": [\"postgres\", \"minio\", \"redis\", \"env\"],
+  \"drive_excludes\": [\"minio\"]
 }" > "${BACKUP_DIR}/manifest.json"
 
     if [ "$UPLOAD" = true ]; then
