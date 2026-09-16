@@ -374,7 +374,7 @@ async def reaperturas(
     )
 
 
-SLA_FRT_HORAS: float = 4.0
+SLA_FRT_HORAS: float = 0.5
 SLA_MTTR_HORAS: float = 24.0
 
 

@@ -403,7 +403,7 @@ export default function MetricasPage() {
             <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
             {sla && (
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Objetivos: FRT ≤ {sla.sla_objetivo_frt_horas}h · MTTR ≤ {sla.sla_objetivo_mttr_horas}h
+                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Resolución ≤ {sla.sla_objetivo_mttr_horas}h
               </p>
             )}
           </div>
