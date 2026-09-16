@@ -129,7 +129,7 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto border-brandCustom overflow-hidden">
+        <nav className="flex-1 overflow-y-auto border-brandCustom overflow-hidden mt-4">
           {links.map((section, sectionIdx) => (
             <div key={sectionIdx}>
               {section.title && (
