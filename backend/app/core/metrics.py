@@ -28,7 +28,6 @@ def setup_metrics() -> Instrumentator:
     )
     instrumentator.add(metrics.requests())
     instrumentator.add(metrics.latency())
-    instrumentator.add(metrics.requests_summary())
 
     instrumentator.exclude(handler="/(metrics|health|docs|openapi.json|redoc)")
 
