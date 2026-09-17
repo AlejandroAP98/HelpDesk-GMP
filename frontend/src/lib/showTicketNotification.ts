@@ -1,6 +1,6 @@
 "use client";
 
-const ICON = "/icon-192.png?v4";
+const ICON = "/icon-192.png?v5";
 
 function display(title: string, options: NotificationOptions): void {
   const show = () => {

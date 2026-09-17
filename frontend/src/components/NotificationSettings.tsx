@@ -110,8 +110,8 @@ export default function NotificationSettings() {
       try {
         const n = new Notification("HelpDesk-GMP - Notificacion de prueba", {
           body: "Notificacion in-app funcionando. Las push reales requieren PWA instalada.",
-          icon: "/icon-192.png?v4",
-          badge: "/icon-192.png?v4",
+          icon: "/icon-192.png?v5",
+          badge: "/icon-192.png?v5",
           tag: "test-in-app",
         });
         n.onclick = () => {

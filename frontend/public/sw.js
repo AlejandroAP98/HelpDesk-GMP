@@ -7,7 +7,7 @@
  *   - Iconos y manifest: cache-first con revalidacion.
  */
 
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const STATIC_CACHE = `helpdesk-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `helpdesk-runtime-${CACHE_VERSION}`;
 
@@ -16,10 +16,10 @@ const PRECACHE_URLS = [
   "/login",
   "/tickets",
   "/manifest.json",
-  "/icon-192.png?v4",
-  "/icon-512.png?v4",
-  "/icon-maskable-512.png?v4",
-  "/apple-touch-icon.png?v4",
+  "/icon-192.png?v5",
+  "/icon-512.png?v5",
+  "/icon-maskable-512.png?v5",
+  "/apple-touch-icon.png?v5",
 ];
 
 self.addEventListener("install", (event) => {
@@ -151,7 +151,7 @@ self.addEventListener("push", (event) => {
   const urgent = _isUrgent(payload);
   const options = {
     body: payload.body,
-    icon: "/icon-192.png?v4",
+    icon: "/icon-192.png?v5",
     data: { url: payload.url, ...(payload.data || {}) },
     requireInteraction: urgent,
     silent: false,
