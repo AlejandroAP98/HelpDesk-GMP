@@ -117,7 +117,7 @@ services:
         max-file: "3"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.4.0
     restart: always
     environment:
       GF_SECURITY_ADMIN_USER: admin
