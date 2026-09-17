@@ -31,6 +31,10 @@
 		reverse_proxy backend:8000
 	}
 
+	handle /metrics {
+		reverse_proxy backend:8000
+	}
+
 	handle /ws {
 		reverse_proxy backend:8000
 	}
@@ -67,6 +71,10 @@ helpdesk.local {
 	}
 
 	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle /metrics {
 		reverse_proxy backend:8000
 	}
 
