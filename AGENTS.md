@@ -125,6 +125,64 @@ sudo systemctl start helpdesk.service
 sudo systemctl status helpdesk.service
 ```
 
+### Monitoring (Prometheus + Grafana + Loki)
+
+```bash
+# Verificar estado de servicios de monitoreo
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod ps | grep -E "prometheus|grafana|loki|promtail|exporter"
+
+# Ver logs de Prometheus
+docker compose logs -f prometheus
+
+# Ver logs de Grafana
+docker compose logs -f grafana
+
+# Recargar Prometheus sin reiniciar (aplica cambios de config)
+curl -X POST http://localhost:9090/-/reload
+
+# Acceder a Grafana (LAN)
+# URL: http://helpdesk.local:3001 o http://<server-ip>:3001
+# User: admin
+# Pass: ${GRAFANA_PASSWORD} (default: helpdesk)
+
+# Acceder a Prometheus (solo desde servidor)
+# curl http://localhost:9091/api/v1/targets
+
+# Verificar que el backend expone métricas
+curl http://localhost:8000/metrics | head -20
+```
+
+**Dashboards de Grafana:**
+
+- **Overview**: Estado general de servicios, requests/s, latencia, errores
+- **Infrastructure**: CPU, RAM, disco, network por container
+- **Application**: HTTP requests, duration histogram, status codes
+- **Database**: PostgreSQL (conexiones, transacciones, tamaño) + Redis (memoria, hits/misses)
+- **Logs**: Explorador de logs por container con Loki
+
+**Servicios de monitoreo (solo prod):**
+
+| Servicio | Puerto | Propósito |
+|---|---|---|
+| Prometheus | 9091 (interno) | Recolectar métricas |
+| Grafana | 3001 (host) | Dashboards visuales |
+| Loki | 3100 (interno) | Logs centralizados |
+| Promtail | none | Enviar logs a Loki |
+| Node Exporter | 9100 (interno) | Métricas del host |
+| Postgres Exporter | 9187 (interno) | Métricas de PostgreSQL |
+| Redis Exporter | 9121 (interno) | Métricas de Redis |
+
+**Variables de entorno:**
+
+- `ENABLE_METRICS=true` (en backend prod) - Habilita endpoint /metrics
+- `GRAFANA_PASSWORD` - Password de Grafana (default: helpdesk)
+
+**Retención de datos:**
+
+- Prometheus: 15 días
+- Loki: 15 días
+- Grafana: indefinido (almacenamiento persistente)
+
 ## Convenciones
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy async (asyncpg), Pydantic v2.
@@ -209,6 +267,7 @@ override del engine de la app. Cobertura: auth (10), tickets (10), comentarios
 (4), scheduler (4), smoke (2) = 30 tests, todos verdes.
 Proxima fase: Fase 10 (deploy en Linux + distribucion de CA Caddy).
 Fase 10 completada: Deploy en Ubuntu Server + acceso movil.
+
 - `docker-compose.yml` base: Caddy en redes `internal` + `proxy` para resolucion DNS
   correcta de servicios internos (evita `connection refused` entre Caddy y frontend).
 - `docker-compose.prod.yml`: `NEXT_PUBLIC_API_URL=""` en build args para rutas relativas
@@ -300,6 +359,7 @@ Fase 13 completada: Web Push notifications (VAPID self-hosted).
 - Proximas fases: 14 (WARP client para SSH al server).
 
 Fase 14 (revisada): Notificaciones push unificadas via PWA + Web Push.
+
 - Se elimino el proyecto Capacitor/Android/iOS (app nativa) en favor de
   la PWA instalable con Web Push VAPID como unico canal de push.
 - Backend: `services/push_service.py` simplificado a solo Web Push (VAPID
@@ -320,6 +380,7 @@ Fase 14 (revisada): Notificaciones push unificadas via PWA + Web Push.
 - Proximas fases: 15 (WARP client para SSH al server).
 
 Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy auth.
+
 - Backend `adjunto_service.py`: whitelist de MIME `image/jpeg|image/png|image/webp`
   + validacion de magic bytes (defensa contra Content-Type spoofing) + validacion
   de extension (.jpg/.jpeg/.png/.webp). Limite 10 MB mantenido.
@@ -333,8 +394,8 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy aut
 - Backend `services/adjunto_service.py`: `_to_out()` ahora genera `archivo_url`
   como **ruta RELATIVA** `/api/tickets/{tid}/adjuntos/{adj_id}/archivo`. El
   navegador la resuelve contra `window.location.origin`, asi funciona
-  identico en LAN (https://helpdesk.local) y Cloudflare Tunnel
-  (https://soporte.gmpredes.online) sin config ni CORS. Tambien nueva
+  identico en LAN (<https://helpdesk.local>) y Cloudflare Tunnel
+  (<https://soporte.gmpredes.online>) sin config ni CORS. Tambien nueva
   funcion `stream_archivo()` que hace `s3.get_object` (con Range opcional)
   y devuelve dict con body/media_type/content_range.
 - Backend `core/config.py`: removidas `minio_public_endpoint` y
@@ -375,6 +436,7 @@ Fase 15 completada: Adjuntos solo imagenes + optimizacion + lightbox + proxy aut
 - Proximas fases: 16 (WARP client para SSH al server).
 
 Fase 16 completada: Notificacion de cambio de estado para clientes.
+
 - Backend `services/ticket_service.py`: nueva funcion `_publicar_cambio_estado()`
   que emite evento `ticket:state_changed` con `estado_anterior` y `estado_nuevo`.
   Se llama en `cambiar_estado()` y `reabrir()` ademas del `ticket:updated`
@@ -393,6 +455,7 @@ Fase 16 completada: Notificacion de cambio de estado para clientes.
   nuevos.
 
 Fase 17 completada: Backup automatizado + systemd auto-restart.
+
 - `scripts/backup.sh`: backup completo de PostgreSQL (pg_dump), MinIO (tar)
   y Redis (BGSAVE + dump.rdb). Soporta `--restore YYYYMMDD_HHMMSS`.
   Limpieza automatica de backups mayores a 7 dias. Verifica espacio en disco.
@@ -404,6 +467,7 @@ Fase 17 completada: Backup automatizado + systemd auto-restart.
 - `AGENTS.md`: documentados comandos de backup, restore y systemd.
 
 Fase 18 completada: Emails transaccionales via Resend + exclusion de agentes de urgentes.
+
 - Backend `services/email_service.py` (nuevo): cliente Resend via httpx async
   contra `POST https://api.resend.com/emails` con Bearer `RESEND_API_KEY`.
   Funciones: `send_ticket_created`, `send_ticket_closed`, `send_ticket_urgent`.
@@ -436,6 +500,7 @@ Fase 18 completada: Emails transaccionales via Resend + exclusion de agentes de 
 - Resultado: 75 tests verdes, ruff limpio en archivos modificados.
 
 Auditoria de seguridad multi-tenant y transaccional (Fixes A-G).
+
 - **A (CRITICO)** `puntos_venta` GET no aplicaba `tenant_filter`: un cliente
   podia listar puntos de venta de cualquier empresa. Fix: `listar`,
   `listar_por_empresa` y `obtener` ahora reciben `current` y filtran por
@@ -465,6 +530,7 @@ Auditoria de seguridad multi-tenant y transaccional (Fixes A-G).
   app recarga sin errores; 75 endpoints intactos.
 
 Optimizacion de performance (Fixes H-K).
+
 - **H (MEDIO)** `routers/stats.py`: reemplazadas 7 queries COUNT
   separadas por 1 `GROUP BY estado` + 1 COUNT para urgentes (2
   round-trips en lugar de 7). Filtros tenant+agente extraidos a
@@ -482,6 +548,7 @@ Optimizacion de performance (Fixes H-K).
   los wrappers async; las llamadas S3 ya no bloquean el event loop.
 
 Mejoras de validacion / integridad (Fixes menores 1-7).
+
 - **1** `utils/pagination.py`: `paginacion()` clampeaba `size` a max
   90, pero los routers declaran `le=100`. Unificado a 100.
 - **2** `services/empresa_service.py`: `crear` y `actualizar` ahora

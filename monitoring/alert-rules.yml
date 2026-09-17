@@ -1,0 +1,56 @@
+groups:
+  - name: helpdesk-alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Servicio caído: {{ $labels.job }}"
+          description: "El servicio {{ $labels.instance }} está caído desde hace más de 1 minuto."
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de memoria: {{ $labels.name }}"
+          description: "El contenedor {{ $labels.name }} está usando más del 85% de su límite de memoria."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tasa alta de errores HTTP"
+          description: "Más del 5% de las respuestas HTTP son errores 5xx."
+
+      - alert: SlowResponses
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Respuestas lentas detectadas"
+          description: "El percentil 95 de latencia supera los 2 segundos."
+
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL caído"
+          description: "La base de datos PostgreSQL no responde."
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis caído"
+          description: "El servicio Redis no responde."

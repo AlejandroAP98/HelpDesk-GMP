@@ -16,6 +16,11 @@
 		-Server
 	}
 
+	log {
+		output stdout
+		format json
+	}
+
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
@@ -48,6 +53,11 @@ helpdesk.local {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Strict-Transport-Security "max-age=31536000"
 		-Server
+	}
+
+	log {
+		output stdout
+		format json
 	}
 
 	handle /ca.crt {

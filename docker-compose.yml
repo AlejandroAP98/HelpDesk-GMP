@@ -22,6 +22,9 @@ volumes:
   minio_data:
   caddy_data:
   caddy_config:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 services:
   # ---------------------------------------------------------------------------

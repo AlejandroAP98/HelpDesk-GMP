@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.metrics import setup_metrics
 from app.routers import adjuntos as adjuntos_router
 from app.routers import auth as auth_router
 from app.routers import categorias as categorias_router
@@ -114,6 +115,9 @@ app.include_router(puntos_venta_router.router)
 app.include_router(actividad_router.router)
 app.include_router(evento_router.router)
 app.include_router(ws_router.router)
+
+metrics_instrumentator = setup_metrics()
+metrics_instrumentator.instrument(app)
 
 
 @app.get("/health")
