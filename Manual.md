@@ -191,9 +191,12 @@ La prioridad se calcula automáticamente según la **matriz de prioridad** confi
 
 ### WebSocket
 
-```
-ws://host:8000/ws?token=<JWT>
-```
+El WebSocket usa autenticación post-handshake (el JWT no viaja en la URL):
+
+1. Conectar a `ws://host:8000/ws` (sin token).
+2. Enviar como primer mensaje: `{"type": "auth", "token": "<JWT_access>"}`.
+3. El servidor responde `{"type": "auth_ok"}` (conexión activa) o
+   `{"type": "auth_error"}` + close 1008 (token inválido/expirado).
 
 ### Health Check
 

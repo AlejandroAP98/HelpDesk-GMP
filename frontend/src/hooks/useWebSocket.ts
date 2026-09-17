@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { silentRefresh } from "@/lib/api";
 
 export type WsStatus = "idle" | "connecting" | "open" | "closed" | "error";
 
@@ -36,7 +37,10 @@ export function useWebSocket({
 }: UseWebSocketOptions) {
   const [status, setStatus] = useState<WsStatus>("idle");
   const wsRef = useRef<WebSocket | null>(null);
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
   const retriesRef = useRef(0);
+  const authFailedRef = useRef(false);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const onEventRef = useRef(onEvent);
@@ -66,30 +70,42 @@ export function useWebSocket({
   }, [stopPing]);
 
   const connect = useCallback(() => {
-    if (!token) {
+    const currentToken = tokenRef.current;
+    if (!currentToken) {
       setStatus("idle");
       return;
     }
     cleanup();
-    const fullUrl = `${url}?token=${encodeURIComponent(token)}`;
-    setStatus("connecting");
-    const ws = new WebSocket(fullUrl);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
+    authFailedRef.current = false;
+    setStatus("connecting");
 
     ws.onopen = () => {
-      retriesRef.current = 0;
-      setStatus("open");
-      stopPing();
-      pingTimer.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
-        }
-      }, pingIntervalMs);
+      ws.send(JSON.stringify({ type: "auth", token: tokenRef.current }));
     };
 
     ws.onmessage = (msg) => {
       try {
         const data = JSON.parse(msg.data) as WsEvent;
+        if (data.type === "auth_ok") {
+          authFailedRef.current = false;
+          retriesRef.current = 0;
+          setStatus("open");
+          stopPing();
+          pingTimer.current = setInterval(() => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+            }
+          }, pingIntervalMs);
+          return;
+        }
+        if (data.type === "auth_error") {
+          authFailedRef.current = true;
+          setStatus("error");
+          ws.close();
+          return;
+        }
         onEventRef.current?.(data);
       } catch {
         // ignore non-JSON frames
@@ -106,20 +122,44 @@ export function useWebSocket({
       stopPing();
       if (retriesRef.current < maxRetries) {
         retriesRef.current += 1;
-        reconnectTimer.current = setTimeout(connect, reconnectDelay);
+        reconnectTimer.current = setTimeout(async () => {
+          if (authFailedRef.current && tokenRef.current) {
+            authFailedRef.current = false;
+            const fresh = await silentRefresh();
+            if (!fresh && !tokenRef.current) return;
+          }
+          connect();
+        }, reconnectDelay);
       }
     };
-  }, [url, token, maxRetries, reconnectDelay, cleanup, pingIntervalMs, stopPing]);
+  }, [url, maxRetries, reconnectDelay, cleanup, pingIntervalMs, stopPing]);
 
   useEffect(() => {
-    connect();
+    if (token) {
+      const ws = wsRef.current;
+      const needsConnect =
+        !ws ||
+        ws.readyState === WebSocket.CLOSED ||
+        ws.readyState === WebSocket.CLOSING;
+      if (needsConnect) {
+        retriesRef.current = 0;
+        connect();
+      }
+    } else {
+      cleanup();
+      setStatus("idle");
+    }
+  }, [token, connect, cleanup]);
+
+  useEffect(() => {
     const onVisibility = () => {
       if (
         typeof document !== "undefined" &&
         document.visibilityState === "visible" &&
         (wsRef.current === null ||
           wsRef.current.readyState === WebSocket.CLOSED ||
-          wsRef.current.readyState === WebSocket.CLOSING)
+          wsRef.current.readyState === WebSocket.CLOSING) &&
+        tokenRef.current
       ) {
         retriesRef.current = 0;
         connect();
@@ -132,9 +172,10 @@ export function useWebSocket({
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", onVisibility);
       }
-      cleanup();
     };
-  }, [connect, cleanup]);
+  }, [connect]);
+
+  useEffect(() => cleanup, [cleanup]);
 
   const send = useCallback((payload: unknown) => {
     const ws = wsRef.current;

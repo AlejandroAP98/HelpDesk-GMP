@@ -18,7 +18,36 @@ api.interceptors.request.use(
   (err) => Promise.reject(err)
 );
 
-let refreshing = false;
+let refreshing: Promise<string | null> | null = null;
+
+export async function silentRefresh(): Promise<string | null> {
+  const { refreshToken, logout, setSession } = useAuthStore.getState();
+  if (!refreshToken) {
+    logout();
+    return null;
+  }
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    try {
+      const r = await axios.post(`${baseURL}/api/auth/refresh`, {
+        refresh_token: refreshToken,
+      });
+      const data = r.data;
+      setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        usuario: data.usuario,
+      });
+      return data.access_token as string;
+    } catch {
+      logout();
+      return null;
+    }
+  })().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
 
 api.interceptors.response.use(
   (r) => r,
@@ -27,28 +56,12 @@ api.interceptors.response.use(
     const original = err.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (status === 401 && !original._retry) {
       original._retry = true;
-      const rt = useAuthStore.getState().refreshToken;
-      if (!rt || refreshing) {
-        useAuthStore.getState().logout();
+      const newToken = await silentRefresh();
+      if (!newToken) {
         return Promise.reject(err);
       }
-      refreshing = true;
-      try {
-        const r = await axios.post(`${baseURL}/api/auth/refresh`, { refresh_token: rt });
-        const data = r.data;
-        useAuthStore.getState().setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-          usuario: data.usuario,
-        });
-        refreshing = false;
-        if (original.headers) original.headers.Authorization = `Bearer ${data.access_token}`;
-        return api(original);
-      } catch (e) {
-        refreshing = false;
-        useAuthStore.getState().logout();
-        return Promise.reject(e);
-      }
+      if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
+      return api(original);
     }
     return Promise.reject(err);
   }

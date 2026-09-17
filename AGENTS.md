@@ -612,3 +612,49 @@ queries (3 round-trips, sin N+1); el cuello era transversal.
 - Verificacion: `py_compile` limpio; `ruff check/format` (0.6.9)
   limpio; expresion de `peso_orden` + equivalencia de orden +
   uso del indice validados en un PostgreSQL 16 real.
+
+Renovacion de sesion: silent refresh + WS auth post-handshake.
+
+- Problema: el access token expira a los 30 min y el WS reconectaba con
+  el token stale, generando rafagas de 401 (`WS conexion rechazada`) en
+  el backend y dejando sin eventos realtime a la sesion abierta.
+- Frontend `lib/token.ts` (nuevo): `getTokenExp(jwt)` decodifica `exp`
+  del payload base64url sin dependencias.
+- Frontend `lib/api.ts`: la logica del interceptor 401 extraida a
+  `silentRefresh()` exportada (lock anti-carrera via Promise
+  compartida; logout si falla). El interceptor la consume.
+- Frontend `app/providers.tsx`: componente `TokenRefresher` que cada
+  30s renueva el access token cuando quedan <=120s de vida
+  (silent refresh proactivo, patron Slack/Discord).
+- Frontend `hooks/useWebSocket.ts`: auth post-handshake. Conecta sin
+  query param, envia el primer mensaje `{"type":"auth","token":...}` y
+  espera `auth_ok`/`auth_error` antes de tratar la conexion como
+  abierta (ping solo tras auth_ok). En reconexion por auth fallida,
+  llama a `silentRefresh()` antes de reintentar. `connect` es estable
+  (via tokenRef); un efecto reacciona a token null<->valor
+  (login/logout) y otro a `visibilitychange`.
+- Backend `routers/ws.py`: autenticacion por primer mensaje con
+  timeout de 10s; responde `auth_ok` y recien entonces conecta a
+  `manager`, o `auth_error` + close 1008. Eliminado el token en query
+  string (ya no queda en logs de proxy).
+- Backend `services/auth_service.py`: `refresh()` ahora rota de verdad
+  el refresh token (revoca el jti viejo en Redis tras emitir el nuevo,
+  reusando `revocar_refresh_token`; antes solo emitia sin invalidar).
+- `scripts/test_ws_urgent.py` y `Manual.md` actualizados al nuevo
+  protocolo WebSocket. En handshakes, `ws.accept()` ANTES de leer el
+  mensaje auth (el cliente no puede enviar hasta recibir el 101) y
+  `manager.connect` acepta solo si `client_state == CONNECTING`
+  (doble-accept matava la conexion sin close frame).
+- Verificacion con contenedor arriba: 86/86 tests pass (requerio
+  DROP/recreate de `helpdesk_test`, schema desactualizado con
+  `peso_orden`, y `alembic upgrade head` en dev DB). E2E
+  `scripts/test_ws_urgent.py` OK: admin recibe `ticket:urgent_created`,
+  cliente solo `ticket:created`; `auth_error` si token invalido. La
+  matriz de prioridad puede RECALCULAR la prioridad solicitada
+  (subcat+elemento), aprobar combinacion urgente con `celda`.
+- Verificacion local sin Docker: `tsc --noEmit` OK, `next lint` solo
+  warnings pre-existentes, `py_compile` + `ruff check` limpio, `mypy`
+  sin errores nuevos en `ws.py` ni `auth_service.py` (los errores que
+  reporta localmente son de stubs/pre-existentes en otros archivos).
+  Pendiente validar E2E del protocolo nuevo en entorno con
+  DB/Redis/contenedor (docker daemon estaba apagado).

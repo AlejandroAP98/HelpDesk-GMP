@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,8 @@ class ConnectionManager:
         empresa_id: int | None = None,
         ticket_id: UUID | None = None,
     ) -> None:
-        await ws.accept()
+        if ws.client_state == WebSocketState.CONNECTING:
+            await ws.accept()
         self.active[conn_id] = ws
         self.by_role[rol].add(conn_id)
         if ticket_id is not None:

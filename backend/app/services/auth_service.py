@@ -127,7 +127,9 @@ async def refresh(refresh_token: str, db: AsyncSession) -> Token:
     ).scalar_one_or_none()
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
-    return await _issue_tokens(usuario)
+    tokens = await _issue_tokens(usuario)
+    await revocar_refresh_token(refresh_token)
+    return tokens
 
 
 async def revocar_refresh_token(refresh_token: str) -> None:

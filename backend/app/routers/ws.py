@@ -1,6 +1,9 @@
 """Endpoint WebSocket de HelpDesk-GMP.
 
-Conexion:  ws://host:8000/ws?token=<JWT_access>
+Conexion (auth post-handshake):
+    1. Cliente abre ws://host:8000/ws (sin token en query).
+    2. Cliente envia primer mensaje: {"type": "auth", "token": "<JWT_access>"}.
+    3. Servidor responde {"type": "auth_ok"} o {"type": "auth_error"} + close 1008.
 Cualquier usuario autenticado puede conectarse; las salas/rooms se gestionan por rol
 en `ConnectionManager`. El cliente recibe eventos:
     - ticket:urgent_created   (solo agente/admin)
@@ -10,11 +13,13 @@ en `ConnectionManager`. El cliente recibe eventos:
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
-from typing import Annotated
+from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -27,6 +32,8 @@ from app.utils.exceptions import TokenInvalido
 
 router = APIRouter(tags=["websocket"])
 logger = logging.getLogger(__name__)
+
+AUTH_TIMEOUT_S = 10.0
 
 
 async def _resolve_user(token: str, db: AsyncSession) -> Usuario:
@@ -72,18 +79,53 @@ async def _can_access_ticket(usuario: Usuario, ticket_id: UUID, db: AsyncSession
 @router.websocket("/ws")
 async def websocket_endpoint(
     ws: WebSocket,
-    token: Annotated[str, Query()] = "",
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    if not token:
+    await ws.accept()
+    try:
+        raw = await asyncio.wait_for(ws.receive(), timeout=AUTH_TIMEOUT_S)
+        first: Any = (
+            json.loads(raw.get("text", ""))
+            if raw.get("type") == "websocket.receive"
+            else None
+        )
+    except asyncio.TimeoutError:
+        logger.warning("WS auth timeout: primer mensaje no llegó en %ss", AUTH_TIMEOUT_S)
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        logger.warning("WS auth primer mensaje invalido: %r", exc)
+        try:
+            await ws.send_json({"type": "auth_error"})
+        except Exception:
+            pass
+        await ws.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    token = (
+        first.get("token")
+        if isinstance(first, dict) and first.get("type") == "auth"
+        else None
+    )
+    if not token or not isinstance(token, str):
+        await ws.send_json({"type": "auth_error"})
+        await ws.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     try:
         usuario = await _resolve_user(token, db)
     except Exception as exc:
         logger.warning("WS conexion rechazada: %s", exc)
+        try:
+            await ws.send_json({"type": "auth_error"})
+        except Exception:
+            pass
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
+
+    await ws.send_json({"type": "auth_ok"})
 
     conn_id = uuid4()
     rol = usuario.rol.value if hasattr(usuario.rol, "value") else usuario.rol
