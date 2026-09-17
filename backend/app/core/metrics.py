@@ -30,12 +30,6 @@ def setup_metrics() -> Instrumentator:
     instrumentator.add(metrics.latency())
     instrumentator.add(metrics.requests_summary())
 
-    instrumentator.exclude(
-        handler="/metrics",
-        handler="/health",
-        handler="/docs",
-        handler="/openapi.json",
-        handler="/redoc",
-    )
+    instrumentator.exclude(handler="/(metrics|health|docs|openapi.json|redoc)")
 
     return instrumentator
