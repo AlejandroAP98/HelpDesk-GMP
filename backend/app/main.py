@@ -116,8 +116,7 @@ app.include_router(actividad_router.router)
 app.include_router(evento_router.router)
 app.include_router(ws_router.router)
 
-metrics_instrumentator = setup_metrics()
-metrics_instrumentator.instrument(app)
+metrics_instrumentator = setup_metrics(app)
 
 
 @app.get("/health")
