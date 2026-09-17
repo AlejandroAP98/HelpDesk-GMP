@@ -21,6 +21,12 @@
 		format json
 	}
 
+	@metrics_notlan {
+		path /metrics
+		not remote_ip 192.168.0.0/16
+	}
+	respond @metrics_notlan "Forbidden" 403
+
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local
 		rewrite * /root.crt
@@ -63,6 +69,12 @@ helpdesk.local {
 		output stdout
 		format json
 	}
+
+	@metrics_notlan {
+		path /metrics
+		not remote_ip 192.168.0.0/16
+	}
+	respond @metrics_notlan "Forbidden" 403
 
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local

@@ -39,7 +39,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "up{job=~\"helpdesk-backend|postgres-exporter|redis-exporter\"}",
+          "expr": "up{job=~\"helpdesk-backend|node-exporter|postgres-exporter|redis-exporter|loki|prometheus\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -111,7 +111,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+          "expr": "rate(http_requests_total{status=\"5xx\"}[5m]) / rate(http_requests_total[5m]) * 100",
           "refId": "A"
         }
       ],

@@ -8,19 +8,21 @@
   "liveNow": false,
   "panels": [
     {
-      "title": "Logs por Container",
+      "title": "Volumen de Logs por Container",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{project=\"helpdesk-gmp\"}",
+          "expr": "sum by (container) (count_over_time({project=\"helpdesk-gmp\"}[5m]))",
           "legendFormat": "{{container}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
+          "min": 0,
           "custom": {
             "drawStyle": "bars",
             "fillOpacity": 50,
@@ -36,7 +38,7 @@
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "sum by (level) (count_over_time({project=\"helpdesk-gmp\"} | level=~\"ERROR|WARNING|INFO|DEBUG\" [1h]))",
+          "expr": "sum by (level) (count_over_time({project=\"helpdesk-gmp\"}[1h]))",
           "legendFormat": "{{level}}",
           "refId": "A"
         }
@@ -49,7 +51,7 @@
       "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{project=\"helpdesk-gmp\"} |= \"ERROR\" or {project=\"helpdesk-gmp\"} |= \"WARNING\"",
+          "expr": "{project=\"helpdesk-gmp\"} |~ \"ERROR|WARNING\"",
           "refId": "A"
         }
       ],

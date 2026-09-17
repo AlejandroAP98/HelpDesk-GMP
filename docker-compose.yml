@@ -25,6 +25,7 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  promtail_positions:
 
 services:
   # ---------------------------------------------------------------------------

@@ -8,14 +8,46 @@
   "liveNow": false,
   "panels": [
     {
-      "title": "CPU Usage por Container",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "title": "Service Status",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"}[5m]) * 100",
-          "legendFormat": "{{name}}",
+          "expr": "up{job=~\"helpdesk-backend|node-exporter|postgres-exporter|redis-exporter|loki|prometheus\"}",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Uso de CPU del Host",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+          "legendFormat": "CPU",
           "refId": "A"
         }
       ],
@@ -23,6 +55,7 @@
         "defaults": {
           "unit": "percent",
           "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -35,46 +68,104 @@
       }
     },
     {
-      "title": "Memory Usage por Container",
+      "title": "Uso de RAM del Host",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "container_memory_usage_bytes{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"} / 1024 / 1024",
-          "legendFormat": "{{name}}",
+          "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+          "legendFormat": "RAM",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "decmbytes",
+          "unit": "percent",
           "min": 0,
+          "max": 100,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 512 },
-              { "color": "red", "value": 1024 }
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
             ]
           }
         }
       }
     },
     {
-      "title": "Network I/O por Container",
+      "title": "Uso de Disco (/)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(container_network_receive_bytes_total{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"}[5m])",
-          "legendFormat": "{{name}} RX",
+          "expr": "(1 - node_filesystem_avail_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}) * 100",
+          "legendFormat": "{{mountpoint}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Load Average",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "node_load1",
+          "legendFormat": "load1",
           "refId": "A"
         },
         {
-          "expr": "rate(container_network_transmit_bytes_total{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"}[5m])",
-          "legendFormat": "{{name}} TX",
+          "expr": "node_load5",
+          "legendFormat": "load5",
+          "refId": "B"
+        },
+        {
+          "expr": "node_load15",
+          "legendFormat": "load15",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        }
+      }
+    },
+    {
+      "title": "Network I/O del Host",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total{device!~\"lo|veth.*|br-.*|docker.*\"}[5m])",
+          "legendFormat": "{{device}} RX",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|br-.*|docker.*\"}[5m])",
+          "legendFormat": "{{device}} TX",
           "refId": "B"
         }
       ],
@@ -86,50 +177,25 @@
       }
     },
     {
-      "title": "Disk I/O por Container",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "expr": "rate(container_fs_reads_bytes_total{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"}[5m])",
-          "legendFormat": "{{name}} read",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(container_fs_writes_bytes_total{name=~\"backend|frontend|scheduler|caddy|postgres|redis|minio\"}[5m])",
-          "legendFormat": "{{name}} write",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "min": 0
-        }
-      }
-    },
-    {
-      "title": "Container Status",
+      "title": "RAM Available",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 21 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "up{job=~\"helpdesk-backend|node-exporter|postgres-exporter|redis-exporter\"}",
-          "legendFormat": "{{job}}",
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "available",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            { "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } }, "type": "value" }
-          ],
+          "unit": "decbytes",
           "thresholds": {
             "steps": [
               { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              { "color": "yellow", "value": 1073741824 },
+              { "color": "green", "value": 2147483648 }
             ]
           }
         }
@@ -144,5 +210,5 @@
   "time": { "from": "now-1h", "to": "now" },
   "title": "Infrastructure",
   "uid": "helpdesk-infrastructure",
-  "version": 1
+  "version": 2
 }

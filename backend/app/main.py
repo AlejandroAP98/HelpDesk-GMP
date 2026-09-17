@@ -1,23 +1,26 @@
 """Entry point de la aplicacion FastAPI HelpDesk-GMP."""
 
 import asyncio
-from contextlib import asynccontextmanager
 import logging
 import logging.config
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.metrics import setup_metrics
+from app.routers import actividad as actividad_router
 from app.routers import adjuntos as adjuntos_router
 from app.routers import auth as auth_router
 from app.routers import categorias as categorias_router
 from app.routers import comentarios as comentarios_router
 from app.routers import empresas as empresas_router
-from app.routers import push as push_router
+from app.routers import evento as evento_router
 from app.routers import matriz_prioridad as matriz_prioridad_router
 from app.routers import metricas as metricas_router
+from app.routers import puntos_venta as puntos_venta_router
+from app.routers import push as push_router
 from app.routers import reportes as reportes_router
 from app.routers import respuestas_rapidas as respuestas_rapidas_router
 from app.routers import stats as stats_router
@@ -26,9 +29,6 @@ from app.routers import tarea_pendiente as tarea_pendiente_router
 from app.routers import tickets as tickets_router
 from app.routers import usuarios as usuarios_router
 from app.routers import ws as ws_router
-from app.routers import puntos_venta as puntos_venta_router
-from app.routers import actividad as actividad_router
-from app.routers import evento as evento_router
 
 LOGGING_CONFIG = {
     "version": 1,

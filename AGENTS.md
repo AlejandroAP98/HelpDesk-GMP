@@ -138,25 +138,28 @@ docker compose logs -f prometheus
 docker compose logs -f grafana
 
 # Recargar Prometheus sin reiniciar (aplica cambios de config)
-curl -X POST http://localhost:9090/-/reload
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod exec prometheus kill -HUP 1
+
+# Ver targets de Prometheus (estado de scrapes)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod exec prometheus wget -qO- http://localhost:9090/api/v1/targets 2>/dev/null
+
+# Métricas del backend (el backend tiene curl instalado)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod exec backend curl -s localhost:8000/metrics | head -20
 
 # Acceder a Grafana (LAN)
 # URL: http://helpdesk.local:3001 o http://<server-ip>:3001
 # User: admin
 # Pass: ${GRAFANA_PASSWORD} (default: helpdesk)
 
-# Acceder a Prometheus (solo desde servidor)
-# curl http://localhost:9091/api/v1/targets
-
-# Verificar que el backend expone métricas
-curl http://localhost:8000/metrics | head -20
+# NOTA: /metrics vía Caddy (http://<lan-ip>/metrics) está restringido a
+# la subnet 192.168.0.0/16. Desde internet (túnel Cloudflare) responde 403.
 ```
 
 **Dashboards de Grafana:**
 
 - **Overview**: Estado general de servicios, requests/s, latencia, errores
-- **Infrastructure**: CPU, RAM, disco, network por container
-- **Application**: HTTP requests, duration histogram, status codes
+- **Infrastructure**: CPU, RAM, disco, load, network del host (node-exporter)
+- **Application**: HTTP requests, duracion, status codes, in-flight
 - **Database**: PostgreSQL (conexiones, transacciones, tamaño) + Redis (memoria, hits/misses)
 - **Logs**: Explorador de logs por container con Loki
 
@@ -164,24 +167,28 @@ curl http://localhost:8000/metrics | head -20
 
 | Servicio | Puerto | Propósito |
 |---|---|---|
-| Prometheus | 9091 (interno) | Recolectar métricas |
+| Prometheus | 9090 (interno) | Recolectar métricas |
 | Grafana | 3001 (host) | Dashboards visuales |
 | Loki | 3100 (interno) | Logs centralizados |
-| Promtail | none | Enviar logs a Loki |
+| Promtail | 9080 (interno) | Enviar logs a Loki |
 | Node Exporter | 9100 (interno) | Métricas del host |
 | Postgres Exporter | 9187 (interno) | Métricas de PostgreSQL |
 | Redis Exporter | 9121 (interno) | Métricas de Redis |
 
 **Variables de entorno:**
 
-- `ENABLE_METRICS=true` (en backend prod) - Habilita endpoint /metrics
 - `GRAFANA_PASSWORD` - Password de Grafana (default: helpdesk)
 
 **Retención de datos:**
 
 - Prometheus: 15 días
-- Loki: 15 días
+- Loki: 15 días (360h)
 - Grafana: indefinido (almacenamiento persistente)
+
+**Caveat multi-worker:** el backend corre con 4 workers uvicorn; Prometheus scrapea
+un solo worker por request, por lo que los contadores (`http_requests_total`) pueden
+aparecer "jumpy". Suficiente para señal básica; si se necesita exactitud, migrar a
+`PROMETHEUS_MULTIPROC_DIR` (modo multiprocess de prometheus_client).
 
 ## Convenciones
 

@@ -83,7 +83,7 @@
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+          "expr": "rate(http_requests_total{status=\"5xx\"}[5m]) / rate(http_requests_total[5m]) * 100",
           "legendFormat": "Error %",
           "refId": "A"
         }

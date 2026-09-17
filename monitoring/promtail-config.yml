@@ -3,7 +3,7 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /tmp/positions.yaml
+  filename: /positions/positions.yaml
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
@@ -22,15 +22,11 @@ scrape_configs:
       - source_labels: ["__meta_docker_container_label_com_docker_compose_project"]
         target_label: "project"
       - source_labels: ["__meta_docker_container_log_stream"]
-        target_label: "logstream"
+        target_label: "stream"
 
     pipeline_stages:
       - docker: {}
       - regex:
-          expression: "^(?P<time>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z?)\\s+(?P<level>\\w+)\\s+(?P<logger>\\S+):\\s+(?P<message>.*)"
+          expression: "^(?:\\S+\\s+)*(?P<level>\\[?(?:CRITICAL|ERROR|WARNING|INFO|DEBUG)\\]?)\\b"
       - labels:
           level:
-          logger:
-      - timestamp:
-          source: time
-          format: "2006-01-02T15:04:05.000Z"
