@@ -581,3 +581,34 @@ Mejoras de validacion / integridad (Fixes menores 1-7).
   admins de otras empresas (data leak por metadata).
 - Verificacion: `py_compile` limpio en todos los archivos
   modificados; app recarga sin errores; 75 endpoints intactos.
+
+Optimizacion de performance (Fixes L-N, monitoring-driven).
+
+Contexto: los dashboards de Grafana detectaron endpoints lentos
+(P95: `/api/empresas` 2.13s, `/api/stats` 967ms, `/api/tickets`
+887ms). La auditoria confirmo que los 3 endpoints hacen pocas
+queries (3 round-trips, sin N+1); el cuello era transversal.
+
+- **L** `core/database.py`: `pool_size` 5 -> 15 y `max_overflow`
+  10 -> 5 (4 workers x 20 = 80 conns < `max_connections=100` de
+  Postgres). El P95 de los endpoints del dashboard se inflaba por
+  espera de conexion del pool cuando corrían en paralelo los
+  endpoints pesados (`/api/metricas/*`, `/api/reportes/*`).
+- **M** Nueva migracion `aa11bb22cc33`: indices
+  `idx_tickets_cliente`, `idx_tickets_fecha_creacion`,
+  `idx_tickets_empresa_fecha` (empresa_id, fecha_creacion) e
+  `idx_usuarios_empresa`. Reflejados en los models Usuario y
+  Ticket.
+- **N** `/api/tickets` ORDER BY no SARGable (2 `case()` dinamicos
+  por estado/prioridad) reemplazado por columna generada
+  persistida `tickets.peso_orden SMALLINT`
+  (`CASE estado * 10 + CASE prioridad`, autocalculada por la DB
+  en cada UPDATE de estado/prioridad, cero riesgo de
+  desincronizado) + indice `(peso_orden, fecha_creacion)`.
+  Equivalencia de orden verificada fila por fila contra el CASE
+  viejo y benchmark en PG16 con 50k filas: page-read
+  9.35ms (seq scan + sort) -> 0.082ms (index scan, sin sort).
+  `orden="prioridad"` pasa a ser sinonimo del default.
+- Verificacion: `py_compile` limpio; `ruff check/format` (0.6.9)
+  limpio; expresion de `peso_orden` + equivalencia de orden +
+  uso del indice validados en un PostgreSQL 16 real.

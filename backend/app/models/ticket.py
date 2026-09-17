@@ -1,18 +1,14 @@
 """Modelo Ticket: entidad central del helpdesk."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, String, Text, func
+from sqlalchemy import Computed, Enum as SAEnum
+from sqlalchemy import ForeignKey, Index, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 from app.models.enums import EstadoTicket, ElementoInfraestructura, PrioridadTicket
-
-if TYPE_CHECKING:
-    from app.models.usuario import Usuario
 
 
 class Ticket(Base):
@@ -86,12 +82,36 @@ class Ticket(Base):
     fecha_asignacion: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     fecha_primera_respuesta: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     fecha_resolucion: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    peso_orden: Mapped[int] = mapped_column(
+        SmallInteger,
+        Computed(
+            "CASE estado"
+            " WHEN 'en_progreso'::estado_ticket THEN 1"
+            " WHEN 'asignado'::estado_ticket THEN 2"
+            " WHEN 'abierto'::estado_ticket THEN 3"
+            " WHEN 'resuelto'::estado_ticket THEN 4"
+            " WHEN 'cerrado'::estado_ticket THEN 5"
+            " ELSE 6 END * 10 +"
+            " CASE prioridad"
+            " WHEN 'urgente'::prioridad_ticket THEN 1"
+            " WHEN 'alta'::prioridad_ticket THEN 2"
+            " WHEN 'media'::prioridad_ticket THEN 3"
+            " WHEN 'baja'::prioridad_ticket THEN 4"
+            " ELSE 5 END",
+            persisted=True,
+        ),
+        nullable=False,
+    )
 
     __table_args__ = (
         Index("idx_tickets_empresa", "empresa_id"),
         Index("idx_tickets_estado", "estado"),
         Index("idx_tickets_prioridad", "prioridad"),
         Index("idx_tickets_agente", "agente_id"),
+        Index("idx_tickets_cliente", "cliente_id"),
+        Index("idx_tickets_fecha_creacion", "fecha_creacion"),
+        Index("idx_tickets_empresa_fecha", "empresa_id", "fecha_creacion"),
+        Index("idx_tickets_peso_orden", "peso_orden", "fecha_creacion"),
     )
 
     def __repr__(self) -> str:

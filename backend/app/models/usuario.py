@@ -1,25 +1,20 @@
 """Modelo Usuario: clientes y equipo interno (agentes/admins)."""
+
 from datetime import datetime
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, String, func, text
+from sqlalchemy import ForeignKey, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 from app.models.enums import RolUsuario
 
-if TYPE_CHECKING:
-    from app.models.empresa import Empresa
-
 
 class Usuario(Base):
     __tablename__ = "usuarios"
 
-    id: Mapped[UUID] = mapped_column(
-        server_default=func.gen_random_uuid(), primary_key=True
-    )
+    id: Mapped[UUID] = mapped_column(server_default=func.gen_random_uuid(), primary_key=True)
     empresa_id: Mapped[int | None] = mapped_column(
         ForeignKey("empresas.id", ondelete="SET NULL"), nullable=True
     )
@@ -36,6 +31,8 @@ class Usuario(Base):
     fecha_creacion: Mapped[datetime] = mapped_column(
         server_default=func.current_timestamp(), nullable=False
     )
+
+    __table_args__ = (Index("idx_usuarios_empresa", "empresa_id"),)
 
     def __repr__(self) -> str:
         return f"<Usuario id={self.id} email={self.email!r} rol={self.rol}>"
