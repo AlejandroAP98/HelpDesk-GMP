@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import enforce_rate_limit
 from app.models.push_subscription import PushSubscription
 from app.models.usuario import Usuario
 from app.schemas.push import (
@@ -73,6 +74,10 @@ async def subscribe(
             )
         )
 
+    await enforce_rate_limit(
+        f"push_subscribe:{current.id}", max_intentos=5, ventana_segundos=60
+    )
+
     existing_count = (
         await db.execute(
             select(PushSubscription).where(
@@ -95,11 +100,26 @@ async def subscribe(
     ).scalar_one_or_none()
 
     if existing is not None:
-        existing.usuario_id = current.id
-        existing.p256dh_key = data.keys.p256dh
-        existing.auth_key = data.keys.auth
-        existing.user_agent = data.user_agent
-        sub = existing
+        if existing.usuario_id != current.id:
+            logger.warning(
+                "Push endpoint re-registrado por otro usuario: viejo=%s nuevo=%s",
+                existing.usuario_id,
+                current.id,
+            )
+            await db.delete(existing)
+            sub = PushSubscription(
+                usuario_id=current.id,
+                endpoint=data.endpoint,
+                p256dh_key=data.keys.p256dh,
+                auth_key=data.keys.auth,
+                user_agent=data.user_agent,
+            )
+            db.add(sub)
+        else:
+            existing.p256dh_key = data.keys.p256dh
+            existing.auth_key = data.keys.auth
+            existing.user_agent = data.user_agent
+            sub = existing
     else:
         sub = PushSubscription(
             usuario_id=current.id,

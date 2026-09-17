@@ -24,6 +24,7 @@ class ConnectionManager:
         self.active: dict[UUID, WebSocket] = {}
         self.by_role: dict[str, set[UUID]] = defaultdict(set)
         self.by_ticket: dict[UUID, set[UUID]] = defaultdict(set)
+        self.by_conn_tickets: dict[UUID, set[UUID]] = {}
         self.meta: dict[UUID, dict[str, Any]] = {}
 
     async def connect(
@@ -41,25 +42,25 @@ class ConnectionManager:
         self.by_role[rol].add(conn_id)
         if ticket_id is not None:
             self.by_ticket[ticket_id].add(conn_id)
+            self.by_conn_tickets[conn_id] = {ticket_id}
+        else:
+            self.by_conn_tickets[conn_id] = set()
         self.meta[conn_id] = {
             "rol": rol,
             "usuario_id": str(usuario_id),
             "empresa_id": empresa_id,
-            "ticket_id": str(ticket_id) if ticket_id else None,
         }
         logger.info("WS conexion %s (rol=%s)", conn_id, rol)
 
     def disconnect(self, conn_id: UUID) -> None:
         meta = self.meta.pop(conn_id, None)
         self.active.pop(conn_id, None)
+        for tid in self.by_conn_tickets.pop(conn_id, set()):
+            self.by_ticket.get(tid, set()).discard(conn_id)
         if meta:
             rol = meta.get("rol")
             if rol and conn_id in self.by_role.get(rol, set()):
                 self.by_role[rol].discard(conn_id)
-            ticket = meta.get("ticket_id")
-            if ticket:
-                t_id = UUID(ticket) if isinstance(ticket, str) else ticket
-                self.by_ticket.get(t_id, set()).discard(conn_id)
 
     async def send_personal(self, conn_id: UUID, payload: dict[str, Any]) -> bool:
         ws = self.active.get(conn_id)
@@ -159,13 +160,11 @@ class ConnectionManager:
         if conn_id not in self.active:
             return
         self.by_ticket[ticket_id].add(conn_id)
-        if conn_id in self.meta:
-            self.meta[conn_id]["ticket_id"] = str(ticket_id)
+        self.by_conn_tickets.setdefault(conn_id, set()).add(ticket_id)
 
     def unsubscribe_ticket(self, conn_id: UUID, ticket_id: UUID) -> None:
+        self.by_conn_tickets.get(conn_id, set()).discard(ticket_id)
         self.by_ticket.get(ticket_id, set()).discard(conn_id)
-        if conn_id in self.meta and self.meta[conn_id].get("ticket_id") == str(ticket_id):
-            self.meta[conn_id]["ticket_id"] = None
 
 
 manager = ConnectionManager()

@@ -16,6 +16,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
+from collections import deque
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -34,6 +36,9 @@ router = APIRouter(tags=["websocket"])
 logger = logging.getLogger(__name__)
 
 AUTH_TIMEOUT_S = 10.0
+MAX_TICKET_SUBS = 50
+FLOOD_WINDOW_S = 60.0
+FLOOD_MAX_MSGS = 120
 
 
 async def _resolve_user(token: str, db: AsyncSession) -> Usuario:
@@ -144,8 +149,21 @@ async def websocket_endpoint(
         usuario.empresa_id,
     )
     try:
+        suscripciones: set[str] = set()
+        ventana: deque[float] = deque()
         while True:
             data = await ws.receive_json()
+            now = time.monotonic()
+            ventana.append(now)
+            while ventana and now - ventana[0] > FLOOD_WINDOW_S:
+                ventana.popleft()
+            if len(ventana) > FLOOD_MAX_MSGS:
+                logger.warning(
+                    "WS flood limit excedido: conn=%s usuario=%s (descarta mensaje)",
+                    conn_id,
+                    usuario.id,
+                )
+                continue
             if isinstance(data, dict) and data.get("type") == "ping":
                 await manager.send_personal(
                     conn_id, {"type": "pong", "ts": data.get("ts")}
@@ -153,7 +171,15 @@ async def websocket_endpoint(
             elif isinstance(data, dict) and data.get("type") == "subscribe_ticket":
                 tid = data.get("ticket_id")
                 if tid:
+                    if len(suscripciones) >= MAX_TICKET_SUBS and tid not in suscripciones:
+                        logger.warning(
+                            "WS subs limit excedido: usuario=%s ticket=%s",
+                            usuario.id,
+                            tid,
+                        )
+                        continue
                     if await _can_access_ticket(usuario, UUID(tid), db):
+                        suscripciones.add(tid)
                         manager.subscribe_ticket(conn_id, UUID(tid))
                     else:
                         logger.warning(
@@ -164,6 +190,7 @@ async def websocket_endpoint(
             elif isinstance(data, dict) and data.get("type") == "unsubscribe_ticket":
                 tid = data.get("ticket_id")
                 if tid:
+                    suscripciones.discard(tid)
                     manager.unsubscribe_ticket(conn_id, UUID(tid))
     except WebSocketDisconnect:
         manager.disconnect(conn_id)

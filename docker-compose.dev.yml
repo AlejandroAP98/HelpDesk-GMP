@@ -26,7 +26,7 @@ services:
       - "9001:9001"   # Consola web
 
   backend:
-    command: ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--ws-max-size", "65536", "--reload"]
     ports:
       - "8000:8000"
     volumes:

@@ -264,24 +264,22 @@ async def _publicar_nuevo_ticket(ticket: Ticket, empresa_nombre: str | None = No
 
 
 async def _publicar_asignacion(ticket: Ticket, empresa_nombre: str | None = None) -> None:
-    """Publica evento ticket:assigned (dispara Web Push al agente asignado).
+    """Publica evento ticket:assigned SOLO al agente asignado.
 
-    Se publica solo a roles agente+mesa_ayuda+administrador via publish_to_roles.
-    El agente asignado recibe la notificacion por su rol; los usuarios en la sala
-    del ticket reciben la actualizacion via ticket:updated (broadcast).
+    El evento viaja via publish_to_users([agente_id]): otros agentes con WS
+    conectado NO ven metadatos (titulo/empresa/punto) de tickets ajenos.
+    El push Web al asignado lo dispacha el push_dispatcher en pubsub.py.
+    El resto de usuarios de la sala del ticket reciben la actualizacion via
+    ticket:updated (por ticket_id).
     """
-    from app.websockets.pubsub import publish_to_roles
+    from app.websockets.pubsub import publish_to_users
 
     if ticket.agente_id is None:
         return
     payload = _ticket_payload(ticket, "ticket:assigned", empresa_nombre)
     try:
-        await publish_to_roles(
-            roles=[
-                RolUsuario.agente.value,
-                RolUsuario.mesa_ayuda.value,
-                RolUsuario.administrador.value,
-            ],
+        await publish_to_users(
+            [ticket.agente_id],
             event=payload,
         )
     except Exception:

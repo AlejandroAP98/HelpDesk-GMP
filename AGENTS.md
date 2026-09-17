@@ -658,3 +658,38 @@ Renovacion de sesion: silent refresh + WS auth post-handshake.
   reporta localmente son de stubs/pre-existentes en otros archivos).
   Pendiente validar E2E del protocolo nuevo en entorno con
   DB/Redis/contenedor (docker daemon estaba apagado).
+
+Hardening pre-produccion WS/Push (3 fixes, un commit).
+
+- **ticket:assigned filtrado por rol** (fuga de metadatos):
+  `ticket_service._publicar_asignacion` publicaba via
+  `publish_to_roles([agente, mesa_ayuda, administrador])` -> cualquier
+  agente conectado recibia titulo/empresa/punto de tickets ajenos.
+  Ahora usa `publish_to_users([ticket.agente_id])`: solo el asignado
+  recibe el evento. El push Webdispatcher no cambia (ya iba al
+  asignado via `event["agente_id"]`). E2E OK: agente asignado recibe
+  `ticket:assigned`, otro agente NO recibe nada.
+- **push subscribe hijacking/libre** (`routers/push.py`): si un
+  endpoint existia de otro usuario se sobreescribia `usuario_id`
+  silenciosamente. Ahora hace handover limpio: DELETE de la fila vieja
+  + INSERT nueva (warning en log), sin reutilizar registros de otros
+  usuarios. Ademas rate limit `push_subscribe:{user_id}` 5/min via
+  `enforce_rate_limit` (solo prod, fail-open).
+- **WS flood + cap de suscripciones** (`routers/ws.py`): ventana
+  deslizante 120 msg/min por conexion (exceso se descarta con warning,
+  la conexion NO se cierra); cap `MAX_TICKET_SUBS = 50` por conexion
+  (exceso ignorado); verificacion E2E: 200 mensajes seguidos no matan
+  la conexion y los pings siguen respondiendo en ventanas siguientes.
+  Ademas `--ws-max-size 65536` (64KB) en los commands de uvicorn de
+  `docker-compose.dev.yml` y `docker-compose.prod.yml` (aplica al
+  proximo `up -d`, no con reload).
+- **manager.py: tickets por conexion**: `meta[conn]["ticket_id"]`
+  guardaba solo el ULTIMO ticket suscrito -> al desconectar quedaban
+  suscripciones huerfanas en `by_ticket` y `broadcast_to_ticket`
+  seguia enviando a conexiones muertas. Nuevo `by_conn_tickets:
+  dict[conn_id, set[ticket_id]]`; disconnect limpia TODAS las
+  suscripciones de la conexion; `subscribe_ticket`/
+  `unsubscribe_ticket` actualizan ambos indices.
+- Verificacion: `py_compile` + `ruff check` limpio; `mypy` sin errores
+  nuevos; 86/86 pytest verdes; E2E assigned y E2E flood OK en
+  contenedor.
