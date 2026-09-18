@@ -40,7 +40,7 @@ export default function TicketDetallePage() {
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
     cargando, error, setError,
-    comentando, actualizando,
+    comentando, accion,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,
     adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
     historialPage, historialTotalPages, cargarMasHistorial,
@@ -198,37 +198,37 @@ export default function TicketDetallePage() {
                   {puedeProgresar && ticket.estado === "asignado" && (
                   <button
                     onClick={() => cambiarEstado("en_progreso")}
-                    disabled={actualizando}
-                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                    disabled={accion !== null}
+                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                   >
-                    {actualizando ? "Procesando..." : "Iniciar trabajo"}
+                    {accion === "cambiar_estado" ? "Procesando..." : "Iniciar trabajo"}
                   </button>
                   )}
                   {puedeAutoasignar && (
                     <button
                       onClick={asignarme}
-                      disabled={actualizando}
-                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={accion !== null}
+                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
-                      {actualizando ? "Asignando..." : "Asignarme"}
+                      {accion === "asignarme" ? "Asignando..." : "Asignarme"}
                     </button>
                   )}
                   {puedeResolver && ticket.estado === "en_progreso" && (
                     <button
                       onClick={() => cambiarEstado("resuelto")}
-                      disabled={actualizando}
-                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={accion !== null}
+                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
-                      {actualizando ? "Procesando..." : "Marcar resuelto"}
+                      {accion === "cambiar_estado" ? "Procesando..." : "Marcar resuelto"}
                     </button>
                   )}
                   {puedeCerrar && ticket.estado === "resuelto" && (
                     <button
                       onClick={cerrar}
-                      disabled={actualizando}
-                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={accion !== null}
+                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
-                      {actualizando ? "Cerrando..." : "Cerrar ticket"}
+                      {accion === "cerrar" ? "Cerrando..." : "Cerrar ticket"}
                     </button>
                   )}
                 </div>
@@ -238,7 +238,7 @@ export default function TicketDetallePage() {
                     <select
                       value={ticket.prioridad}
                       onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                      disabled={actualizando}
+                      disabled={accion !== null}
                       className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                       {PRIORIDADES.map((p) => (
@@ -254,10 +254,10 @@ export default function TicketDetallePage() {
                 <label className="text-xs font-medium text-gray-600 tracking-wider mb-2 block pl-1">Acciones:</label>
                 <button
                   onClick={reabrir}
-                  disabled={actualizando}
-                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all"
+                  disabled={accion !== null}
+                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                 >
-                  {actualizando ? "Reabriendo..." : "Reabrir ticket"}
+                  {accion === "reabrir" ? "Reabriendo..." : "Reabrir ticket"}
                 </button>
               </div>
             )}
@@ -284,7 +284,7 @@ export default function TicketDetallePage() {
                 </select>
                 <button
                   onClick={reasignar}
-                  disabled={!agenteSel || reasignando}
+                  disabled={!agenteSel || accion !== null}
                   className="rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all whitespace-nowrap"
                 >
                   {reasignando ? "Reasignando..." : "Reasignar"}

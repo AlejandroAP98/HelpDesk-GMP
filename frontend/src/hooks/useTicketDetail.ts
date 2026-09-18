@@ -18,6 +18,15 @@ import {
 } from "@/lib/endpoints";
 import type { Usuario } from "@/store/authStore";
 
+export type AccionTicket =
+  | "asignarme"
+  | "cambiar_estado"
+  | "cerrar"
+  | "reabrir"
+  | "prioridad"
+  | "reasignar"
+  | null;
+
 export function useTicketDetail(ticketId: string) {
   const usuario = useAuthStore((s) => s.usuario);
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
@@ -42,7 +51,7 @@ export function useTicketDetail(ticketId: string) {
   const [reasignando, setReasignando] = useState(false);
   const [campoCopiado, setCampoCopiado] = useState<string | null>(null);
   const [comentando, setComentando] = useState(false);
-  const [actualizando, setActualizando] = useState(false);
+  const [accion, setAccion] = useState<AccionTicket>(null);
   const busyRef = useRef(false);
 
   const handleCopiar = useCallback((campo: string, valor: string) => {
@@ -202,7 +211,7 @@ export function useTicketDetail(ticketId: string) {
   const cambiarEstado = async (estado: EstadoTicket) => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setActualizando(true);
+    setAccion("cambiar_estado");
     try {
       await ticketApi.cambiarEstado(ticketId, estado);
       await cargar();
@@ -210,14 +219,14 @@ export function useTicketDetail(ticketId: string) {
       setError("Transicion invalida");
     } finally {
       busyRef.current = false;
-      setActualizando(false);
+      setAccion(null);
     }
   };
 
   const cerrar = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setActualizando(true);
+    setAccion("cerrar");
     try {
       await ticketApi.cerrar(ticketId);
       await cargar();
@@ -225,14 +234,14 @@ export function useTicketDetail(ticketId: string) {
       setError("No se pudo cerrar el ticket");
     } finally {
       busyRef.current = false;
-      setActualizando(false);
+      setAccion(null);
     }
   };
 
   const reabrir = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setActualizando(true);
+    setAccion("reabrir");
     try {
       await ticketApi.reabrir(ticketId);
       await cargar();
@@ -240,14 +249,14 @@ export function useTicketDetail(ticketId: string) {
       setError("No se pudo reabrir el ticket");
     } finally {
       busyRef.current = false;
-      setActualizando(false);
+      setAccion(null);
     }
   };
 
   const asignarme = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setActualizando(true);
+    setAccion("asignarme");
     try {
       await ticketApi.asignarme(ticketId);
       await cargar();
@@ -255,12 +264,14 @@ export function useTicketDetail(ticketId: string) {
       setError("No se pudo autoasignar el ticket");
     } finally {
       busyRef.current = false;
-      setActualizando(false);
+      setAccion(null);
     }
   };
 
   const reasignar = async () => {
-    if (!agenteSel) return;
+    if (!agenteSel || busyRef.current) return;
+    busyRef.current = true;
+    setAccion("reasignar");
     setReasignando(true);
     setError(null);
     try {
@@ -270,6 +281,8 @@ export function useTicketDetail(ticketId: string) {
     } catch {
       setError("No se pudo reasignar el ticket");
     } finally {
+      busyRef.current = false;
+      setAccion(null);
       setReasignando(false);
     }
   };
@@ -277,7 +290,7 @@ export function useTicketDetail(ticketId: string) {
   const setPrioridad = async (p: PrioridadTicket) => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setActualizando(true);
+    setAccion("prioridad");
     try {
       await ticketApi.cambiarPrioridad(ticketId, p);
       await cargar();
@@ -285,7 +298,7 @@ export function useTicketDetail(ticketId: string) {
       setError("No se pudo cambiar prioridad");
     } finally {
       busyRef.current = false;
-      setActualizando(false);
+      setAccion(null);
     }
   };
 
@@ -294,7 +307,7 @@ export function useTicketDetail(ticketId: string) {
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
     cargando, error, setError,
-    comentando, actualizando,
+    comentando, accion,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,
     adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
     historialPage, historialTotalPages, cargarMasHistorial,
