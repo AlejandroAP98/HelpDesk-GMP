@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "cambia_esta_cadena_por_un_valor_largo_y_aleatorio_de_64_bytes"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    refresh_token_expire_days: int = 7
+    refresh_token_expire_days: int = 1
     cookie_secure: bool = False
 
     # --- MinIO / S3 ---
