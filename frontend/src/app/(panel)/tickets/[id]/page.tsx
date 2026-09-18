@@ -199,7 +199,7 @@ export default function TicketDetallePage() {
                   <button
                     onClick={() => cambiarEstado("en_progreso")}
                     disabled={accion !== null}
-                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                   >
                     {accion === "cambiar_estado" ? "Procesando..." : "Iniciar trabajo"}
                   </button>
@@ -208,7 +208,7 @@ export default function TicketDetallePage() {
                     <button
                       onClick={asignarme}
                       disabled={accion !== null}
-                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
                       {accion === "asignarme" ? "Asignando..." : "Asignarme"}
                     </button>
@@ -217,7 +217,7 @@ export default function TicketDetallePage() {
                     <button
                       onClick={() => cambiarEstado("resuelto")}
                       disabled={accion !== null}
-                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
                       {accion === "cambiar_estado" ? "Procesando..." : "Marcar resuelto"}
                     </button>
@@ -226,7 +226,7 @@ export default function TicketDetallePage() {
                     <button
                       onClick={cerrar}
                       disabled={accion !== null}
-                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                     >
                       {accion === "cerrar" ? "Cerrando..." : "Cerrar ticket"}
                     </button>
@@ -255,7 +255,7 @@ export default function TicketDetallePage() {
                 <button
                   onClick={reabrir}
                   disabled={accion !== null}
-                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                 >
                   {accion === "reabrir" ? "Reabriendo..." : "Reabrir ticket"}
                 </button>
@@ -285,7 +285,7 @@ export default function TicketDetallePage() {
                 <button
                   onClick={reasignar}
                   disabled={!agenteSel || accion !== null}
-                  className="rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all whitespace-nowrap"
+                  className="rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all whitespace-nowrap"
                 >
                   {reasignando ? "Reasignando..." : "Reasignar"}
                 </button>
