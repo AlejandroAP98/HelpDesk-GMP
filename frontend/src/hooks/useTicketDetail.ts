@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
@@ -41,6 +41,9 @@ export function useTicketDetail(ticketId: string) {
   const [agenteSel, setAgenteSel] = useState<string>("");
   const [reasignando, setReasignando] = useState(false);
   const [campoCopiado, setCampoCopiado] = useState<string | null>(null);
+  const [comentando, setComentando] = useState(false);
+  const [actualizando, setActualizando] = useState(false);
+  const busyRef = useRef(false);
 
   const handleCopiar = useCallback((campo: string, valor: string) => {
     navigator.clipboard.writeText(valor);
@@ -177,7 +180,9 @@ export function useTicketDetail(ticketId: string) {
 
   const enviarComentario = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoComentario.trim()) return;
+    if (busyRef.current || !nuevoComentario.trim()) return;
+    busyRef.current = true;
+    setComentando(true);
     try {
       await comentarioApi.crear(ticketId, {
         contenido: nuevoComentario,
@@ -188,42 +193,69 @@ export function useTicketDetail(ticketId: string) {
       await cargar();
     } catch {
       setError("No se pudo agregar el comentario");
+    } finally {
+      busyRef.current = false;
+      setComentando(false);
     }
   };
 
   const cambiarEstado = async (estado: EstadoTicket) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActualizando(true);
     try {
       await ticketApi.cambiarEstado(ticketId, estado);
       await cargar();
     } catch {
       setError("Transicion invalida");
+    } finally {
+      busyRef.current = false;
+      setActualizando(false);
     }
   };
 
   const cerrar = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActualizando(true);
     try {
       await ticketApi.cerrar(ticketId);
       await cargar();
     } catch {
       setError("No se pudo cerrar el ticket");
+    } finally {
+      busyRef.current = false;
+      setActualizando(false);
     }
   };
 
   const reabrir = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActualizando(true);
     try {
       await ticketApi.reabrir(ticketId);
       await cargar();
     } catch {
       setError("No se pudo reabrir el ticket");
+    } finally {
+      busyRef.current = false;
+      setActualizando(false);
     }
   };
 
   const asignarme = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActualizando(true);
     try {
       await ticketApi.asignarme(ticketId);
       await cargar();
     } catch {
       setError("No se pudo autoasignar el ticket");
+    } finally {
+      busyRef.current = false;
+      setActualizando(false);
     }
   };
 
@@ -243,11 +275,17 @@ export function useTicketDetail(ticketId: string) {
   };
 
   const setPrioridad = async (p: PrioridadTicket) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActualizando(true);
     try {
       await ticketApi.cambiarPrioridad(ticketId, p);
       await cargar();
     } catch {
       setError("No se pudo cambiar prioridad");
+    } finally {
+      busyRef.current = false;
+      setActualizando(false);
     }
   };
 
@@ -256,6 +294,7 @@ export function useTicketDetail(ticketId: string) {
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
     cargando, error, setError,
+    comentando, actualizando,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,
     adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
     historialPage, historialTotalPages, cargarMasHistorial,

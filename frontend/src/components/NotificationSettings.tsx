@@ -33,6 +33,9 @@ export default function NotificationSettings() {
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
+  const [quitando, setQuitando] = useState<string | null>(null);
+  const [probando, setProbando] = useState(false);
+
   const emailEnabled = usuario?.notificaciones_email ?? true;
 
   const cargar = async () => {
@@ -75,23 +78,33 @@ export default function NotificationSettings() {
   };
 
   const handleQuitar = async (endpoint: string) => {
+    if (quitando) return;
+    setQuitando(endpoint);
     try {
       await pushApi.unsubscribe(endpoint);
       await cargar();
     } catch {
+    } finally {
+      setQuitando(null);
     }
   };
 
   const handleQuitarTodas = async () => {
+    if (quitando) return;
+    setQuitando("__todas__");
     try {
       await pushApi.unsubscribeAll();
       await cargar();
       await refresh();
     } catch {
+    } finally {
+      setQuitando(null);
     }
   };
 
   const handleTest = async () => {
+    if (probando || busy) return;
+    setProbando(true);
     setError(null);
     setSuccess(null);
     try {
@@ -151,6 +164,8 @@ export default function NotificationSettings() {
       }
     } catch (e) {
       setError(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setProbando(false);
     }
   };
 
@@ -220,8 +235,8 @@ export default function NotificationSettings() {
                 {busy ? "Procesando..." : "Activar notificaciones"}
               </Button>
             )}
-            <Button variant="secondary" onClick={handleTest} disabled={busy}>
-              Probar
+            <Button variant="secondary" onClick={handleTest} disabled={busy || probando}>
+              {probando ? "Enviando..." : "Probar"}
             </Button>
           </div>
           {error && (
@@ -258,9 +273,10 @@ export default function NotificationSettings() {
                         </div>
                         <button
                           onClick={() => handleQuitar(s.endpoint)}
-                          className="ml-2 text-xs font-normal text-red-600 hover:text-red-700"
+                          disabled={quitando !== null}
+                          className="ml-2 text-xs font-normal text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Quitar
+                          {quitando === s.endpoint ? "Quitando..." : "Quitar"}
                         </button>
                       </li>
                     ))}
@@ -268,9 +284,10 @@ export default function NotificationSettings() {
                   {subs.length > 1 && (
                     <button
                       onClick={handleQuitarTodas}
-                      className="mt-3 text-xs font-normal text-red-600 hover:text-red-700"
+                      disabled={quitando !== null}
+                      className="mt-3 text-xs font-normal text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Quitar todas las suscripciones
+                      {quitando === "__todas__" ? "Quitando..." : "Quitar todas las suscripciones"}
                     </button>
                   )}
                 </>

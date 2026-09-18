@@ -15,6 +15,7 @@ export function QuickReplies({ onInsert }: Props) {
   const [formTitulo, setFormTitulo] = useState("");
   const [formContenido, setFormContenido] = useState("");
   const [loading, setLoading] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   const cargar = async () => {
     try {
@@ -46,7 +47,8 @@ export function QuickReplies({ onInsert }: Props) {
   };
 
   const guardar = async () => {
-    if (!formTitulo.trim() || !formContenido.trim()) return;
+    if (guardando || !formTitulo.trim() || !formContenido.trim()) return;
+    setGuardando(true);
     try {
       if (editando) {
         await respuestaRapidaApi.actualizar(editando.id, {
@@ -63,6 +65,8 @@ export function QuickReplies({ onInsert }: Props) {
       await cargar();
     } catch {
       console.error("Error al guardar la respuesta rapida");
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -206,10 +210,10 @@ export function QuickReplies({ onInsert }: Props) {
               <button
                 type="button"
                 onClick={guardar}
-                disabled={!formTitulo.trim() || !formContenido.trim()}
+                disabled={guardando || !formTitulo.trim() || !formContenido.trim()}
                 className="rounded-xl bg-brandCustom px-4 py-2 text-xs font-normal text-white hover:bg-brandCustom/90 disabled:opacity-50 transition-all"
               >
-                {editando ? "Guardar cambios" : "Crear"}
+                {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Crear"}
               </button>
             </div>
           </div>

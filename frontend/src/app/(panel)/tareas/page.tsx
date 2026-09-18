@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { tareaApi, ticketApi, type TareaPendiente, type Ticket, type Pagina } from "@/lib/endpoints";
 import { extractApiError } from "@/lib/errors";
 import { useAuthStore } from "@/store/authStore";
@@ -29,6 +29,7 @@ export default function TareasPage() {
   const [ticketId, setTicketId] = useState("");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [creando, setCreando] = useState(false);
+  const creandoRef = useRef(false);
   const [showForm, setShowForm] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -70,7 +71,8 @@ export default function TareasPage() {
   }, [showForm]);
 
   const handleCrear = async () => {
-    if (!nuevoTexto.trim()) return;
+    if (creandoRef.current || !nuevoTexto.trim()) return;
+    creandoRef.current = true;
     setCreando(true);
     try {
       const tarea = await tareaApi.crear({
@@ -85,6 +87,7 @@ export default function TareasPage() {
     } catch (err) {
       setError(extractApiError(err));
     } finally {
+      creandoRef.current = false;
       setCreando(false);
     }
   };

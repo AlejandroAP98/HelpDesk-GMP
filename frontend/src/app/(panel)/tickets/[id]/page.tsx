@@ -40,6 +40,7 @@ export default function TicketDetallePage() {
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
     cargando, error, setError,
+    comentando, actualizando,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,
     adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
     historialPage, historialTotalPages, cargarMasHistorial,
@@ -197,33 +198,37 @@ export default function TicketDetallePage() {
                   {puedeProgresar && ticket.estado === "asignado" && (
                   <button
                     onClick={() => cambiarEstado("en_progreso")}
-                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                    disabled={actualizando}
+                    className="self-end rounded-xl bg-yellowCustom hover:bg-yellowCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
                   >
-                    Iniciar trabajo
+                    {actualizando ? "Procesando..." : "Iniciar trabajo"}
                   </button>
                   )}
                   {puedeAutoasignar && (
                     <button
                       onClick={asignarme}
-                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={actualizando}
+                      className="self-end rounded-xl bg-violetCustom hover:bg-violetCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
                     >
-                      Asignarme
+                      {actualizando ? "Asignando..." : "Asignarme"}
                     </button>
                   )}
                   {puedeResolver && ticket.estado === "en_progreso" && (
                     <button
                       onClick={() => cambiarEstado("resuelto")}
-                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={actualizando}
+                      className="self-end rounded-xl bg-greenCustom hover:bg-greenCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
                     >
-                      Marcar resuelto
+                      {actualizando ? "Procesando..." : "Marcar resuelto"}
                     </button>
                   )}
                   {puedeCerrar && ticket.estado === "resuelto" && (
                     <button
                       onClick={cerrar}
-                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
+                      disabled={actualizando}
+                      className="self-end rounded-xl bg-grayCustom hover:bg-grayCustom/80 disabled:opacity-50 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all"
                     >
-                      Cerrar ticket
+                      {actualizando ? "Cerrando..." : "Cerrar ticket"}
                     </button>
                   )}
                 </div>
@@ -233,7 +238,8 @@ export default function TicketDetallePage() {
                     <select
                       value={ticket.prioridad}
                       onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto"
+                      disabled={actualizando}
+                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                       {PRIORIDADES.map((p) => (
                         <option key={p} value={p}>{prioridadLabels[p]}</option>
@@ -248,9 +254,10 @@ export default function TicketDetallePage() {
                 <label className="text-xs font-medium text-gray-600 tracking-wider mb-2 block pl-1">Acciones:</label>
                 <button
                   onClick={reabrir}
-                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all"
+                  disabled={actualizando}
+                  className="rounded-xl bg-brandCustom hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal text-white active:scale-[0.98] transition-all"
                 >
-                  Reabrir ticket
+                  {actualizando ? "Reabriendo..." : "Reabrir ticket"}
                 </button>
               </div>
             )}
@@ -360,9 +367,10 @@ export default function TicketDetallePage() {
                   )}
                   <button
                     type="submit"
-                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 sm:text-sm text-[12px] font-regular text-white hover:bg-brandCustom/90 shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
+                    disabled={comentando}
+                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 sm:text-sm text-[12px] font-regular text-white hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
                   >
-                    Comentar
+                    {comentando ? "Enviando..." : "Comentar"}
                     <SendCommentIcon className="w-5 h-5" />
                   </button>
                 </div>

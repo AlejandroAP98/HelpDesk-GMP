@@ -93,7 +93,7 @@ function AdjuntoThumb({
             e.stopPropagation();
             onDelete();
           }}
-          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 flex items-center justify-center"
+          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 flex items-center justify-center pointer-events-auto"
           title="Borrar"
         >
           <svg
@@ -167,6 +167,7 @@ export function AdjuntosGallery({
   onError,
 }: Props) {
   const [subiendo, setSubiendo] = useState(false);
+  const [borrandoId, setBorrandoId] = useState<string | null>(null);
   const [progreso, setProgreso] = useState("");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -205,6 +206,7 @@ export function AdjuntosGallery({
   }, [adjuntos.length, lightboxIndex]);
 
   const handleFiles = async (files: FileList) => {
+    if (subiendo) return;
     const lista = Array.from(files);
     if (lista.length === 0) return;
 
@@ -244,12 +246,16 @@ export function AdjuntosGallery({
   };
 
   const borrar = async (a: Adjunto) => {
+    if (borrandoId) return;
     if (!confirm(`Borrar "${a.nombre_archivo}"?`)) return;
+    setBorrandoId(a.id);
     try {
       await adjuntoApi.eliminar(ticketId, a.id);
       onChanged();
     } catch {
       onError("No se pudo borrar el adjunto");
+    } finally {
+      setBorrandoId(null);
     }
   };
 
