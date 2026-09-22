@@ -295,9 +295,30 @@ Genera un manifest JSON con metadatos. Los backups se almacenan en `/backups/hel
 
 ### Programar backup diario
 
+1. Hacer el script ejecutable:
+
+```bash
+chmod +x scripts/backup.sh
 ```
-0 3 * * * /opt/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+
+2. Crear la ruta del log (debe ser escribible por el usuario del deployment;
+   `/var/log` NO es escribible por usuarios normales):
+
+```bash
+mkdir -p ~/backups
 ```
+
+3. Agregar la entrada al crontab del usuario (`crontab -e`):
+
+```
+0 3 * * * /home/gmp/HelpDesk-GMP/scripts/backup.sh >> /home/gmp/backups/backup.log 2>&1
+```
+
+> Ajustar la ruta del proyecto si difiere. Verificar la instalacion con
+> `crontab -l | grep backup` y confirmar que `scripts/backup.sh` tiene el bit
+> de ejecucion (`ls -l scripts/backup.sh` debe mostrar la `x`).
+> Si el backup falla, revisar `~/backups/backup.log` y el syslog
+> (`grep CRON /var/log/syslog`).
 
 ## 1.15 PWA (Progressive Web App)
 

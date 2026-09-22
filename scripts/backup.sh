@@ -65,15 +65,16 @@ backup_minio() {
 backup_redis() {
     log "Respaldando Redis..."
     mkdir -p "${BACKUP_DIR}/redis"
-    ${COMPOSE_CMD} exec -T redis redis-cli BGSAVE >/dev/null 2>&1
+    ${COMPOSE_CMD} exec -T redis redis-cli BGSAVE >/dev/null 2>&1 || true
     sleep 2
-    docker run --rm \
-        --user "$(id -u):$(id -g)" \
-        -v "helpdesk-gmp_redis_data:/data:ro" \
-        -v "${BACKUP_DIR}/redis":/backup \
-        alpine sh -c "cp /data/dump.rdb /backup/dump.rdb && gzip /backup/dump.rdb" 2>/dev/null || {
-            warn "Redis sin datos persistidos"; return 0; }
-    log "Redis OK: $(du -sh ${BACKUP_DIR}/redis/dump.rdb.gz | cut -f1)"
+    local tmp="${BACKUP_DIR}/redis/dump.rdb"
+    if ${COMPOSE_CMD} exec -T redis cat /data/dump.rdb > "$tmp" && [ -s "$tmp" ]; then
+        gzip -f "${BACKUP_DIR}/redis/dump.rdb"
+        log "Redis OK: $(du -sh ${BACKUP_DIR}/redis/dump.rdb.gz | cut -f1)"
+    else
+        warn "Redis dump.rdb no disponible (BGSAVE fallo o archivo vacio)"
+        return 0
+    fi
 }
 
 backup_env() {

@@ -76,8 +76,14 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod u
 # Restaurar desde Google Drive
 ./scripts/backup.sh --restore-gdrive YYYYMMDD_HHMMSS
 
+# Requisitos previos (una vez):
+#   chmod +x scripts/backup.sh
+#   mkdir -p ~/backups (el log debe estar en una ruta escribible por el usuario
+#   del deployment; /var/log NO es escribible por usuarios normales y hace que
+#   el redirect de cron falle silenciosamente sin crear ni ejecutar el script)
 # Cron de backup diario a las 3am (con subida a Drive):
-# 0 3 * * * /home/gmp/HelpDesk-GMP/scripts/backup.sh >> /var/log/helpdesk-backup.log 2>&1
+# 0 3 * * * /home/gmp/HelpDesk-GMP/scripts/backup.sh >> /home/gmp/backups/backup.log 2>&1
+# Verificar instalacion: crontab -l | grep backup && ls -l scripts/backup.sh (debe tener la x)
 ```
 
 **Configuracion de rclone (una vez):**
