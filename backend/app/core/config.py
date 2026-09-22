@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_role_key: str = ""
 
+    # --- SLA ---
+    sla_frt_horas: float = 0.5
+    sla_mttr_horas: float = 24.0
+    sla_mttr_remoto_horas: float = 48.0
+    sla_ciudades_base: list[str] = ["Manizales", "Villamaría"]
+
     # --- Resend (emails transaccionales) ---
     resend_api_key: str = ""
     resend_from_email: str = "HelpDesk <noreply@helpdesk.local>"

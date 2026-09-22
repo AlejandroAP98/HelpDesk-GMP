@@ -31,7 +31,6 @@ class PrioridadTicket(str, Enum):
 class ElementoInfraestructura(str, Enum):
     torre = "torre"
     celda = "celda"
-    mastil = "mastil"
     punto_venta = "punto_venta"
 
 

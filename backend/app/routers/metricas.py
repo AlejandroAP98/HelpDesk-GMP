@@ -6,14 +6,16 @@ from datetime import date, datetime, time
 from dateutil.relativedelta import relativedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import Integer, func, select
+from sqlalchemy import ColumnElement, Integer, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.core.deps import require_mesa_ayuda
 from app.models.empresa import Empresa
-from app.models.enums import EstadoTicket
+from app.models.enums import ElementoInfraestructura, EstadoTicket
 from app.models.historial_estado import HistorialEstado
+from app.models.punto_venta import PuntoVenta
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.metricas import (
@@ -374,8 +376,50 @@ async def reaperturas(
     )
 
 
-SLA_FRT_HORAS: float = 0.5
-SLA_MTTR_HORAS: float = 24.0
+def _ciudades_base_normalizadas() -> frozenset[str]:
+    return frozenset(_normalizar_texto(c) for c in settings.sla_ciudades_base)
+
+
+def _normalizar_texto(s: str) -> str:
+    reemplazos = str.maketrans("áéíóúüñÁÉÍÓÚÜÑ", "aeiouunAEIOUUN")
+    return s.lower().translate(reemplazos).strip()
+
+
+SLA_FRT_HORAS: float = settings.sla_frt_horas
+SLA_MTTR_HORAS: float = settings.sla_mttr_horas
+SLA_MTTR_REMOTO_HORAS: float = settings.sla_mttr_remoto_horas
+SLA_CIUDADES_BASE: frozenset[str] = _ciudades_base_normalizadas()
+
+
+def _normalizar_ciudad() -> ColumnElement[str]:
+    """Expresion SQL que normaliza pv.ciudad (minusculas, sin acentos)."""
+    return func.lower(
+        func.translate(
+            PuntoVenta.ciudad,
+            "áéíóúüñÁÉÍÓÚÜÑ",
+            "aeiouunAEIOUUN",
+        )
+    )
+
+
+def _es_sede_remota() -> ColumnElement[bool]:
+    """True si el ticket es de punto de venta con ciudad fuera de las ciudades base."""
+    ciudad = _normalizar_ciudad()
+    return (
+        (Ticket.elemento_afectado == ElementoInfraestructura.punto_venta)
+        & Ticket.punto_venta_id.isnot(None)
+        & ciudad.isnot(None)
+        & ciudad.notin_(SLA_CIUDADES_BASE)
+    )
+
+
+def _umbral_mttr_segundos() -> ColumnElement[float]:
+    """Umbral MTTR por ticket: 48h para puntos de venta en ciudades remotas,
+    24h para el resto (torre, celda, sin sede o ciudad base)."""
+    return case(
+        (_es_sede_remota(), SLA_MTTR_REMOTO_HORAS * 3600),
+        else_=SLA_MTTR_HORAS * 3600,
+    )
 
 
 async def _calcular_sla_empresa(
@@ -391,6 +435,11 @@ async def _calcular_sla_empresa(
     if empresa_id is not None:
         filtros.append(Ticket.empresa_id == empresa_id)
 
+    umbral_mttr = _umbral_mttr_segundos()
+    frt_segundos = func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
+    mttr_segundos = func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+    es_base = ~_es_sede_remota()
+
     stmt_total = (
         select(
             Ticket.empresa_id,
@@ -399,31 +448,21 @@ async def _calcular_sla_empresa(
             func.sum(
                 func.cast(
                     (Ticket.fecha_primera_respuesta.isnot(None))
-                    & (
-                        func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
-                        <= SLA_FRT_HORAS * 3600
-                    )
+                    & (frt_segundos <= SLA_FRT_HORAS * 3600)
                     & (
                         (Ticket.fecha_resolucion.is_(None))
-                        | (
-                            Ticket.fecha_resolucion.isnot(None)
-                            & (
-                                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
-                                <= SLA_MTTR_HORAS * 3600
-                            )
-                        )
+                        | (Ticket.fecha_resolucion.isnot(None) & (mttr_segundos <= umbral_mttr))
                     ),
                     Integer,
                 )
             ).label("en_sla"),
-            func.avg(
-                func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion) / 3600.0
-            ).label("frt_horas"),
-            func.avg(
-                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0
-            ).label("mttr_horas"),
+            func.avg(frt_segundos / 3600.0).label("frt_horas"),
+            func.avg(mttr_segundos / 3600.0).label("mttr_horas"),
+            func.avg(case((es_base, mttr_segundos / 3600.0))).label("mttr_base_horas"),
+            func.avg(case((~es_base, mttr_segundos / 3600.0))).label("mttr_remoto_horas"),
         )
         .join(Empresa, Ticket.empresa_id == Empresa.id)
+        .outerjoin(PuntoVenta, Ticket.punto_venta_id == PuntoVenta.id)
         .where(*filtros)
     )
 
@@ -439,6 +478,12 @@ async def _calcular_sla_empresa(
             "en_sla": r.en_sla or 0,
             "frt_horas": round(r.frt_horas, 2) if r.frt_horas is not None else None,
             "mttr_horas": round(r.mttr_horas, 2) if r.mttr_horas is not None else None,
+            "mttr_base_horas": (
+                round(r.mttr_base_horas, 2) if r.mttr_base_horas is not None else None
+            ),
+            "mttr_remoto_horas": (
+                round(r.mttr_remoto_horas, 2) if r.mttr_remoto_horas is not None else None
+            ),
         }
         for r in rows
     }
@@ -482,6 +527,8 @@ async def metricas_sla(
             porcentaje_sla=pct,
             frt_horas=data["frt_horas"],
             mttr_horas=data["mttr_horas"],
+            mttr_base_horas=data["mttr_base_horas"],
+            mttr_remoto_horas=data["mttr_remoto_horas"],
             total_tickets_mes_anterior=ant["total"] if ant else None,
             porcentaje_sla_mes_anterior=(
                 round((ant["en_sla"] / ant["total"]) * 100, 1) if ant and ant["total"] > 0 else None
@@ -515,5 +562,6 @@ async def metricas_sla(
     return MetricasSLA(
         sla_objetivo_frt_horas=SLA_FRT_HORAS,
         sla_objetivo_mttr_horas=SLA_MTTR_HORAS,
+        sla_objetivo_mttr_remoto_horas=SLA_MTTR_REMOTO_HORAS,
         por_empresa=por_empresa,
     )

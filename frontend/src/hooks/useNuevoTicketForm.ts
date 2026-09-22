@@ -140,9 +140,11 @@ export function useNuevoTicketForm() {
     setEnviando(true);
     setError(null);
     try {
-      const nombrePunto = elemento === "punto_venta" && puntoVentaId
-        ? puntosVenta.find((pv) => pv.id === puntoVentaId)?.nombre ?? null
-        : null;
+      const puntoVentaSeleccionado =
+        elemento === "punto_venta"
+          ? puntosVenta.find((pv) => pv.id === puntoVentaId) ?? null
+          : null;
+      const nombrePunto = puntoVentaSeleccionado?.nombre ?? null;
       const base = {
         titulo,
         descripcion,
@@ -154,6 +156,7 @@ export function useNuevoTicketForm() {
         mascara_red: camposActivos.mascara_red ? valoresCampos.mascara_red || null : null,
         puerta_enlace: camposActivos.puerta_enlace ? valoresCampos.puerta_enlace || null : null,
         nombre_punto: nombrePunto,
+        punto_venta_id: puntoVentaSeleccionado?.id ?? null,
       };
       if (esStaff && empresaId && clienteId) {
         await ticketApi.crearAdmin({ ...base, empresa_id: empresaId, cliente_id: clienteId });

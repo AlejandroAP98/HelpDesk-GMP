@@ -6,6 +6,7 @@ Este seed crea usuarios de prueba y categorias base.
 Uso (dentro del contenedor backend):
     python -m scripts.seed [--reset]
 """
+
 import argparse
 import asyncio
 import sys
@@ -83,16 +84,25 @@ CATEGORIAS_DEMO = [
         "nombre": "Instalación",
         "descripcion": "Tareas planificadas, despliegues y altas de servicios",
         "subcategorias": [
-            ("Instalación o Cambio de Hardware", "Montaje, reemplazo o migración de equipos de red"),
+            (
+                "Instalación o Cambio de Hardware",
+                "Montaje, reemplazo o migración de equipos de red",
+            ),
             ("Cableado estructurado", "Despliegue de red LAN, canalización o peinado de rack"),
-            ("Configuración de equipos nuevos", "Comisionamiento y aprovisionamiento de routers/switches"),
+            (
+                "Configuración de equipos nuevos",
+                "Comisionamiento y aprovisionamiento de routers/switches",
+            ),
         ],
     },
     {
         "nombre": "Mantenimiento",
         "descripcion": "Tareas preventivas destinadas a mitigar riesgos futuros",
         "subcategorias": [
-            ("Actualización de Software", "Parcheo de firmware o sistema operativo en equipos de red"),
+            (
+                "Actualización de Software",
+                "Parcheo de firmware o sistema operativo en equipos de red",
+            ),
             ("Limpieza y Respaldo", "Mantenimiento preventivo físico y lógico de infraestructura"),
         ],
     },
@@ -105,19 +115,36 @@ async def run(reset: bool = False) -> None:
         all_cats = (await db.execute(select(Categoria))).scalars().all()
         for cat in all_cats:
             if cat.nombre not in nombres_validos:
-                await db.execute(text("DELETE FROM historial_estados WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
-                await db.execute(text("DELETE FROM adjuntos WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
-                await db.execute(text("DELETE FROM comentarios WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"), {"cid": cat.id})
-                await db.execute(text("DELETE FROM tickets WHERE categoria_id = :cid"), {"cid": cat.id})
-                await db.execute(text("DELETE FROM subcategorias WHERE categoria_id = :cid"), {"cid": cat.id})
+                await db.execute(
+                    text(
+                        "DELETE FROM historial_estados WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"
+                    ),
+                    {"cid": cat.id},
+                )
+                await db.execute(
+                    text(
+                        "DELETE FROM adjuntos WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"
+                    ),
+                    {"cid": cat.id},
+                )
+                await db.execute(
+                    text(
+                        "DELETE FROM comentarios WHERE ticket_id IN (SELECT id FROM tickets WHERE categoria_id = :cid)"
+                    ),
+                    {"cid": cat.id},
+                )
+                await db.execute(
+                    text("DELETE FROM tickets WHERE categoria_id = :cid"), {"cid": cat.id}
+                )
+                await db.execute(
+                    text("DELETE FROM subcategorias WHERE categoria_id = :cid"), {"cid": cat.id}
+                )
                 await db.execute(text("DELETE FROM categorias WHERE id = :cid"), {"cid": cat.id})
                 print(f"Categoría obsoleta eliminada: id={cat.id} nombre={cat.nombre!r}")
         await db.commit()
 
         empresa_interna = (
-            await db.execute(
-                select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)")
-            )
+            await db.execute(select(Empresa).where(Empresa.nombre == "GMP Redes (Interna)"))
         ).scalar_one_or_none()
         if empresa_interna is None:
             empresa_interna = Empresa(nombre="GMP Redes (Interna)")
@@ -130,7 +157,9 @@ async def run(reset: bool = False) -> None:
 
         empresa_demo_id = empresa_interna.id
 
-        admin = (await db.execute(select(Usuario).where(Usuario.email == ADMIN_DEMO["email"]))).scalar_one_or_none()
+        admin = (
+            await db.execute(select(Usuario).where(Usuario.email == ADMIN_DEMO["email"]))
+        ).scalar_one_or_none()
         if admin is None:
             admin = Usuario(
                 nombre=ADMIN_DEMO["nombre"],
@@ -148,7 +177,9 @@ async def run(reset: bool = False) -> None:
             print(f"Admin ya existe: id={admin.id} email={admin.email!r}")
 
         for demo_user in AGENTES_DEMO + MESA_AYUDA_DEMO + CLIENTES_DEMO:
-            user_db = (await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))).scalar_one_or_none()
+            user_db = (
+                await db.execute(select(Usuario).where(Usuario.email == demo_user["email"]))
+            ).scalar_one_or_none()
             if user_db is None:
                 eid = empresa_demo_id if demo_user["empresa_id"] is not None else None
                 user_db = Usuario(
@@ -161,13 +192,17 @@ async def run(reset: bool = False) -> None:
                 db.add(user_db)
                 await db.commit()
                 await db.refresh(user_db)
-                print(f"Usuario creado: id={user_db.id} email={user_db.email!r} rol={user_db.rol.value}")
+                print(
+                    f"Usuario creado: id={user_db.id} email={user_db.email!r} rol={user_db.rol.value}"
+                )
                 print(f"  Credenciales: {demo_user['email']} / {demo_user['password']}")
             else:
                 print(f"Usuario ya existe: id={user_db.id} email={user_db.email!r}")
 
         for cat_data in CATEGORIAS_DEMO:
-            cat_db = (await db.execute(select(Categoria).where(Categoria.nombre == cat_data["nombre"]))).scalar_one_or_none()
+            cat_db = (
+                await db.execute(select(Categoria).where(Categoria.nombre == cat_data["nombre"]))
+            ).scalar_one_or_none()
             if cat_db is None:
                 cat_db = Categoria(nombre=cat_data["nombre"], descripcion=cat_data["descripcion"])
                 db.add(cat_db)
@@ -198,9 +233,17 @@ async def run(reset: bool = False) -> None:
                 else:
                     print(f"  Subcategoría ya existe: id={sub_db.id} nombre={sub_db.nombre!r}")
 
-        await db.execute(text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))"))
-        await db.execute(text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))"))
-        await db.execute(text("SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"))
+        await db.execute(
+            text("SELECT setval('empresas_id_seq', (SELECT COALESCE(MAX(id),1) FROM empresas))")
+        )
+        await db.execute(
+            text("SELECT setval('categorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM categorias))")
+        )
+        await db.execute(
+            text(
+                "SELECT setval('subcategorias_id_seq', (SELECT COALESCE(MAX(id),1) FROM subcategorias))"
+            )
+        )
 
         await db.commit()
 
@@ -214,13 +257,49 @@ def _build_matriz_demo() -> None:
     if MATRIZ_DEMO:
         return
     _m = MATRIZ_DEMO.append
-    _m(("Soporte", "Caída total del servicio", {"torre": "urgente", "celda": "urgente", "mastil": "alta", "punto_venta": "alta"}))
-    _m(("Soporte", "Lentitud o intermitencia", {"torre": "alta", "celda": "alta", "mastil": "media", "punto_venta": "media"}))
-    _m(("Instalación", "Instalación o Cambio de Hardware", {"torre": "media", "mastil": "media", "punto_venta": "baja"}))
+    _m(
+        (
+            "Soporte",
+            "Caída total del servicio",
+            {"torre": "urgente", "celda": "urgente", "punto_venta": "alta"},
+        )
+    )
+    _m(
+        (
+            "Soporte",
+            "Lentitud o intermitencia",
+            {"torre": "alta", "celda": "alta", "punto_venta": "media"},
+        )
+    )
+    _m(
+        (
+            "Instalación",
+            "Instalación o Cambio de Hardware",
+            {"torre": "media", "punto_venta": "baja"},
+        )
+    )
     _m(("Instalación", "Cableado estructurado", {"punto_venta": "baja"}))
-    _m(("Instalación", "Configuración de equipos nuevos", {"torre": "media", "mastil": "media", "punto_venta": "baja"}))
-    _m(("Mantenimiento", "Actualización de Software", {"torre": "media", "celda": "media", "mastil": "baja", "punto_venta": "baja"}))
-    _m(("Mantenimiento", "Limpieza y Respaldo", {"torre": "baja", "celda": "baja", "mastil": "baja", "punto_venta": "baja"}))
+    _m(
+        (
+            "Instalación",
+            "Configuración de equipos nuevos",
+            {"torre": "media", "punto_venta": "baja"},
+        )
+    )
+    _m(
+        (
+            "Mantenimiento",
+            "Actualización de Software",
+            {"torre": "media", "celda": "media", "punto_venta": "baja"},
+        )
+    )
+    _m(
+        (
+            "Mantenimiento",
+            "Limpieza y Respaldo",
+            {"torre": "baja", "celda": "baja", "punto_venta": "baja"},
+        )
+    )
 
 
 async def _seed_matriz_prioridad(db) -> None:
@@ -241,12 +320,14 @@ async def _seed_matriz_prioridad(db) -> None:
             print(f"  Saltando matriz: {cat_nombre} -> {sub_nombre} (no encontrada)")
             continue
         for elem, pri in mapa.items():
-            db.add(MatrizPrioridad(
-                categoria_id=cat_id,
-                subcategoria_id=sub_id,
-                elemento=elem,
-                prioridad=pri,
-            ))
+            db.add(
+                MatrizPrioridad(
+                    categoria_id=cat_id,
+                    subcategoria_id=sub_id,
+                    elemento=elem,
+                    prioridad=pri,
+                )
+            )
             count += 1
     await db.commit()
     print(f"Matriz de prioridad sembrada: {count} entradas")
@@ -254,12 +335,15 @@ async def _seed_matriz_prioridad(db) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed inicial HelpDesk-GMP")
-    parser.add_argument("--reset", action="store_true", help="Borra usuarios y categorias antes de insertar")
+    parser.add_argument(
+        "--reset", action="store_true", help="Borra usuarios y categorias antes de insertar"
+    )
     args = parser.parse_args()
     try:
         asyncio.run(run(reset=args.reset))
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     sys.exit(0)

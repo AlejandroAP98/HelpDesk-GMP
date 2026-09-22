@@ -77,6 +77,7 @@ export function useDashboard() {
           subcategoria_id: ev.subcategoria_id ?? 0,
           elemento_afectado: (ev.elemento_afectado as ElementoInfraestructura) ?? "torre",
           nombre_punto: ev.nombre_punto ?? null,
+          punto_venta_id: null,
           prioridad: ev.prioridad as PrioridadTicket,
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",

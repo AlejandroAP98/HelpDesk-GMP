@@ -21,6 +21,7 @@ class TicketCreate(BaseModel):
     mascara_red: str | None = Field(None, max_length=255)
     puerta_enlace: str | None = Field(None, max_length=255)
     nombre_punto: str | None = Field(None, max_length=255)
+    punto_venta_id: int | None = Field(None, ge=1)
 
 
 class TicketAdminCreate(TicketCreate):
@@ -77,6 +78,7 @@ class TicketOut(BaseModel):
     mascara_red: str | None = None
     puerta_enlace: str | None = None
     nombre_punto: str | None = None
+    punto_venta_id: int | None = None
     estado: EstadoTicket
     prioridad: PrioridadTicket
     fecha_creacion: DatetimeUTC

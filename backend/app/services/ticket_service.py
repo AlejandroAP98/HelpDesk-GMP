@@ -13,6 +13,7 @@ from app.models.categoria import Categoria
 from app.models.empresa import Empresa
 from app.models.enums import EstadoTicket, PrioridadTicket, RolUsuario, VistaTicket
 from app.models.historial_estado import HistorialEstado
+from app.models.punto_venta import PuntoVenta
 from app.models.subcategoria import Subcategoria
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
@@ -38,6 +39,30 @@ VISTA_ESTADOS: dict[VistaTicket, list[EstadoTicket]] = {
     VistaTicket.historial: [EstadoTicket.resuelto, EstadoTicket.cerrado],
     VistaTicket.todos: [],
 }
+
+
+async def _resolver_punto_venta(
+    punto_venta_id: int | None,
+    empresa_id: int,
+    db: AsyncSession,
+) -> tuple[int | None, str | None]:
+    """Valida que el punto de venta exista y pertenezca a la empresa del ticket.
+
+    Retorna (punto_venta_id, nombre_punto) o (None, None) si no se indico sede.
+    """
+    if punto_venta_id is None:
+        return None, None
+    pv = (
+        await db.execute(
+            select(PuntoVenta).where(
+                PuntoVenta.id == punto_venta_id,
+                PuntoVenta.empresa_id == empresa_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if pv is None:
+        raise Conflicto(f"Punto de venta {punto_venta_id} no existe en la empresa {empresa_id}")
+    return pv.id, pv.nombre
 
 
 async def _registrar_historial(
@@ -354,6 +379,7 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
     prioridad = await calcular_prioridad(
         data.categoria_id, data.subcategoria_id, data.elemento_afectado, db
     )
+    pv_id, pv_nombre = await _resolver_punto_venta(data.punto_venta_id, empresa_id, db)
 
     ticket = Ticket(
         empresa_id=empresa_id,
@@ -367,7 +393,8 @@ async def crear(data: TicketCreate, current: Usuario, db: AsyncSession) -> Ticke
         ip_antena=data.ip_antena,
         mascara_red=data.mascara_red,
         puerta_enlace=data.puerta_enlace,
-        nombre_punto=data.nombre_punto,
+        nombre_punto=pv_nombre if pv_id else data.nombre_punto,
+        punto_venta_id=pv_id,
         prioridad=prioridad,
         estado=EstadoTicket.abierto,
         modificado_por_id=current.id,
@@ -424,6 +451,7 @@ async def crear_admin(
     prioridad = await calcular_prioridad(
         data.categoria_id, data.subcategoria_id, data.elemento_afectado, db
     )
+    pv_id, pv_nombre = await _resolver_punto_venta(data.punto_venta_id, empresa_id, db)
 
     ticket = Ticket(
         empresa_id=empresa_id,
@@ -437,7 +465,8 @@ async def crear_admin(
         ip_antena=data.ip_antena,
         mascara_red=data.mascara_red,
         puerta_enlace=data.puerta_enlace,
-        nombre_punto=data.nombre_punto,
+        nombre_punto=pv_nombre if pv_id else data.nombre_punto,
+        punto_venta_id=pv_id,
         prioridad=prioridad,
         estado=EstadoTicket.abierto,
         modificado_por_id=current.id,

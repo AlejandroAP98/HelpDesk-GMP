@@ -49,6 +49,9 @@ class Ticket(Base):
     mascara_red: Mapped[str | None] = mapped_column(Text, nullable=True)
     puerta_enlace: Mapped[str | None] = mapped_column(Text, nullable=True)
     nombre_punto: Mapped[str | None] = mapped_column(Text, nullable=True)
+    punto_venta_id: Mapped[int | None] = mapped_column(
+        ForeignKey("puntos_venta.id", ondelete="SET NULL"), nullable=True
+    )
     estado: Mapped[EstadoTicket] = mapped_column(
         SAEnum(
             EstadoTicket,
@@ -112,6 +115,7 @@ class Ticket(Base):
         Index("idx_tickets_fecha_creacion", "fecha_creacion"),
         Index("idx_tickets_empresa_fecha", "empresa_id", "fecha_creacion"),
         Index("idx_tickets_peso_orden", "peso_orden", "fecha_creacion"),
+        Index("idx_tickets_punto_venta", "punto_venta_id"),
     )
 
     def __repr__(self) -> str:

@@ -25,7 +25,6 @@ import BackIcon from "@/app/assets/icons/BackIcon";
 const elementoLabels: Record<ElementoInfraestructura, string> = {
   torre: "Torre",
   celda: "Celda",
-  mastil: "Mástil",
   punto_venta: "Punto de venta",
 };
 

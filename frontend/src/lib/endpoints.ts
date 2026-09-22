@@ -4,7 +4,7 @@ import type { Usuario } from "@/store/authStore";
 export type EstadoTicket = "abierto" | "asignado" | "en_progreso" | "resuelto" | "cerrado";
 export type PrioridadTicket = "baja" | "media" | "alta" | "urgente";
 export type VistaTicket = "activos" | "historial" | "todos";
-export type ElementoInfraestructura = "torre" | "celda" | "mastil" | "punto_venta";
+export type ElementoInfraestructura = "torre" | "celda" | "punto_venta";
 
 export interface Ticket {
   id: string;
@@ -25,6 +25,7 @@ export interface Ticket {
   mascara_red: string | null;
   puerta_enlace: string | null;
   nombre_punto: string | null;
+  punto_venta_id: number | null;
   estado: EstadoTicket;
   prioridad: PrioridadTicket;
   fecha_creacion: string;
@@ -222,6 +223,8 @@ export interface SLAItem {
   porcentaje_sla: number;
   frt_horas: number | null;
   mttr_horas: number | null;
+  mttr_base_horas: number | null;
+  mttr_remoto_horas: number | null;
   total_tickets_mes_anterior: number | null;
   porcentaje_sla_mes_anterior: number | null;
   frt_horas_mes_anterior: number | null;
@@ -231,6 +234,7 @@ export interface SLAItem {
 export interface MetricasSLA {
   sla_objetivo_frt_horas: number;
   sla_objetivo_mttr_horas: number;
+  sla_objetivo_mttr_remoto_horas: number;
   por_empresa: SLAItem[];
 }
 
@@ -299,11 +303,11 @@ export const ticketApi = {
     const r = await api.get(`/api/tickets/${id}`);
     return r.data as Ticket;
   },
-  crear: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null }) => {
+  crear: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null; punto_venta_id?: number | null }) => {
     const r = await api.post("/api/tickets", data);
     return r.data as Ticket;
   },
-  crearAdmin: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; empresa_id: number; cliente_id: string; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null }) => {
+  crearAdmin: async (data: { titulo: string; descripcion: string; categoria_id: number; subcategoria_id: number; elemento_afectado: ElementoInfraestructura; empresa_id: number; cliente_id: string; ip_pcs?: string | null; ip_antena?: string | null; mascara_red?: string | null; puerta_enlace?: string | null; nombre_punto?: string | null; punto_venta_id?: number | null }) => {
     const r = await api.post("/api/tickets/admin", data);
     return r.data as Ticket;
   },

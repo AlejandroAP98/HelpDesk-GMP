@@ -140,6 +140,7 @@ export function useTicketsList() {
           mascara_red: null,
           puerta_enlace: null,
           nombre_punto: null,
+          punto_venta_id: null,
           prioridad: ev.prioridad as PrioridadTicket,
           estado: ev.estado as EstadoTicket,
           cliente_id: ev.cliente_id ?? "",

@@ -24,7 +24,6 @@ import AddSubCategoryIcon from "@/app/assets/icons/AddSubCategoryIcon";
 const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
   { value: "torre", label: "Torre" },
   { value: "celda", label: "Celda" },
-  { value: "mastil", label: "Mástil" },
   { value: "punto_venta", label: "Pto. Venta" },
 ];
 

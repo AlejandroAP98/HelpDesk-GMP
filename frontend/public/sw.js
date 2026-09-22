@@ -7,7 +7,7 @@
  *   - Iconos y manifest: cache-first con revalidacion.
  */
 
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const STATIC_CACHE = `helpdesk-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `helpdesk-runtime-${CACHE_VERSION}`;
 

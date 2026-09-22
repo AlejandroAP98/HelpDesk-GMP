@@ -43,7 +43,6 @@ const PRIORIDAD_LABELS: Record<string, string> = {
 const ELEMENTO_LABELS: Record<string, string> = {
   torre: "Torre",
   celda: "Celda",
-  mastil: "Mástil",
   punto_venta: "Punto de Venta",
 };
 
@@ -403,7 +402,7 @@ export default function MetricasPage() {
             <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
             {sla && (
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Resolución ≤ {sla.sla_objetivo_mttr_horas}h
+                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Resolución ≤ {sla.sla_objetivo_mttr_horas}h · Sedes remotas ≤ {sla.sla_objetivo_mttr_remoto_horas}h
               </p>
             )}
           </div>
@@ -416,7 +415,8 @@ export default function MetricasPage() {
                 "Tickets en SLA",
                 "% SLA",
                 `FRT (h) [Obj: ${sla.sla_objetivo_frt_horas}h] `,
-                `MTTR (h) [Obj: ${sla.sla_objetivo_mttr_horas}h] `,
+                `MTTR Base (h) [Obj: ${sla.sla_objetivo_mttr_horas}h] `,
+                `MTTR Remoto (h) [Obj: ${sla.sla_objetivo_mttr_remoto_horas}h] `,
                 "Tickets Mes Anterior",
                 "% SLA Mes Anterior",
                 "FRT Mes Anterior (h)",
@@ -428,7 +428,8 @@ export default function MetricasPage() {
                 e.tickets_en_sla,
                 e.porcentaje_sla,
                 e.frt_horas ?? "",
-                e.mttr_horas ?? "",
+                e.mttr_base_horas ?? "",
+                e.mttr_remoto_horas ?? "",
                 e.total_tickets_mes_anterior ?? "",
                 e.porcentaje_sla_mes_anterior ?? "",
                 e.frt_horas_mes_anterior ?? "",
@@ -460,7 +461,8 @@ export default function MetricasPage() {
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">Cumplimiento SLA</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">% SLA</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TPR</th>
-                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR</th>
+                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Base</th>
+                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Remoto</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 text-center">vs Mes Ant.</th>
                 </tr>
               </thead>
@@ -495,8 +497,13 @@ export default function MetricasPage() {
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-center">
-                        <span className={`text-[11px] font-normal ${e.mttr_horas != null && e.mttr_horas <= sla!.sla_objetivo_mttr_horas ? "text-greenCustom" : "text-redCustom"}`}>
-                          {e.mttr_horas != null ? `${e.mttr_horas}h` : "—"}
+                        <span className={`text-[11px] font-normal ${e.mttr_base_horas != null && e.mttr_base_horas <= sla!.sla_objetivo_mttr_horas ? "text-greenCustom" : e.mttr_base_horas != null ? "text-redCustom" : "text-gray-400"}`}>
+                          {e.mttr_base_horas != null ? `${e.mttr_base_horas}h` : "—"}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        <span className={`text-[11px] font-normal ${e.mttr_remoto_horas != null && e.mttr_remoto_horas <= sla!.sla_objetivo_mttr_remoto_horas ? "text-greenCustom" : e.mttr_remoto_horas != null ? "text-redCustom" : "text-gray-400"}`}>
+                          {e.mttr_remoto_horas != null ? `${e.mttr_remoto_horas}h` : "—"}
                         </span>
                       </td>
                       <td className="py-2.5 text-center">

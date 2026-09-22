@@ -14,7 +14,6 @@ import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
 const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
   { value: "torre", label: "Torre" },
   { value: "celda", label: "Celda" },
-  { value: "mastil", label: "Mástil" },
   { value: "punto_venta", label: "Punto de venta" },
 ];
 

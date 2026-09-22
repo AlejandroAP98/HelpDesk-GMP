@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class MatrizPrioridadCreate(BaseModel):
     categoria_id: int = Field(..., ge=1)
     subcategoria_id: int = Field(..., ge=1)
-    elemento: str = Field(..., pattern=r"^(torre|celda|mastil|punto_venta)$")
+    elemento: str = Field(..., pattern=r"^(torre|celda|punto_venta)$")
     prioridad: str = Field(..., pattern=r"^(baja|media|alta|urgente)$")
 
 
@@ -25,7 +25,7 @@ class MatrizPrioridadOut(BaseModel):
 
 class MatrizPrioridadBulkItem(BaseModel):
     subcategoria_id: int = Field(..., ge=1)
-    elemento: str = Field(..., pattern=r"^(torre|celda|mastil|punto_venta)$")
+    elemento: str = Field(..., pattern=r"^(torre|celda|punto_venta)$")
     prioridad: str = Field(..., pattern=r"^(baja|media|alta|urgente)$")
 
 
