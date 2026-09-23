@@ -20,6 +20,7 @@ async def listar(
     size: int = 20,
     rol: RolUsuario | None = None,
     empresa_id: int | None = None,
+    activo: bool | None = None,
     db: AsyncSession = None,
 ) -> Pagina[UsuarioOut]:
     p = paginacion(page, size)
@@ -31,6 +32,9 @@ async def listar(
     if empresa_id is not None:
         stmt = stmt.where(Usuario.empresa_id == empresa_id)
         count_stmt = count_stmt.where(Usuario.empresa_id == empresa_id)
+    if activo is not None:
+        stmt = stmt.where(Usuario.activo.is_(activo))
+        count_stmt = count_stmt.where(Usuario.activo.is_(activo))
     total = (await db.execute(count_stmt)).scalar_one()
     items = (
         await db.execute(stmt.order_by(Usuario.fecha_creacion.desc()).offset(p.offset).limit(p.limit))
@@ -47,7 +51,12 @@ async def obtener(usuario_id: UUID, db: AsyncSession) -> Usuario:
     return usuario
 
 
-async def actualizar(usuario_id: UUID, data: UsuarioUpdateByAdmin, db: AsyncSession) -> Usuario:
+async def actualizar(
+    usuario_id: UUID,
+    data: UsuarioUpdateByAdmin,
+    db: AsyncSession,
+    current: Usuario | None = None,
+) -> Usuario:
     usuario = await obtener(usuario_id, db)
     if data.email is not None and data.email != usuario.email:
         dup = (
@@ -75,6 +84,32 @@ async def actualizar(usuario_id: UUID, data: UsuarioUpdateByAdmin, db: AsyncSess
         usuario.empresa_id = data.empresa_id
     if data.password is not None:
         usuario.password_hash = hash_password(data.password)
+    if data.activo is not None and data.activo != usuario.activo:
+        if data.activo:
+            usuario.activo = True
+        else:
+            if current is not None and current.id == usuario.id:
+                raise Conflicto("No puedes inactivar tu propia cuenta")
+            if usuario.rol == RolUsuario.administrador:
+                otros_admins = (
+                    await db.execute(
+                        select(func.count(Usuario.id)).where(
+                            Usuario.rol == RolUsuario.administrador,
+                            Usuario.id != usuario.id,
+                            Usuario.activo.is_(True),
+                        )
+                    )
+                ).scalar_one()
+                if otros_admins == 0:
+                    raise Conflicto("No puedes inactivar al ultimo administrador activo")
+            usuario.activo = False
+            from sqlalchemy import delete
+
+            from app.models.push_subscription import PushSubscription
+
+            await db.execute(
+                delete(PushSubscription).where(PushSubscription.usuario_id == usuario.id)
+            )
     await db.commit()
     await db.refresh(usuario)
     return usuario

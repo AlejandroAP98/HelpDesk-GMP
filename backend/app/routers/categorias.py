@@ -3,7 +3,6 @@
 - GET (listar y obtener): cualquier usuario autenticado.
 - POST/PATCH/DELETE: solo admin.
 """
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession

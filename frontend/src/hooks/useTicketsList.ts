@@ -53,8 +53,8 @@ export function useTicketsList() {
     if (esAdminOMesaAyuda) {
       Promise.all([
         empresaApi.listar({ size: 100 }),
-        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
-        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
+        adminApi.listarUsuarios({ rol: "agente", size: 100, activo: true }),
+        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100, activo: true }),
       ]).then(([empresasRes, agentesRes, mesasRes]) => {
         setEmpresas(empresasRes.items);
         setAgentes([...agentesRes.items, ...mesasRes.items]);

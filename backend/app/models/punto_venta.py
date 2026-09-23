@@ -1,13 +1,8 @@
 """Modelo PuntoVenta: sedes/sucursales de cada empresa (sincronizadas desde GMP)."""
-from typing import TYPE_CHECKING
-
 from sqlalchemy import Boolean, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-
-if TYPE_CHECKING:
-    from app.models.empresa import Empresa
 
 
 class PuntoVenta(Base):

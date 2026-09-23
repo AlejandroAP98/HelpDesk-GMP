@@ -136,8 +136,8 @@ export function useTicketDetail(ticketId: string) {
   useEffect(() => {
     if ((usuario?.rol === "administrador" || usuario?.rol === "mesa_ayuda") && ticket?.agente_id) {
       Promise.all([
-        adminApi.listarUsuarios({ rol: "agente", size: 100 }),
-        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
+        adminApi.listarUsuarios({ rol: "agente", size: 100, activo: true }),
+        adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100, activo: true }),
       ]).then(([agentes, mesas]) => {
         setAgentes([...agentes.items, ...mesas.items]);
       }).catch(() => {});

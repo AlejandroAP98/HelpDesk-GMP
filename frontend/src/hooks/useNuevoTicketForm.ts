@@ -70,7 +70,7 @@ export function useNuevoTicketForm() {
     setClienteId(null);
     if (esStaff && empresaId) {
       adminApi
-        .listarUsuarios({ empresa_id: empresaId, rol: "cliente", size: 100 })
+        .listarUsuarios({ empresa_id: empresaId, rol: "cliente", size: 100, activo: true })
         .then((r) => setClientes(r.items))
         .catch(() => setClientes([]));
     } else {

@@ -37,6 +37,7 @@ class UsuarioOut(BaseModel):
     rol: RolUsuario
     empresa_id: int | None
     notificaciones_email: bool = True
+    activo: bool = True
     fecha_creacion: DatetimeUTC
 
 
@@ -69,6 +70,7 @@ class UsuarioUpdateByAdmin(BaseModel):
     rol: RolUsuario | None = None
     empresa_id: int | None = None
     password: str | None = Field(None, min_length=8, max_length=128)
+    activo: bool | None = None
 
 
 from app.schemas.usuario import UsuarioOut  # noqa: E402,F811 (ref forward)

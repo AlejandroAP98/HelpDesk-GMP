@@ -15,3 +15,10 @@ async def test_db_liente(client) -> None:  # type: ignore[no-untyped-def]
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
+
+
+async def test_emails_desactivados_en_tests() -> None:
+    """Guard: ningun test debe poder enviar emails reales (cuota de Resend)."""
+    from app.services import email_service
+
+    assert email_service.is_email_enabled() is False

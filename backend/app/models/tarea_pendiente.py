@@ -1,16 +1,11 @@
 """Modelo TareaPendiente: checklist interno de agentes/admins."""
 from datetime import datetime
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Boolean, ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-
-if TYPE_CHECKING:
-    from app.models.ticket import Ticket
-    from app.models.usuario import Usuario
 
 
 class TareaPendiente(Base):

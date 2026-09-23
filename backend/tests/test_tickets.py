@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from tests.helpers import (
     auth_header,
@@ -614,7 +614,6 @@ async def test_admin_puede_reasignar_ticket_en_progreso_200(client, db_session):
 
 async def test_mesa_ayuda_no_puede_reabrir_403(client, db_session):  # type: ignore[no-untyped-def]
     from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from app.core.database import AsyncSessionLocal
 

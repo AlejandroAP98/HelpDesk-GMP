@@ -43,13 +43,15 @@ export default function UsuariosPage() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [filtroRol, setFiltroRol] = useState("");
   const [filtroEmpresa, setFiltroEmpresa] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
 
   const filtros = useMemo(() => {
     const f: Record<string, unknown> = {};
     if (filtroRol) f.rol = filtroRol;
     if (filtroEmpresa) f.empresa_id = Number(filtroEmpresa);
+    if (filtroEstado) f.activo = filtroEstado === "activos";
     return f;
-  }, [filtroRol, filtroEmpresa]);
+  }, [filtroRol, filtroEmpresa, filtroEstado]);
 
   const crud = useCrudPage<Usuario, UsuarioForm, string>({
     listar: (params) => adminApi.listarUsuarios(params),
@@ -94,7 +96,7 @@ export default function UsuariosPage() {
     page, totalPages, setPage,
     modalOpen, editando, form, setForm,
     guardando, eliminandoKey,
-    abrirCrear, abrirEditar, cerrarModal, guardar, eliminar,
+    abrirCrear, abrirEditar, cerrarModal, guardar, eliminar, cargar: recargar,
   } = crud;
 
   const cargarEmpresas = useCallback(async () => {
@@ -127,6 +129,18 @@ export default function UsuariosPage() {
     eliminar(u);
   };
 
+  const cambiarEstado = async (u: Usuario) => {
+    if (guardando) return;
+    if (u.activo && !confirm(`¿Inactivar a ${u.nombre}? Ya no podra ingresar al sistema.`)) return;
+    if (!u.activo && !confirm(`¿Reactivar a ${u.nombre}?`)) return;
+    try {
+      await adminApi.actualizarUsuario(u.id, { activo: !u.activo });
+      recargar();
+    } catch (e) {
+      setError(extractApiError(e, "No se pudo cambiar el estado del usuario"));
+    }
+  };
+
   const empresaOptions = empresas.map((e) => ({ value: String(e.id), label: e.nombre }));
 
   return (
@@ -150,6 +164,16 @@ export default function UsuariosPage() {
           onChange={(e) => { setFiltroEmpresa(e.target.value); setPage(1); }}
           options={empresaOptions}
           placeholder="Todas las empresas"
+          className="w-full max-w-xs"
+        />
+        <Select
+          value={filtroEstado}
+          onChange={(e) => { setFiltroEstado(e.target.value); setPage(1); }}
+          options={[
+            { value: "activos", label: "Activos" },
+            { value: "inactivos", label: "Inactivos" },
+          ]}
+          placeholder="Todos los estados"
           className="w-full max-w-xs"
         />
       </div>
@@ -205,12 +229,28 @@ export default function UsuariosPage() {
                 ),
               },
               {
+                key: "estado",
+                header: "Estado",
+                cell: (u: Usuario) => (
+                  <span className={`inline-block uppercase rounded-xl px-2.5 py-1 sm:py-2 sm:text-[11px] text-[9px] font-medium ${u.activo ? "bg-greenCustom/10 text-greenCustom" : "bg-gray-200 text-gray-500"}`}>
+                    {u.activo ? "Activo" : "Inactivo"}
+                  </span>
+                ),
+              },
+              {
                 key: "acciones",
                 header: "Acciones",
                 cell: (u: Usuario) => (
                   <div className="flex items-center gap-2">
                     <Button variant="secondary" onClick={() => abrirEditar(u)} className="py-1.5 px-3 text-xs">
                       Editar
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => cambiarEstado(u)}
+                      className={`py-1.5 px-3 text-xs ${u.activo ? "text-yellowCustom" : "text-greenCustom"}`}
+                    >
+                      {u.activo ? "Desactivar" : "Activar"}
                     </Button>
                     <Button
                       variant="danger"
@@ -226,7 +266,7 @@ export default function UsuariosPage() {
             ]}
             data={usuarios}
             keyExtractor={(u: Usuario) => u.id}
-            minWidth="min-w-[700px]"
+            minWidth="min-w-[820px]"
           />
           <Pagination
             page={page}

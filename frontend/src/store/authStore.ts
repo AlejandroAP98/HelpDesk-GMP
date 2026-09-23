@@ -13,6 +13,7 @@ export interface Usuario {
   rol: Rol;
   empresa_id: number | null;
   notificaciones_email: boolean;
+  activo: boolean;
   fecha_creacion: string;
 }
 

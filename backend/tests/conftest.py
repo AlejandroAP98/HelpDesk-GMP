@@ -24,6 +24,9 @@ ADMIN_DB_URL = "postgresql+asyncpg://helpdesk:helpdesk@postgres:5432/postgres"
 
 os.environ["DATABASE_URL"] = TEST_DB_URL
 os.environ["APP_ENV"] = "test"
+# Jamas enviar emails reales desde tests (Resend cobra por request).
+# Debe setearse ANTES de que app.core.config instancie settings.
+os.environ["RESEND_API_KEY"] = ""
 
 
 async def _asegurar_db_test() -> None:

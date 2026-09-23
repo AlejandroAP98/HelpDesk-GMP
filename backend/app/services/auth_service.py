@@ -100,6 +100,8 @@ async def login(data: LoginRequest, db: AsyncSession) -> Token:
     ).scalar_one_or_none()
     if usuario is None or not verify_password(data.password, usuario.password_hash):
         raise CredencialesInvalidas()
+    if not usuario.activo:
+        raise CredencialesInvalidas("Usuario inactivo. Contacte al administrador.")
     return await _issue_tokens(usuario)
 
 
@@ -127,6 +129,8 @@ async def refresh(refresh_token: str, db: AsyncSession) -> Token:
     ).scalar_one_or_none()
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
+    if not usuario.activo:
+        raise TokenInvalido("Usuario inactivo. Contacte al administrador.")
     tokens = await _issue_tokens(usuario)
     await revocar_refresh_token(refresh_token)
     return tokens

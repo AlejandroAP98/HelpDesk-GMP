@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -25,7 +24,6 @@ from app.schemas.ticket import (
     TicketOut,
     TicketUpdate,
 )
-from app.schemas.usuario import Mensaje
 from app.models.empresa import Empresa
 from app.services import ticket_service
 from app.utils.pagination import Pagina

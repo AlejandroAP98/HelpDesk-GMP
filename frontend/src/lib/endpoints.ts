@@ -471,7 +471,7 @@ export const adminApi = {
     const r = await api.get(`/api/usuarios/${id}`);
     return r.data as Usuario;
   },
-  actualizarUsuario: async (id: string, data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string }) => {
+  actualizarUsuario: async (id: string, data: { nombre?: string; email?: string; rol?: string; empresa_id?: number; password?: string; activo?: boolean }) => {
     const r = await api.patch(`/api/usuarios/${id}`, data);
     return r.data as Usuario;
   },

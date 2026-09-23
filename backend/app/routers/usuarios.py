@@ -6,10 +6,9 @@
 La creacion de usuarios se hace via /api/auth/register (cliente) o
 /api/auth/register/agente (agente/admin), no aca.
 """
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -29,11 +28,12 @@ async def listar(
     size: int = Query(20, ge=1, le=100),
     rol: RolUsuario | None = Query(None),
     empresa_id: int | None = Query(None),
+    activo: bool | None = Query(None),
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_mesa_ayuda),
 ) -> Pagina[UsuarioOut]:
     return await usuario_service.listar(
-        page=page, size=size, rol=rol, empresa_id=empresa_id, db=db
+        page=page, size=size, rol=rol, empresa_id=empresa_id, activo=activo, db=db
     )
 
 
@@ -52,9 +52,9 @@ async def actualizar(
     usuario_id: UUID,
     data: UsuarioUpdateByAdmin,
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(require_admin),
+    current: Usuario = Depends(require_admin),
 ) -> UsuarioOut:
-    usuario = await usuario_service.actualizar(usuario_id, data, db)
+    usuario = await usuario_service.actualizar(usuario_id, data, db, current=current)
     return UsuarioOut.model_validate(usuario)
 
 

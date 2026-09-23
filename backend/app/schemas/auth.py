@@ -2,7 +2,7 @@
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.enums import RolUsuario
-from app.schemas.usuario import RefreshRequest, Token, UsuarioOut
+from app.schemas.usuario import Token, UsuarioOut
 
 
 class LoginRequest(BaseModel):

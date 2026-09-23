@@ -28,6 +28,9 @@ class Usuario(Base):
     notificaciones_email: Mapped[bool] = mapped_column(
         nullable=False, server_default=text("true"), default=True
     )
+    activo: Mapped[bool] = mapped_column(
+        nullable=False, server_default=text("true"), default=True
+    )
     fecha_creacion: Mapped[datetime] = mapped_column(
         server_default=func.current_timestamp(), nullable=False
     )

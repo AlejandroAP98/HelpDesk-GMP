@@ -55,6 +55,8 @@ async def _resolve_user(token: str, db: AsyncSession) -> Usuario:
     ).scalar_one_or_none()
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
+    if not usuario.activo:
+        raise TokenInvalido("Usuario inactivo")
     return usuario
 
 

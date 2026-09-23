@@ -1,7 +1,6 @@
 """Endpoints REST de Tareas Pendientes (checklist interno)."""
 from __future__ import annotations
 
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status

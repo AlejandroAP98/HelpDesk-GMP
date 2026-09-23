@@ -3,9 +3,8 @@
 - GET (listar por categoría): cualquier usuario autenticado.
 - POST/PATCH/DELETE: solo admin.
 """
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db

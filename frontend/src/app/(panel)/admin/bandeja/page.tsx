@@ -33,8 +33,8 @@ export default function BandejaPage() {
       try {
         const [tk, ags, mesas] = await Promise.all([
           ticketApi.listar({ estado: "abierto", page, size: 15 }),
-          adminApi.listarUsuarios({ rol: "agente", size: 100 }),
-          adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100 }),
+          adminApi.listarUsuarios({ rol: "agente", size: 100, activo: true }),
+          adminApi.listarUsuarios({ rol: "mesa_ayuda", size: 100, activo: true }),
         ]);
         setTickets(tk.items);
         setAgentes([...ags.items, ...mesas.items]);

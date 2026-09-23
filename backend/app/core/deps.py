@@ -1,7 +1,7 @@
 """Dependencias de FastAPI: auth, RBAC y aislamiento multi-tenant."""
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +47,8 @@ async def get_current_user(
     usuario = result.scalar_one_or_none()
     if usuario is None:
         raise TokenInvalido("Usuario inexistente")
+    if not usuario.activo:
+        raise TokenInvalido("Usuario inactivo. Contacte al administrador.")
     return usuario
 
 
