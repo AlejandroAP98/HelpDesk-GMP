@@ -196,6 +196,33 @@ un solo worker por request, por lo que los contadores (`http_requests_total`) pu
 aparecer "jumpy". Suficiente para señal básica; si se necesita exactitud, migrar a
 `PROMETHEUS_MULTIPROC_DIR` (modo multiprocess de prometheus_client).
 
+## Matriz de SLA (configurable via env, ver backend/.env.example)
+
+| Elemento | Ciudad | Umbral resolución (MTTR) |
+|---|---|---|
+| Torre | cualquiera | 4h (`SLA_MTTR_TORRE_CELDA_HORAS`) |
+| Celda | cualquiera | 4h (`SLA_MTTR_TORRE_CELDA_HORAS`) |
+| Punto de venta | ciudad en `SLA_CIUDADES_BASE` o sin ciudad | 24h (`SLA_MTTR_HORAS`) |
+| Punto de venta | cualquier otra ciudad con datos | 48h (`SLA_MTTR_REMOTO_HORAS`) |
+
+- Primera respuesta (FRT): 0.5h para todos, sin excepciones (`SLA_FRT_HORAS`).
+- `SLA_CIUDADES_BASE` (default): Manizales, Villamaría, Chinchiná, Neira, Palestina,
+  Anserma, Belalcázar, Viterbo, San José. Regla invertida: base=24h, cualquier otra
+  ciudad con datos=48h. Comparación normalizada (minusculas, sin acentos).
+- Cada ticket se evalúa contra su propio umbral; el % SLA global es acumulativo.
+- La medición es en vivo contra `puntos_venta.ciudad`: corregir la ciudad de una
+  sede reclasifica retroactivamente el SLA de sus tickets históricos.
+- Migración `bb22cc33dd44`: `tickets.punto_venta_id` (FK, SET NULL) vincula el
+  ticket con la sede; `mastil` eliminado de la app (los datos históricos pasaron a
+  torre; el valor queda en el ENUM de PG por limitación de PG16).
+- `/api/metricas/sla` agrega `mttr_torre_horas`, `mttr_base_horas` (P.Vta 24h),
+  `mttr_remoto_horas` (P.Vta 48h) y los objetivos correspondientes.
+- Tests: `RESEND_API_KEY=""` forzado en `tests/conftest.py` para que pytest nunca
+  consuma cuota de Resend (los tests de email usan mocks con clave ficticia).
+- Sync de sedes (`scripts/sync_sedes_supabase.py`): pendiente refactor por
+  `supabase_id` con paginación (Supabase REST limita a 1000 filas por request;
+  hoy trae solo las primeras 1000 de N).
+
 ## Convenciones
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy async (asyncpg), Pydantic v2.

@@ -100,6 +100,7 @@ class SLAItem(BaseModel):
     mttr_horas: float | None = None
     mttr_base_horas: float | None = None
     mttr_remoto_horas: float | None = None
+    mttr_torre_horas: float | None = None
     total_tickets_mes_anterior: int | None = None
     porcentaje_sla_mes_anterior: float | None = None
     frt_horas_mes_anterior: float | None = None
@@ -110,4 +111,5 @@ class MetricasSLA(BaseModel):
     sla_objetivo_frt_horas: float
     sla_objetivo_mttr_horas: float
     sla_objetivo_mttr_remoto_horas: float
+    sla_objetivo_mttr_torre_celda_horas: float
     por_empresa: list[SLAItem]

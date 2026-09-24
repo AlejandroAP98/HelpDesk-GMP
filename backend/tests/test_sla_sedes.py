@@ -5,6 +5,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+import pytest
+
 from app.models.punto_venta import PuntoVenta
 from tests.helpers import (
     auth_header,
@@ -197,21 +199,128 @@ async def test_sla_sede_local_36h_fuera_sla(client, db_session, db_engine):  # t
     assert susuerte["tickets_en_sla"] == 0
 
 
-async def test_sla_torre_sin_sede_24h(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """Tickets de torre usan 24h aunque exista sede remota en la empresa."""
+async def test_sla_torre_celda_sin_importar_ciudad(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre/Celda usan el umbral de 4h sin importar la ciudad; nunca caen en los
+    grupos de punto de venta (base/remoto)."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
 
     await _crear_ticket(
-        client, tok, titulo="Torre 20h", elemento_afectado="torre", punto_venta_id=None
+        client, tok, titulo="Torre 2h", elemento_afectado="torre", punto_venta_id=None
     )
-    await _marcar_resuelto(db_engine, "Torre 20h", frt_min=5, resolucion_horas=20)
+    await _marcar_resuelto(db_engine, "Torre 2h", frt_min=5, resolucion_horas=2)
+
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
+    data = r.json()
+    assert data["sla_objetivo_mttr_torre_celda_horas"] == 4.0
+    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
+    assert susuerte["tickets_en_sla"] == 1
+    assert susuerte["mttr_torre_horas"] is not None
+    assert round(susuerte["mttr_torre_horas"], 1) == 2.0
+    assert susuerte["mttr_base_horas"] is None
+    assert susuerte["mttr_remoto_horas"] is None
+
+
+async def test_sla_torre_5h_fuera_de_sla(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre con 5h excede el umbral de 4h -> fuera de SLA (aunque exista sede remota)."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+
+    await _crear_ticket(
+        client, tok, titulo="Torre 5h", elemento_afectado="torre", punto_venta_id=None
+    )
+    await _marcar_resuelto(db_engine, "Torre 5h", frt_min=5, resolucion_horas=5)
+
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
+    data = r.json()
+    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
+    assert susuerte["total_tickets"] == 1
+    assert susuerte["tickets_en_sla"] == 0
+    assert round(susuerte["mttr_torre_horas"], 1) == 5.0
+
+
+async def test_sla_celda_2h_en_sla(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Celda con 2h de resolucion cumple el umbral de 4h."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+
+    await _crear_ticket(
+        client, tok, titulo="Celda 2h", elemento_afectado="celda", punto_venta_id=None
+    )
+    await _marcar_resuelto(db_engine, "Celda 2h", frt_min=5, resolucion_horas=2)
 
     mesa = await login_token(client, "mesa@test.com", "Password12345")
     r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
     data = r.json()
     susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
     assert susuerte["tickets_en_sla"] == 1
-    assert susuerte["mttr_base_horas"] is not None
-    assert round(susuerte["mttr_base_horas"], 1) == 20.0
+    assert round(susuerte["mttr_torre_horas"], 1) == 2.0
+
+
+async def test_sla_torre_con_baja_y_torre_ok(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre 5h (fuera 4h) + torre 2h (en SLA): 1 de 2 en SLA."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+
+    await _crear_ticket(
+        client, tok, titulo="Torre B 5h", elemento_afectado="torre", punto_venta_id=None
+    )
+    await _crear_ticket(
+        client, tok, titulo="Torre A 2h", elemento_afectado="torre", punto_venta_id=None
+    )
+    await _marcar_resuelto(db_engine, "Torre B 5h", frt_min=5, resolucion_horas=5)
+    await _marcar_resuelto(db_engine, "Torre A 2h", frt_min=5, resolucion_horas=2)
+
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
+    data = r.json()
+    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
+    assert susuerte["total_tickets"] == 2
+    assert susuerte["tickets_en_sla"] == 1
+    assert round(susuerte["mttr_torre_horas"], 1) == 3.5
+
+
+@pytest.mark.parametrize(
+    "ciudad, resolucion_horas",
+    [
+        ("Chinchiná", 20),
+        ("chinchina", 20),
+        ("Neira", 20),
+        ("Palestina", 20),
+        ("Anserma", 20),
+        ("Belalcázar", 20),
+        ("Viterbo", 20),
+        ("San Jose", 20),
+        ("San José", 30),
+    ],
+)
+async def test_sla_municipios_base_24h(client, db_session, db_engine, ciudad, resolucion_horas):  # type: ignore[no-untyped-def]
+    """Los municipios base (Manizales, Villamaría + los 7 adicionales) usan umbral 24h:
+    con 20h estan EN SLA y con 30h FUERA (prueba que no miden con 48h)."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+
+    pv = PuntoVenta(empresa_id=1, nombre=f"PV {ciudad}", ciudad=ciudad)
+    db_session.add(pv)
+    await db_session.commit()
+    await db_session.refresh(pv)
+
+    await _crear_ticket(client, tok, titulo=f"T {ciudad} {resolucion_horas}h", punto_venta_id=pv.id)
+    await _marcar_resuelto(
+        db_engine, f"T {ciudad} {resolucion_horas}h", frt_min=5, resolucion_horas=resolucion_horas
+    )
+
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
+    data = r.json()
+    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
+    assert susuerte["total_tickets"] == 1
+    en_sla = susuerte["tickets_en_sla"] == 1
+    if resolucion_horas <= 24:
+        assert en_sla, f"{ciudad} con {resolucion_horas}h debe ENTRAR en SLA (umbral 24h)"
+    else:
+        assert not en_sla, f"{ciudad} con {resolucion_horas}h debe estar FUERA de SLA (umbral 24h)"
+    assert round(susuerte["mttr_base_horas"], 1) == float(resolucion_horas)
     assert susuerte["mttr_remoto_horas"] is None

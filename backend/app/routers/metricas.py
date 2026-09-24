@@ -388,6 +388,7 @@ def _normalizar_texto(s: str) -> str:
 SLA_FRT_HORAS: float = settings.sla_frt_horas
 SLA_MTTR_HORAS: float = settings.sla_mttr_horas
 SLA_MTTR_REMOTO_HORAS: float = settings.sla_mttr_remoto_horas
+SLA_MTTR_TORRE_CELDA_HORAS: float = settings.sla_mttr_torre_celda_horas
 SLA_CIUDADES_BASE: frozenset[str] = _ciudades_base_normalizadas()
 
 
@@ -413,10 +414,19 @@ def _es_sede_remota() -> ColumnElement[bool]:
     )
 
 
+def _es_torre_celda() -> ColumnElement[bool]:
+    """True si el ticket es de torre o celda (SLA corto, sin importar la ciudad)."""
+    return Ticket.elemento_afectado.in_(
+        [ElementoInfraestructura.torre, ElementoInfraestructura.celda]
+    )
+
+
 def _umbral_mttr_segundos() -> ColumnElement[float]:
-    """Umbral MTTR por ticket: 48h para puntos de venta en ciudades remotas,
-    24h para el resto (torre, celda, sin sede o ciudad base)."""
+    """Umbral MTTR por ticket: 4h para torre/celda (sin importar la ciudad),
+    48h para puntos de venta en ciudades fuera de la lista base, 24h para
+    puntos de venta en ciudades base o sin ciudad registrada."""
     return case(
+        (_es_torre_celda(), SLA_MTTR_TORRE_CELDA_HORAS * 3600),
         (_es_sede_remota(), SLA_MTTR_REMOTO_HORAS * 3600),
         else_=SLA_MTTR_HORAS * 3600,
     )
@@ -438,7 +448,9 @@ async def _calcular_sla_empresa(
     umbral_mttr = _umbral_mttr_segundos()
     frt_segundos = func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
     mttr_segundos = func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
-    es_base = ~_es_sede_remota()
+    es_torre_celda = _es_torre_celda()
+    es_remoto = _es_sede_remota()
+    es_base = ~es_torre_celda & ~es_remoto
 
     stmt_total = (
         select(
@@ -459,7 +471,8 @@ async def _calcular_sla_empresa(
             func.avg(frt_segundos / 3600.0).label("frt_horas"),
             func.avg(mttr_segundos / 3600.0).label("mttr_horas"),
             func.avg(case((es_base, mttr_segundos / 3600.0))).label("mttr_base_horas"),
-            func.avg(case((~es_base, mttr_segundos / 3600.0))).label("mttr_remoto_horas"),
+            func.avg(case((es_remoto, mttr_segundos / 3600.0))).label("mttr_remoto_horas"),
+            func.avg(case((es_torre_celda, mttr_segundos / 3600.0))).label("mttr_torre_horas"),
         )
         .join(Empresa, Ticket.empresa_id == Empresa.id)
         .outerjoin(PuntoVenta, Ticket.punto_venta_id == PuntoVenta.id)
@@ -483,6 +496,9 @@ async def _calcular_sla_empresa(
             ),
             "mttr_remoto_horas": (
                 round(r.mttr_remoto_horas, 2) if r.mttr_remoto_horas is not None else None
+            ),
+            "mttr_torre_horas": (
+                round(r.mttr_torre_horas, 2) if r.mttr_torre_horas is not None else None
             ),
         }
         for r in rows
@@ -529,6 +545,7 @@ async def metricas_sla(
             mttr_horas=data["mttr_horas"],
             mttr_base_horas=data["mttr_base_horas"],
             mttr_remoto_horas=data["mttr_remoto_horas"],
+            mttr_torre_horas=data["mttr_torre_horas"],
             total_tickets_mes_anterior=ant["total"] if ant else None,
             porcentaje_sla_mes_anterior=(
                 round((ant["en_sla"] / ant["total"]) * 100, 1) if ant and ant["total"] > 0 else None
@@ -563,5 +580,6 @@ async def metricas_sla(
         sla_objetivo_frt_horas=SLA_FRT_HORAS,
         sla_objetivo_mttr_horas=SLA_MTTR_HORAS,
         sla_objetivo_mttr_remoto_horas=SLA_MTTR_REMOTO_HORAS,
+        sla_objetivo_mttr_torre_celda_horas=SLA_MTTR_TORRE_CELDA_HORAS,
         por_empresa=por_empresa,
     )

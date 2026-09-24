@@ -225,6 +225,7 @@ export interface SLAItem {
   mttr_horas: number | null;
   mttr_base_horas: number | null;
   mttr_remoto_horas: number | null;
+  mttr_torre_horas: number | null;
   total_tickets_mes_anterior: number | null;
   porcentaje_sla_mes_anterior: number | null;
   frt_horas_mes_anterior: number | null;
@@ -235,6 +236,7 @@ export interface MetricasSLA {
   sla_objetivo_frt_horas: number;
   sla_objetivo_mttr_horas: number;
   sla_objetivo_mttr_remoto_horas: number;
+  sla_objetivo_mttr_torre_celda_horas: number;
   por_empresa: SLAItem[];
 }
 

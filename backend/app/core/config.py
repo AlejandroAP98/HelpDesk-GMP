@@ -43,7 +43,18 @@ class Settings(BaseSettings):
     sla_frt_horas: float = 0.5
     sla_mttr_horas: float = 24.0
     sla_mttr_remoto_horas: float = 48.0
-    sla_ciudades_base: list[str] = ["Manizales", "Villamaría"]
+    sla_mttr_torre_celda_horas: float = 4.0
+    sla_ciudades_base: list[str] = [
+        "Manizales",
+        "Villamaría",
+        "Chinchiná",
+        "Neira",
+        "Palestina",
+        "Anserma",
+        "Belalcázar",
+        "Viterbo",
+        "San José",
+    ]
 
     # --- Resend (emails transaccionales) ---
     resend_api_key: str = ""
