@@ -25,13 +25,11 @@ ADMIN_DB_URL = "postgresql+asyncpg://helpdesk:helpdesk@postgres:5432/postgres"
 
 os.environ["DATABASE_URL"] = TEST_DB_URL
 os.environ["APP_ENV"] = "test"
-# Desactivar emails reales en tests (precede sobre cualquier .env del entorno,
-# evita consumir cuota de Resend durante las corridas de pytest)
+# Jamas enviar emails reales desde tests (cero consumo de cuota de Resend).
+# Las variables de entorno tienen precedencia sobre cualquier .env; deben setearse
+# ANTES de que app.core.config instancie settings.
 os.environ["RESEND_API_KEY"] = ""
 os.environ["RESEND_URGENT_RECIPIENTS"] = ""
-# Jamas enviar emails reales desde tests (Resend cobra por request).
-# Debe setearse ANTES de que app.core.config instancie settings.
-os.environ["RESEND_API_KEY"] = ""
 
 
 async def _asegurar_db_test() -> None:

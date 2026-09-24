@@ -402,7 +402,7 @@ export default function MetricasPage() {
             <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
             {sla && (
               <p className="text-[11px] text-gray-400 mt-0.5">
-                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Torre/Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h · Resolución P.Vta ≤ {sla.sla_objetivo_mttr_horas}h · Sedes remotas ≤ {sla.sla_objetivo_mttr_remoto_horas}h
+                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Urgente/Alta: Torre/Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h, P.Vta ≤ {sla.sla_objetivo_mttr_horas}h (remotas {sla.sla_objetivo_mttr_remoto_horas}h) · Media ≤ {sla.sla_objetivo_mttr_media_horas}h · Baja ≤ {sla.sla_objetivo_mttr_baja_horas}h
               </p>
             )}
           </div>
@@ -415,9 +415,9 @@ export default function MetricasPage() {
                 "Tickets en SLA",
                 "% SLA",
                 `FRT (h) [Obj: ${sla.sla_objetivo_frt_horas}h] `,
-                `MTTR Torre/Celda (h) [Obj: ${sla.sla_objetivo_mttr_torre_celda_horas}h] `,
-                `MTTR Base (h) [Obj: ${sla.sla_objetivo_mttr_horas}h] `,
-                `MTTR Remoto (h) [Obj: ${sla.sla_objetivo_mttr_remoto_horas}h] `,
+                `MTTR Urg/Alta (h) [Obj: ${sla.sla_objetivo_mttr_torre_celda_horas}h] `,
+                `MTTR Media (h) [Obj: ${sla.sla_objetivo_mttr_media_horas}h] `,
+                `MTTR Baja (h) [Obj: ${sla.sla_objetivo_mttr_baja_horas}h] `,
                 "Tickets Mes Anterior",
                 "% SLA Mes Anterior",
                 "FRT Mes Anterior (h)",
@@ -429,9 +429,9 @@ export default function MetricasPage() {
                 e.tickets_en_sla,
                 e.porcentaje_sla,
                 e.frt_horas ?? "",
-                e.mttr_torre_horas ?? "",
-                e.mttr_base_horas ?? "",
-                e.mttr_remoto_horas ?? "",
+                e.mttr_urgente_horas ?? "",
+                e.mttr_media_horas ?? "",
+                e.mttr_baja_horas ?? "",
                 e.total_tickets_mes_anterior ?? "",
                 e.porcentaje_sla_mes_anterior ?? "",
                 e.frt_horas_mes_anterior ?? "",
@@ -463,9 +463,9 @@ export default function MetricasPage() {
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">Cumplimiento SLA</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">% SLA</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TPR</th>
-                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR T/C</th>
-                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Base</th>
-                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Remoto</th>
+                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Urg/Alta</th>
+                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Media</th>
+                  <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 pr-4 text-center">TMR Baja</th>
                   <th className="text-[10px] font-medium text-gray-500 uppercase tracking-wider pb-2 text-center">vs Mes Ant.</th>
                 </tr>
               </thead>
@@ -500,18 +500,18 @@ export default function MetricasPage() {
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-center">
-                        <span className={`text-[11px] font-normal ${e.mttr_torre_horas != null && e.mttr_torre_horas <= sla!.sla_objetivo_mttr_torre_celda_horas ? "text-greenCustom" : e.mttr_torre_horas != null ? "text-redCustom" : "text-gray-400"}`}>
-                          {e.mttr_torre_horas != null ? `${e.mttr_torre_horas}h` : "—"}
+                        <span className={`text-[11px] font-normal ${e.mttr_urgente_horas != null && e.mttr_urgente_horas <= sla!.sla_objetivo_mttr_torre_celda_horas ? "text-greenCustom" : e.mttr_urgente_horas != null ? "text-redCustom" : "text-gray-400"}`}>
+                          {e.mttr_urgente_horas != null ? `${e.mttr_urgente_horas}h` : "—"}
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-center">
-                        <span className={`text-[11px] font-normal ${e.mttr_base_horas != null && e.mttr_base_horas <= sla!.sla_objetivo_mttr_horas ? "text-greenCustom" : e.mttr_base_horas != null ? "text-redCustom" : "text-gray-400"}`}>
-                          {e.mttr_base_horas != null ? `${e.mttr_base_horas}h` : "—"}
+                        <span className={`text-[11px] font-normal ${e.mttr_media_horas != null && e.mttr_media_horas <= sla!.sla_objetivo_mttr_media_horas ? "text-greenCustom" : e.mttr_media_horas != null ? "text-redCustom" : "text-gray-400"}`}>
+                          {e.mttr_media_horas != null ? `${e.mttr_media_horas}h` : "—"}
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-center">
-                        <span className={`text-[11px] font-normal ${e.mttr_remoto_horas != null && e.mttr_remoto_horas <= sla!.sla_objetivo_mttr_remoto_horas ? "text-greenCustom" : e.mttr_remoto_horas != null ? "text-redCustom" : "text-gray-400"}`}>
-                          {e.mttr_remoto_horas != null ? `${e.mttr_remoto_horas}h` : "—"}
+                        <span className={`text-[11px] font-normal ${e.mttr_baja_horas != null && e.mttr_baja_horas <= sla!.sla_objetivo_mttr_baja_horas ? "text-greenCustom" : e.mttr_baja_horas != null ? "text-redCustom" : "text-gray-400"}`}>
+                          {e.mttr_baja_horas != null ? `${e.mttr_baja_horas}h` : "—"}
                         </span>
                       </td>
                       <td className="py-2.5 text-center">

@@ -1,4 +1,6 @@
-"""Tests de SLA por sede: umbral 48h para puntos de venta en ciudades remotas."""
+"""Tests de SLA: umbrales por prioridad (media 96h / baja 144h) y matriz por
+elemento/ciudad para urgente-alta (torre-celda 4h, P.Vta 24h, P.Vta remoto 48h).
+Ningún test consume la cuota de Resend: conftest fuerza RESEND_API_KEY=""."""
 
 from __future__ import annotations
 
@@ -88,13 +90,29 @@ async def _marcar_resuelto(
 
 
 async def _crear_ticket(client, tok: str, **overrides) -> dict:  # type: ignore[no-untyped-def]
-    r = await client.post(
-        "/api/tickets",
-        headers=auth_header(tok),
-        json=_ticket_body(**overrides),
-    )
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body(**overrides))
     assert r.status_code == 201, r.text
     return r.json()
+
+
+async def _fijar_prioridad(client, tid: str, prioridad: str) -> None:  # type: ignore[no-untyped-def]
+    """Cambia la prioridad del ticket con usuario mesa (umbral SLA es 'en vivo')."""
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.patch(
+        f"/api/tickets/{tid}/prioridad",
+        headers=auth_header(mesa),
+        json={"prioridad": prioridad},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["prioridad"] == prioridad
+
+
+async def _sla_por_empresa(client, empresa_id: int = 1) -> dict:  # type: ignore[no-untyped-def]
+    mesa = await login_token(client, "mesa@test.com", "Password12345")
+    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
+    assert r.status_code == 200, r.text
+    data = r.json()
+    return next(e for e in data["por_empresa"] if e["empresa_id"] == empresa_id)
 
 
 async def test_crear_ticket_guarda_punto_venta_y_deriva_nombre(client, db_session, db_engine):  # type: ignore[no-untyped-def]
@@ -104,10 +122,9 @@ async def test_crear_ticket_guarda_punto_venta_y_deriva_nombre(client, db_sessio
     r = await client.get("/api/puntos-venta", headers=auth_header(tok))
     assert r.status_code == 200, r.text
     pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
-    pv_remota_id = pvs["PV Riosucio"]
 
-    t = await _crear_ticket(client, tok, punto_venta_id=pv_remota_id)
-    assert t["punto_venta_id"] == pv_remota_id
+    t = await _crear_ticket(client, tok, punto_venta_id=pvs["PV Riosucio"])
+    assert t["punto_venta_id"] == pvs["PV Riosucio"]
     assert t["nombre_punto"] == "PV Riosucio"
 
 
@@ -129,157 +146,154 @@ async def test_punto_venta_de_otra_empresa_409(client, db_session):  # type: ign
     assert r.status_code == 409, r.text
 
 
-async def test_sla_sede_remota_48h_sede_local_24h(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """PV en Manizales con 30h -> EN SLA (24h). PV remota con 30h -> EN SLA (48h)."""
+async def test_sla_media_ignora_elemento_y_ciudad(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Media = 96h flat: un P.Vta remoto (umbral 48h si fuera urgente) con 90h EN SLA."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
-
     r = await client.get("/api/puntos-venta", headers=auth_header(tok))
     pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
 
-    t_local = await _crear_ticket(client, tok, titulo="Local OK", punto_venta_id=pvs["PV Centro"])
-    t_remota = await _crear_ticket(
-        client, tok, titulo="Remota OK", punto_venta_id=pvs["PV Riosucio"]
-    )
-    assert t_local["punto_venta_id"] and t_remota["punto_venta_id"]
+    t = await _crear_ticket(client, tok, titulo="Media 90h", punto_venta_id=pvs["PV Riosucio"])
+    await _fijar_prioridad(client, t["id"], "media")
+    await _marcar_resuelto(db_engine, "Media 90h", frt_min=5, resolucion_horas=90)
 
-    await _marcar_resuelto(db_engine, "Local OK", frt_min=5, resolucion_horas=20)
-    await _marcar_resuelto(db_engine, "Remota OK", frt_min=5, resolucion_horas=30)
-
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    assert r.status_code == 200, r.text
-    data = r.json()
-    assert data["sla_objetivo_mttr_horas"] == 24.0
-    assert data["sla_objetivo_mttr_remoto_horas"] == 48.0
-
-    por_empresa = {e["empresa_id"]: e for e in data["por_empresa"]}
-    susuerte = por_empresa[1]
-    assert susuerte["tickets_en_sla"] == 2
-    assert susuerte["mttr_base_horas"] is not None
-    assert round(susuerte["mttr_base_horas"], 1) == 20.0
-    assert round(susuerte["mttr_remoto_horas"], 1) == 30.0
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+    assert round(d["mttr_media_horas"], 1) == 90.0
+    assert d["mttr_urgente_horas"] is None
+    assert d["mttr_baja_horas"] is None
 
 
-async def test_sla_sede_remota_36h_fuera_sla_y_local_dentro(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """PV remota con 36h excede 24h pero cumple 48h: el % SLA global cuenta con el umbral propio."""
+async def test_sla_media_100h_fuera(client, db_session, db_engine):  # type: ignore[no-untyped-def]
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
 
-    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
-    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
+    t = await _crear_ticket(client, tok, titulo="Media 100h")
+    await _fijar_prioridad(client, t["id"], "media")
+    await _marcar_resuelto(db_engine, "Media 100h", frt_min=5, resolucion_horas=100)
 
-    await _crear_ticket(client, tok, titulo="Remota 36h", punto_venta_id=pvs["PV Riosucio"])
-    await _marcar_resuelto(db_engine, "Remota 36h", frt_min=5, resolucion_horas=36)
-
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["total_tickets"] == 1
-    assert susuerte["tickets_en_sla"] == 1
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 1
+    assert d["tickets_en_sla"] == 0
+    assert round(d["mttr_media_horas"], 1) == 100.0
 
 
-async def test_sla_sede_local_36h_fuera_sla(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """PV en Manizales con 36h excede el umbral de 24h -> fuera de SLA."""
+async def test_sla_baja_140h_en_y_150h_fuera(client, db_session, db_engine):  # type: ignore[no-untyped-def]
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
 
-    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
-    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
+    t1 = await _crear_ticket(client, tok, titulo="Baja 140h")
+    await _fijar_prioridad(client, t1["id"], "baja")
+    await _marcar_resuelto(db_engine, "Baja 140h", frt_min=5, resolucion_horas=140)
 
-    await _crear_ticket(client, tok, titulo="Local 36h", punto_venta_id=pvs["PV Centro"])
-    await _marcar_resuelto(db_engine, "Local 36h", frt_min=5, resolucion_horas=36)
+    t2 = await _crear_ticket(client, tok, titulo="Baja 150h")
+    await _fijar_prioridad(client, t2["id"], "baja")
+    await _marcar_resuelto(db_engine, "Baja 150h", frt_min=5, resolucion_horas=150)
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["total_tickets"] == 1
-    assert susuerte["tickets_en_sla"] == 0
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 2
+    assert d["tickets_en_sla"] == 1
+    assert abs(d["mttr_baja_horas"] - 145.0) < 0.1
+    assert d["mttr_media_horas"] is None
 
 
-async def test_sla_torre_celda_sin_importar_ciudad(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """Torre/Celda usan el umbral de 4h sin importar la ciudad; nunca caen en los
-    grupos de punto de venta (base/remoto)."""
+async def test_sla_urgente_torre_4h(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre urgente: 2h EN SLA, 5h FUERA (umbral 4h, sin importar la ciudad)."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
 
-    await _crear_ticket(
+    t_ok = await _crear_ticket(
         client, tok, titulo="Torre 2h", elemento_afectado="torre", punto_venta_id=None
     )
+    await _fijar_prioridad(client, t_ok["id"], "urgente")
     await _marcar_resuelto(db_engine, "Torre 2h", frt_min=5, resolucion_horas=2)
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    assert data["sla_objetivo_mttr_torre_celda_horas"] == 4.0
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["tickets_en_sla"] == 1
-    assert susuerte["mttr_torre_horas"] is not None
-    assert round(susuerte["mttr_torre_horas"], 1) == 2.0
-    assert susuerte["mttr_base_horas"] is None
-    assert susuerte["mttr_remoto_horas"] is None
-
-
-async def test_sla_torre_5h_fuera_de_sla(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """Torre con 5h excede el umbral de 4h -> fuera de SLA (aunque exista sede remota)."""
-    await _seed_escenario(db_session)
-    tok = await login_token(client, "c@test.com", "Password12345")
-
-    await _crear_ticket(
+    t_fuera = await _crear_ticket(
         client, tok, titulo="Torre 5h", elemento_afectado="torre", punto_venta_id=None
     )
+    await _fijar_prioridad(client, t_fuera["id"], "urgente")
     await _marcar_resuelto(db_engine, "Torre 5h", frt_min=5, resolucion_horas=5)
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["total_tickets"] == 1
-    assert susuerte["tickets_en_sla"] == 0
-    assert round(susuerte["mttr_torre_horas"], 1) == 5.0
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 2
+    assert d["tickets_en_sla"] == 1
+    assert abs(d["mttr_urgente_horas"] - 3.5) < 0.1
+    assert d["mttr_media_horas"] is None
 
 
-async def test_sla_celda_2h_en_sla(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """Celda con 2h de resolucion cumple el umbral de 4h."""
+async def test_sla_urgente_punto_venta_local_24h(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """P.Vta en Manizales urgente: 20h EN SLA (24h)."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
+    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
+    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
 
-    await _crear_ticket(
-        client, tok, titulo="Celda 2h", elemento_afectado="celda", punto_venta_id=None
-    )
-    await _marcar_resuelto(db_engine, "Celda 2h", frt_min=5, resolucion_horas=2)
+    t = await _crear_ticket(client, tok, titulo="PV Local 20h", punto_venta_id=pvs["PV Centro"])
+    await _fijar_prioridad(client, t["id"], "urgente")
+    await _marcar_resuelto(db_engine, "PV Local 20h", frt_min=5, resolucion_horas=20)
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["tickets_en_sla"] == 1
-    assert round(susuerte["mttr_torre_horas"], 1) == 2.0
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+    assert abs(d["mttr_urgente_horas"] - 20.0) < 0.1
 
 
-async def test_sla_torre_con_baja_y_torre_ok(client, db_session, db_engine):  # type: ignore[no-untyped-def]
-    """Torre 5h (fuera 4h) + torre 2h (en SLA): 1 de 2 en SLA."""
+async def test_sla_urgente_punto_venta_remota_48h(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """P.Vta urgente en ciudad remota: 30h EN SLA (48h) y 36h EN SLA."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
+    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
+    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
 
-    await _crear_ticket(
-        client, tok, titulo="Torre B 5h", elemento_afectado="torre", punto_venta_id=None
-    )
-    await _crear_ticket(
-        client, tok, titulo="Torre A 2h", elemento_afectado="torre", punto_venta_id=None
-    )
-    await _marcar_resuelto(db_engine, "Torre B 5h", frt_min=5, resolucion_horas=5)
-    await _marcar_resuelto(db_engine, "Torre A 2h", frt_min=5, resolucion_horas=2)
+    t1 = await _crear_ticket(client, tok, titulo="Remota 30h", punto_venta_id=pvs["PV Riosucio"])
+    await _fijar_prioridad(client, t1["id"], "urgente")
+    await _marcar_resuelto(db_engine, "Remota 30h", frt_min=5, resolucion_horas=30)
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["total_tickets"] == 2
-    assert susuerte["tickets_en_sla"] == 1
-    assert round(susuerte["mttr_torre_horas"], 1) == 3.5
+    t2 = await _crear_ticket(client, tok, titulo="Remota 36h", punto_venta_id=pvs["PV Riosucio"])
+    await _fijar_prioridad(client, t2["id"], "urgente")
+    await _marcar_resuelto(db_engine, "Remota 36h", frt_min=5, resolucion_horas=36)
+
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 2
+    assert d["tickets_en_sla"] == 2
+    assert abs(d["mttr_urgente_horas"] - 33.0) < 0.1
+
+
+async def test_sla_urgente_pv_local_30h_fuera(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """P.Vta local urgente con 36h excede 24h -> fuera de SLA."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
+    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
+
+    t = await _crear_ticket(client, tok, titulo="Local 36h", punto_venta_id=pvs["PV Centro"])
+    await _fijar_prioridad(client, t["id"], "urgente")
+    await _marcar_resuelto(db_engine, "Local 36h", frt_min=5, resolucion_horas=36)
+
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 1
+    assert d["tickets_en_sla"] == 0
+
+
+async def test_sla_reclasificacion_en_vivo_por_prioridad(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Ticket media resuelto en 30h esta EN SLA (96h); al subir prioridad a urgente
+    pasa a FUERA (P.Vta local, umbral 24h). El umbral sigue la prioridad actual."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    r = await client.get("/api/puntos-venta", headers=auth_header(tok))
+    pvs = {pv["nombre"]: pv["id"] for pv in r.json()["items"]}
+
+    t = await _crear_ticket(client, tok, titulo="Reclas 30h", punto_venta_id=pvs["PV Centro"])
+    await _fijar_prioridad(client, t["id"], "media")
+    await _marcar_resuelto(db_engine, "Reclas 30h", frt_min=5, resolucion_horas=30)
+
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+
+    await _fijar_prioridad(client, t["id"], "urgente")
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 0
+    assert d["mttr_media_horas"] is None
+    assert abs(d["mttr_urgente_horas"] - 30.0) < 0.1
 
 
 @pytest.mark.parametrize(
@@ -296,9 +310,11 @@ async def test_sla_torre_con_baja_y_torre_ok(client, db_session, db_engine):  # 
         ("San José", 30),
     ],
 )
-async def test_sla_municipios_base_24h(client, db_session, db_engine, ciudad, resolucion_horas):  # type: ignore[no-untyped-def]
-    """Los municipios base (Manizales, Villamaría + los 7 adicionales) usan umbral 24h:
-    con 20h estan EN SLA y con 30h FUERA (prueba que no miden con 48h)."""
+async def test_sla_municipios_base_24h_en_urgente(
+    client, db_session, db_engine, ciudad, resolucion_horas
+):  # type: ignore[no-untyped-def]
+    """Municipios base: con prioridad urgente el umbral es 24h (con 20h EN, con 30h FUERA).
+    Si se midieran con 48h, el caso de 30h daria EN SLA y el test fallaria."""
     await _seed_escenario(db_session)
     tok = await login_token(client, "c@test.com", "Password12345")
 
@@ -307,20 +323,18 @@ async def test_sla_municipios_base_24h(client, db_session, db_engine, ciudad, re
     await db_session.commit()
     await db_session.refresh(pv)
 
-    await _crear_ticket(client, tok, titulo=f"T {ciudad} {resolucion_horas}h", punto_venta_id=pv.id)
+    t = await _crear_ticket(
+        client, tok, titulo=f"T {ciudad} {resolucion_horas}h", punto_venta_id=pv.id
+    )
+    await _fijar_prioridad(client, t["id"], "urgente")
     await _marcar_resuelto(
         db_engine, f"T {ciudad} {resolucion_horas}h", frt_min=5, resolucion_horas=resolucion_horas
     )
 
-    mesa = await login_token(client, "mesa@test.com", "Password12345")
-    r = await client.get("/api/metricas/sla", headers=auth_header(mesa))
-    data = r.json()
-    susuerte = next(e for e in data["por_empresa"] if e["empresa_id"] == 1)
-    assert susuerte["total_tickets"] == 1
-    en_sla = susuerte["tickets_en_sla"] == 1
+    d = await _sla_por_empresa(client)
+    assert d["total_tickets"] == 1
+    esta_en_sla = d["tickets_en_sla"] == 1
     if resolucion_horas <= 24:
-        assert en_sla, f"{ciudad} con {resolucion_horas}h debe ENTRAR en SLA (umbral 24h)"
+        assert esta_en_sla, f"{ciudad} con {resolucion_horas}h debe estar EN SLA (umbral 24h)"
     else:
-        assert not en_sla, f"{ciudad} con {resolucion_horas}h debe estar FUERA de SLA (umbral 24h)"
-    assert round(susuerte["mttr_base_horas"], 1) == float(resolucion_horas)
-    assert susuerte["mttr_remoto_horas"] is None
+        assert not esta_en_sla, f"{ciudad} con {resolucion_horas}h debe estar FUERA de SLA (24h)"

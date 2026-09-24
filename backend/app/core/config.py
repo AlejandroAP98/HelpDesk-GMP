@@ -1,4 +1,5 @@
 """Configuracion central del backend HelpDesk-GMP."""
+
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,6 +45,8 @@ class Settings(BaseSettings):
     sla_mttr_horas: float = 24.0
     sla_mttr_remoto_horas: float = 48.0
     sla_mttr_torre_celda_horas: float = 4.0
+    sla_mttr_media_horas: float = 96.0
+    sla_mttr_baja_horas: float = 144.0
     sla_ciudades_base: list[str] = [
         "Manizales",
         "Villamaría",
@@ -85,7 +88,7 @@ def get_settings() -> Settings:
         if s.jwt_secret == _DEFAULT_JWT_SECRET or len(s.jwt_secret) < 32:
             raise RuntimeError(
                 "JWT_SECRET inseguro en prod: usa un valor aleatorio de al menos 32 chars "
-                "(python -c \"import secrets; print(secrets.token_urlsafe(64))\")"
+                '(python -c "import secrets; print(secrets.token_urlsafe(64))")'
             )
         if s.minio_secret_key == _DEFAULT_MINIO_SECRET:
             raise RuntimeError(
