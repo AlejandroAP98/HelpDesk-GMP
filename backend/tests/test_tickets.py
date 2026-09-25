@@ -1353,3 +1353,125 @@ async def test_empresa_inexistente_404(client, db_session):  # type: ignore[no-u
         json=_ticket_admin_body(str(cliente.id), empresa_id=999),
     )
     assert r.status_code == 404
+
+
+async def test_urgente_se_envia_si_notificaciones_email_false(  # type: ignore[no-untyped-def]
+    client, db_session, monkeypatch
+):
+    """Cliente con notificaciones_email=False + ticket urgente: el email urgente
+    a mesa/admin se envia igual (alerta operacional desacoplada del toggle del cliente).
+    El email de "ticket creado" al cliente NO se envia (respeta el toggle)."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+        notificaciones_email=False,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="urgente",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    spy_urgent = AsyncMock(return_value=True)
+    spy_created = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_created", spy_created)
+    monkeypatch.setattr(email_service, "send_ticket_urgent", spy_urgent)
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_urgent.call_count == 1
+    assert spy_created.call_count == 0
+
+
+async def test_creado_no_se_envia_si_notificaciones_email_false(  # type: ignore[no-untyped-def]
+    client, db_session, monkeypatch
+):
+    """Cliente con notificaciones_email=False + ticket no urgente: NO se envia
+    ni el email de creado ni el urgente (regression: el toggle sigue cortando
+    el creado; el urgente no aplica porque la prioridad no es urgente)."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+        notificaciones_email=False,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="media",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    spy_created = AsyncMock(return_value=True)
+    spy_urgent = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_created", spy_created)
+    monkeypatch.setattr(email_service, "send_ticket_urgent", spy_urgent)
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_created.call_count == 0
+    assert spy_urgent.call_count == 0
+
+
+async def test_ambos_se_envian_si_notificaciones_email_true(  # type: ignore[no-untyped-def]
+    client, db_session, monkeypatch
+):
+    """Regression: cliente con notificaciones_email=True + ticket urgente
+    sigue recibiendo AMBOS emails (creado al cliente + urgente a mesa/admin)."""
+    from app.services import email_service
+
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="cliente@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+        notificaciones_email=True,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    await seed_matriz_prioridad(
+        db_session,
+        categoria_id=1,
+        subcategoria_id=1,
+        elemento="punto_venta",
+        prioridad="urgente",
+    )
+    monkeypatch.setattr(email_service.settings, "resend_api_key", "re_test_xxx")
+    spy_created = AsyncMock(return_value=True)
+    spy_urgent = AsyncMock(return_value=True)
+    monkeypatch.setattr(email_service, "send_ticket_created", spy_created)
+    monkeypatch.setattr(email_service, "send_ticket_urgent", spy_urgent)
+
+    tok = await login_token(client, "cliente@test.com", "Password12345")
+    r = await client.post("/api/tickets", headers=auth_header(tok), json=_ticket_body())
+    assert r.status_code == 201, r.text
+
+    await asyncio.sleep(0.1)
+    assert spy_created.call_count == 1
+    assert spy_urgent.call_count == 1

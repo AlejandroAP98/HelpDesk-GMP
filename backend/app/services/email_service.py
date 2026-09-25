@@ -4,9 +4,13 @@ Usa la API HTTP de Resend directamente con httpx (async-native, sin SDK sync).
 Si `resend_api_key` esta vacio, el servicio se desactiva (no hace nada y loguea).
 
 Eventos que disparan email:
-    - Ticket creado: confirmacion al cliente (su correo).
-    - Ticket resuelto: notificacion al cliente.
-    - Ticket urgente creado: alerta a la lista `resend_urgent_recipients`.
+    - Ticket creado: confirmacion al cliente (su correo). Respeta
+      `cliente.notificaciones_email` (si esta en False, no se envia).
+    - Ticket resuelto: notificacion al cliente. Mismo gate.
+    - Ticket urgente creado: alerta a la lista `resend_urgent_recipients`
+      (mesa de ayuda / administrador). Se dispara SIEMPRE que la prioridad
+      sea urgente, independientemente de `cliente.notificaciones_email`,
+      porque es una alerta operacional que NO va al cliente.
 """
 from __future__ import annotations
 

@@ -55,6 +55,7 @@ async def seed_usuario(
     password: str = "Password12345",
     rol: RolUsuario = RolUsuario.cliente,
     empresa_id: int | None = None,
+    notificaciones_email: bool = True,
 ) -> Usuario:
     u = Usuario(
         nombre=nombre,
@@ -62,6 +63,7 @@ async def seed_usuario(
         password_hash=hash_password(password),
         rol=rol,
         empresa_id=empresa_id,
+        notificaciones_email=notificaciones_email,
     )
     db.add(u)
     await db.commit()

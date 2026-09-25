@@ -145,17 +145,21 @@ async def _enviar_emails_post_creacion(
     empresa_nombre: str | None,
 ) -> None:
     """Lanza los emails transaccionales que se disparan al crear un ticket.
-    Fire-and-forget: si falla el envio, no afecta la creacion del ticket."""
+    Fire-and-forget: si falla el envio, no afecta la creacion del ticket.
+
+    - Email de "ticket creado" al cliente: respeta cliente.notificaciones_email.
+    - Email de "ticket urgente" a resend_urgent_recipients (mesa/admin): se dispara
+      SIEMPRE que la prioridad sea urgente, independientemente del toggle del cliente,
+      porque es una alerta operacional que no va al cliente.
+    """
     import asyncio
 
     from app.services import email_service
 
-    if not cliente.notificaciones_email:
-        return
-
     async def _run() -> None:
         try:
-            await email_service.send_ticket_created(ticket, cliente.email)
+            if cliente.notificaciones_email:
+                await email_service.send_ticket_created(ticket, cliente.email)
             if ticket.prioridad == PrioridadTicket.urgente:
                 await email_service.send_ticket_urgent(ticket, empresa_nombre)
         except Exception:
