@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { metricasApi, statsApi, type MetricasTiempos, type MetricasVolumen, type MetricasInfraestructura, type MetricasRendimiento, type MetricasTiempoPorAgente, type MetricasReaperturas, type MetricasSLA, type Graficas } from "@/lib/endpoints";
+import { metricasApi, statsApi, type MetricasTiempos, type MetricasVolumen, type MetricasInfraestructura, type MetricasRendimiento, type MetricasTiempoPorAgente, type MetricasReaperturas, type MetricasSLA, type MetricasDistribucion, type Graficas } from "@/lib/endpoints";
 
 export function useMetricas() {
   const usuario = useAuthStore((s) => s.usuario);
@@ -19,6 +19,7 @@ export function useMetricas() {
   const [reaperturas, setReaperturas] = useState<MetricasReaperturas | null>(null);
   const [sla, setSla] = useState<MetricasSLA | null>(null);
   const [graficas, setGraficas] = useState<Graficas | null>(null);
+  const [distribucion, setDistribucion] = useState<MetricasDistribucion | null>(null);
 
   const hayFiltros = fechaInicio || fechaFin;
 
@@ -36,7 +37,7 @@ export function useMetricas() {
         const params: Record<string, string> = {};
         if (fechaInicio) params.fecha_inicio = fechaInicio;
         if (fechaFin) params.fecha_fin = fechaFin;
-        const [t, v, i, r, ta, rp, sl, gf] = await Promise.all([
+        const [t, v, i, r, ta, rp, sl, gf, db] = await Promise.all([
           metricasApi.tiempos(params),
           metricasApi.volumen(params),
           metricasApi.infraestructura(params),
@@ -45,6 +46,7 @@ export function useMetricas() {
           metricasApi.reaperturas(params),
           metricasApi.sla(params),
           statsApi.graficas(),
+          metricasApi.distribucion(params),
         ]);
         setTiempos(t);
         setVolumen(v);
@@ -54,6 +56,7 @@ export function useMetricas() {
         setReaperturas(rp);
         setSla(sl);
         setGraficas(gf);
+        setDistribucion(db);
       } catch {
         console.error("Error al cargar las métricas");
       } finally {
@@ -70,6 +73,6 @@ export function useMetricas() {
   return {
     usuario, fechaInicio, setFechaInicio, fechaFin, setFechaFin,
     cargando, hayFiltros, limpiarFiltros,
-    tiempos, volumen, infra, rendimiento, tiempoAgente, reaperturas, sla, graficas,
+    tiempos, volumen, infra, rendimiento, tiempoAgente, reaperturas, sla, graficas, distribucion,
   };
 }

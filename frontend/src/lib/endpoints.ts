@@ -139,6 +139,7 @@ export interface MetricasTiempos {
   tiempo_primera_respuesta_minutos: number | null;
   tickets_resueltos_analizados: number;
   tickets_con_primera_respuesta: number;
+  porcentaje_frt_cumplido: number | null;
 }
 
 export interface ConteoPorEstado {
@@ -653,6 +654,27 @@ export const respuestaRapidaApi = {
   },
 };
 
+export interface ItemTendencia {
+  dia: string;
+  creados: number;
+  resueltos: number;
+}
+
+export interface MetricasTendencia {
+  por_dia: ItemTendencia[];
+}
+
+export interface CeldaDistribucion {
+  dow: number;
+  hora: number;
+  cantidad: number;
+}
+
+export interface MetricasDistribucion {
+  por_dia_hora: CeldaDistribucion[];
+  total: number;
+}
+
 export const metricasApi = {
   tiempos: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/tiempos", { params });
@@ -661,6 +683,14 @@ export const metricasApi = {
   volumen: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/volumen", { params });
     return r.data as MetricasVolumen;
+  },
+  tendencia: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/tendencia", { params });
+    return r.data as MetricasTendencia;
+  },
+  distribucion: async (params: Record<string, string> = {}) => {
+    const r = await api.get("/api/metricas/distribucion", { params });
+    return r.data as MetricasDistribucion;
   },
   infraestructura: async (params: Record<string, string> = {}) => {
     const r = await api.get("/api/metricas/infraestructura", { params });

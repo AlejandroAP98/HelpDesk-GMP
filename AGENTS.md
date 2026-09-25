@@ -231,6 +231,20 @@ aparecer "jumpy". Suficiente para señal básica; si se necesita exactitud, migr
   `supabase_id` con paginación (Supabase REST limita a 1000 filas por request;
   hoy trae solo las primeras 1000 de N).
 
+## Métricas (`/api/metricas/*`)
+
+- `/tiempos`: MTTR, FRT promedio, tickets resueltos/analizados, % FRT cumplido
+  (`porcentaje_frt_cumplido`, NULL si no hay tickets con primera respuesta).
+- `/tendencia`: serie diaria de creados vs resueltos (por defecto últimos 30 días);
+  días sin movimiento se devuelven con `0` para mantener la línea continua.
+- `/distribucion`: heatmap de tickets creados por dow (0=Dom..6=Sáb) y hora
+  (0..23); útil para identificar picos y planificar turnos.
+- `/volumen`, `/infraestructura`, `/rendimiento-agente`, `/tiempo-por-agente`,
+  `/reaperturas`, `/sla`: ver `schemas/metricas.py`.
+- Página `/metricas`: el heatmap de distribución es un componente SVG propio
+  (`components/Heatmap.tsx`, sin dependencias) para mantener el bundle pequeño
+  y coherente con `DonutChart`.
+
 ## Convenciones
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy async (asyncpg), Pydantic v2.
@@ -734,3 +748,28 @@ Hardening pre-produccion WS/Push (3 fixes, un commit).
 - Verificacion: `py_compile` + `ruff check` limpio; `mypy` sin errores
   nuevos; 86/86 pytest verdes; E2E assigned y E2E flood OK en
   contenedor.
+
+Fase 19 completada: Email urgente desacoplado del toggle del cliente.
+
+- Backend `services/ticket_service.py:_enviar_emails_post_creacion`: el gate
+  `if not cliente.notificaciones_email: return` se movia adentro del task
+  y cortaba TODOS los emails del cliente (incluido el urgente). Ahora el
+  toggle solo gatea `send_ticket_created` (que va al cliente). El email
+  urgente a `resend_urgent_recipients` (mesa/admin) se dispara SIEMPRE
+  que `prioridad == urgente`, porque es una alerta operacional que NO
+  va al cliente. Consistente con el push/WebSocket urgente, que ya estaba
+  desacoplado del toggle del cliente.
+- Backend `services/email_service.py`: docstring actualizado para
+  documentar el contrato nuevo (urgente siempre, creado/resuelto respeta
+  el toggle).
+- Tests `tests/test_tickets.py` (+3): cubren los 3 caminos del gate
+  nuevo: urgente con toggle OFF (urgente SI, creado NO), no-urgente con
+  toggle OFF (ambos NO, regression), urgente con toggle ON (ambos SI,
+  regression). `tests/helpers.py:seed_usuario` extendido con param
+  `notificaciones_email=True` por defecto.
+- Verificacion: `ruff check` limpio en archivos modificados; `py_compile`
+  sin errores; 123/123 pytest verdes.
+- Pendiente: bug pre-existente en `crear_admin` (linea 411) — pasa `current`
+  (el agente) a `_enviar_emails_post_creacion` en vez del `cliente` real,
+  lo que haria que `send_ticket_created` se envie al email del agente y
+  se gatee con su toggle. No incluido en este PR (D1).

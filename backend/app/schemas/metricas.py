@@ -14,6 +14,7 @@ class MetricasTiempos(BaseModel):
     tiempo_primera_respuesta_minutos: float | None = None
     tickets_resueltos_analizados: int = 0
     tickets_con_primera_respuesta: int = 0
+    porcentaje_frt_cumplido: float | None = None
 
 
 class ConteoPorEstado(BaseModel):
@@ -36,6 +37,27 @@ class MetricasVolumen(BaseModel):
     por_estado: list[ConteoPorEstado]
     por_prioridad: list[ConteoPorPrioridad]
     top_empresas: list[VolumenPorEmpresa]
+
+
+class ItemTendencia(BaseModel):
+    dia: str
+    creados: int
+    resueltos: int
+
+
+class MetricasTendencia(BaseModel):
+    por_dia: list[ItemTendencia]
+
+
+class CeldaDistribucion(BaseModel):
+    dow: int
+    hora: int
+    cantidad: int
+
+
+class MetricasDistribucion(BaseModel):
+    por_dia_hora: list[CeldaDistribucion]
+    total: int
 
 
 class DesgloseElemento(BaseModel):

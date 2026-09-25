@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # --- Entorno ---
     app_env: str = "dev"
     log_level: str = "INFO"
+    app_timezone: str = "America/Bogota"
 
     # --- Base de datos ---
     database_url: str = "postgresql+asyncpg://helpdesk:helpdesk@postgres:5432/helpdesk"

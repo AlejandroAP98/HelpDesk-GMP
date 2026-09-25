@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatsCard } from "@/components/ui/StatsCard";
 import { DonutChart } from "@/components/DonutChart";
+import { Heatmap } from "@/components/Heatmap";
 import TicketSolvedIcon from "@/app/assets/icons/TicketSolvedIcon";
 import Link from "next/link";
 import { ESTADO_DONUT_COLORS, ESTADO_DONUT_LABELS, PRIORIDAD_DONUT_COLORS, PRIORIDAD_DONUT_LABELS } from "@/lib/chartConstants";
@@ -26,19 +27,13 @@ const ESTADO_LABELS: Record<string, string> = {
   cerrado: "Cerrado",
 };
 
-const PRIORIDAD_COLORS: Record<string, string> = {
-  urgente: "bg-redCustom",
-  alta: "bg-orange-500",
-  media: "bg-gray-500",
-  baja: "bg-gray-300",
-};
-
-const PRIORIDAD_LABELS: Record<string, string> = {
-  urgente: "Urgente",
-  alta: "Alta",
-  media: "Media",
-  baja: "Baja",
-};
+const ESTADO_ORDEN: Array<keyof typeof ESTADO_LABELS> = [
+  "abierto",
+  "asignado",
+  "en_progreso",
+  "resuelto",
+  "cerrado",
+];
 
 const ELEMENTO_LABELS: Record<string, string> = {
   torre: "Torre",
@@ -50,17 +45,21 @@ export default function MetricasPage() {
   const {
     usuario, fechaInicio, setFechaInicio, fechaFin, setFechaFin,
     cargando, hayFiltros, limpiarFiltros,
-    tiempos, volumen, infra, rendimiento, tiempoAgente, reaperturas, sla, graficas,
+    tiempos, volumen, infra, rendimiento, tiempoAgente, reaperturas, sla, graficas, distribucion,
   } = useMetricas();
 
   if (usuario?.rol !== "administrador" && usuario?.rol !== "mesa_ayuda") return null;
   if (cargando) return <LoadingState />;
 
   const maxEstado = Math.max(1, ...(volumen?.por_estado.map((e) => e.cantidad) ?? [1]));
-  const maxPrioridad = Math.max(1, ...(volumen?.por_prioridad.map((p) => p.cantidad) ?? [1]));
   const maxEmpresa = Math.max(1, ...(volumen?.top_empresas.map((e) => e.cantidad) ?? [1]));
-  const maxElemento = Math.max(1, ...(infra?.por_elemento.map((e) => e.cantidad) ?? [1]));
   const maxUbicacion = Math.max(1, ...(infra?.top_ubicaciones.map((u) => u.cantidad) ?? [1]));
+  const totalEstado = volumen?.por_estado.reduce((s, e) => s + e.cantidad, 0) ?? 0;
+  const totalPrioridad = volumen?.por_prioridad.reduce((s, p) => s + p.cantidad, 0) ?? 0;
+  const totalElemento = infra?.por_elemento.reduce((s, e) => s + e.cantidad, 0) ?? 0;
+  const estadoOrdenado = ESTADO_ORDEN.map((e) =>
+    volumen?.por_estado.find((x) => x.estado === e)
+  ).filter((x): x is NonNullable<typeof x> => x != null);
 
   return (
     <div className="space-y-6">
@@ -143,7 +142,7 @@ export default function MetricasPage() {
         {/* Sección 1: Tiempos */}
         <section className="space-y-4">
           <h2 className="text-base font-medium text-gray-900 tracking-tight">Tiempos de respuesta</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatsCard
               label="Tiempo Medio de Resolución"
               value={tiempos?.mttr_horas != null ? `${tiempos.mttr_horas} h` : "—"}
@@ -159,6 +158,24 @@ export default function MetricasPage() {
               className="bg-yellowCustom"
             />
             <StatsCard
+              label="% FRT cumplido"
+              value={
+                tiempos?.porcentaje_frt_cumplido != null
+                  ? `${tiempos.porcentaje_frt_cumplido}%`
+                  : "—"
+              }
+              icon={
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-check" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/><path d="m9 14 2 2 4-4"/></svg>
+              }
+              className={
+                tiempos?.porcentaje_frt_cumplido == null
+                  ? "bg-grayCustom"
+                  : tiempos.porcentaje_frt_cumplido >= 90
+                    ? "bg-greenCustom"
+                    : "bg-redCustom"
+              }
+            />
+            <StatsCard
               label="Tickets resueltos"
               value={tiempos?.tickets_resueltos_analizados ?? 0}
               icon={
@@ -170,7 +187,8 @@ export default function MetricasPage() {
               label="Con Primera respuesta"
               value={tiempos?.tickets_con_primera_respuesta ?? 0}
               icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>}
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>
+              }
               className="bg-violetCustom"
             />
           </div>
@@ -184,11 +202,16 @@ export default function MetricasPage() {
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               <h3 className="text-xs font-medium text-gray-500 tracking-wider mb-3">Por estado</h3>
               <div className="space-y-2.5">
-                {volumen?.por_estado.map((item, index: number) => (
+                {estadoOrdenado.map((item, index: number) => (
                   <div key={item.estado}  className="space-y-1 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-normal text-gray-700">{ESTADO_LABELS[item.estado] ?? item.estado}</span>
-                      <span className="text-[11px] font-semibold text-gray-500">{item.cantidad}</span>
+                      <span className="text-[11px] font-semibold text-gray-500">
+                        {item.cantidad}
+                        {totalEstado > 0 && (
+                          <span className="text-gray-400 ml-1">({Math.round((item.cantidad / totalEstado) * 100)}%)</span>
+                        )}
+                      </span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -201,25 +224,23 @@ export default function MetricasPage() {
               </div>
             </div>
 
-            {/* Por prioridad */}
+            {/* Por prioridad (donut) */}
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               <h3 className="text-xs font-medium text-gray-500 tracking-wider mb-3">Por prioridad</h3>
-              <div className="space-y-2.5">
-                {volumen?.por_prioridad.map((item, index: number) => (
-                  <div key={item.prioridad} className="space-y-1 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-normal text-gray-700">{PRIORIDAD_LABELS[item.prioridad] ?? item.prioridad}</span>
-                      <span className="text-[11px] font-semibold text-gray-500">{item.cantidad}</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${PRIORIDAD_COLORS[item.prioridad] ?? "bg-gray-300"}`}
-                        style={{ width: `${(item.cantidad / maxPrioridad) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {volumen?.por_prioridad.length ? (
+                <DonutChart
+                  data={volumen.por_prioridad.map((p) => ({
+                    label: PRIORIDAD_DONUT_LABELS[p.prioridad] ?? p.prioridad,
+                    value: p.cantidad,
+                    color: PRIORIDAD_DONUT_COLORS[p.prioridad] ?? "#9ca3af",
+                  }))}
+                  size={140}
+                  centerLabel="total"
+                  centerValue={totalPrioridad}
+                />
+              ) : (
+                <p className="text-xs text-gray-400 py-8 text-center">Sin datos</p>
+              )}
             </div>
 
             {/* Top empresas */}
@@ -249,34 +270,42 @@ export default function MetricasPage() {
               </div>
             </div>
           </div>
+
+          {/* Heatmap de entradas */}
+          <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-medium text-gray-500 tracking-wider">Matriz de distribución</h3>
+              <span className="text-[10px] text-gray-400">{distribucion?.total ?? 0} tickets en el periodo</span>
+            </div>
+            {distribucion && distribucion.por_dia_hora.length > 0 ? (
+              <Heatmap cells={distribucion.por_dia_hora} height={240} />
+            ) : (
+              <p className="text-xs text-gray-400 py-8 text-center">Sin datos</p>
+            )}
+          </div>
         </section>
 
         {/* Sección 3: Infraestructura */}
         <section className="space-y-4">
           <h2 className="text-base font-medium text-gray-900 tracking-tight">Infraestructura</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Por elemento */}
+            {/* Por elemento (donut) */}
             <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
               <h3 className="text-xs font-medium text-gray-500 tracking-wider mb-3">Fallas por elemento</h3>
-              <div className="space-y-2.5">
-                {infra?.por_elemento.map((item, index: number) => (
-                  <div key={item.elemento} className="space-y-1 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-normal text-gray-700">{ELEMENTO_LABELS[item.elemento] ?? item.elemento}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-semibold text-gray-400">{item.porcentaje}%</span>
-                        <span className="text-[11px] font-semibold text-gray-500">{item.cantidad}</span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-grayCustom transition-all duration-500"
-                        style={{ width: `${(item.cantidad / maxElemento) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {infra?.por_elemento.length ? (
+                <DonutChart
+                  data={infra.por_elemento.map((e) => ({
+                    label: ELEMENTO_LABELS[e.elemento] ?? e.elemento,
+                    value: e.cantidad,
+                    color: e.elemento === "torre" ? "#ef4444" : e.elemento === "celda" ? "#f59e0b" : "#2563eb",
+                  }))}
+                  size={140}
+                  centerLabel="total"
+                  centerValue={totalElemento}
+                />
+              ) : (
+                <p className="text-xs text-gray-400 py-8 text-center">Sin datos</p>
+              )}
             </div>
 
             {/* Top ubicaciones */}
@@ -401,9 +430,27 @@ export default function MetricasPage() {
           <div>
             <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
             {sla && (
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Objetivos: Primera Respuesta ≤ {sla.sla_objetivo_frt_horas}h · Urgente/Alta: Torre/Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h, P.Vta ≤ {sla.sla_objetivo_mttr_horas}h (remotas {sla.sla_objetivo_mttr_remoto_horas}h) · Media ≤ {sla.sla_objetivo_mttr_media_horas}h · Baja ≤ {sla.sla_objetivo_mttr_baja_horas}h
-              </p>
+              <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="bg-yellowCustom/5 border border-yellowCustom/20 rounded-xl p-3">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Primera Respuesta</span>
+                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_frt_horas}h</p>
+                </div>
+                <div className="bg-redCustom/5 border border-redCustom/20 rounded-xl p-3">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Urgente / Alta</span>
+                  <p className="text-lg font-semibold text-gray-800 mt-1.5">Torre y Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Puntos de Venta ≤ {sla.sla_objetivo_mttr_horas}h · Remotos ≤ {sla.sla_objetivo_mttr_remoto_horas}h</p>
+                </div>
+                <div className="bg-brandCustom/5 border border-brandCustom/20 rounded-xl p-3">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Media</span>
+                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_media_horas}h</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">4 días · para todo</p>
+                </div>
+                <div className="bg-grayCustom/5 border border-grayCustom/20 rounded-xl p-3">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Baja</span>
+                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_baja_horas}h</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">6 días · para todo</p>
+                </div>
+              </div>
             )}
           </div>
           <button

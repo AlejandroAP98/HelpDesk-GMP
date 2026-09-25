@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from dateutil.relativedelta import relativedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -19,13 +19,17 @@ from app.models.punto_venta import PuntoVenta
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.metricas import (
+    CeldaDistribucion,
     ConteoPorEstado,
     ConteoPorPrioridad,
     DesgloseElemento,
+    ItemTendencia,
+    MetricasDistribucion,
     MetricasInfraestructura,
     MetricasReaperturas,
     MetricasRendimiento,
     MetricasSLA,
+    MetricasTendencia,
     MetricasTiempos,
     MetricasTiempoPorAgente,
     MetricasVolumen,
@@ -72,6 +76,13 @@ async def tiempos(
             func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion) / 60.0
         ),
         func.count(Ticket.id),
+        func.sum(
+            func.cast(
+                func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
+                <= SLA_FRT_HORAS * 3600,
+                Integer,
+            )
+        ),
     ).where(
         Ticket.fecha_primera_respuesta.isnot(None),
         *filtros,
@@ -79,12 +90,17 @@ async def tiempos(
     row2 = (await db.execute(stmt_primera)).one()
     tfr_minutos: float | None = round(row2[0], 2) if row2[0] is not None else None
     tickets_tfr: int = row2[1]
+    frt_cumplidos: int = row2[2] or 0
+    porcentaje_frt_cumplido: float | None = (
+        round((frt_cumplidos / tickets_tfr) * 100, 1) if tickets_tfr > 0 else None
+    )
 
     return MetricasTiempos(
         mttr_horas=mttr_horas,
         tiempo_primera_respuesta_minutos=tfr_minutos,
         tickets_resueltos_analizados=tickets_resueltos,
         tickets_con_primera_respuesta=tickets_tfr,
+        porcentaje_frt_cumplido=porcentaje_frt_cumplido,
     )
 
 
@@ -158,6 +174,129 @@ async def volumen(
         por_prioridad=por_prioridad,
         top_empresas=top_empresas,
     )
+
+
+@router.get("/tendencia", response_model=MetricasTendencia)
+async def tendencia(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_mesa_ayuda),
+) -> MetricasTendencia:
+    """Serie diaria de tickets creados vs resueltos para graficar tendencia.
+
+    Si no se pasan fechas, usa los últimos 30 dias. Los dias sin movimiento se
+    devuelven con creados=0 y resueltos=0 para que la linea sea continua.
+    """
+    if fecha_fin is None:
+        fecha_fin = date.today()
+    if fecha_inicio is None:
+        fecha_inicio = fecha_fin - timedelta(days=29)
+
+    tz = settings.app_timezone
+    filtros_comun: list = [
+        Ticket.fecha_creacion >= datetime.combine(fecha_inicio, time.min),
+        Ticket.fecha_creacion <= datetime.combine(fecha_fin, time.max),
+    ]
+    if empresa_id is not None:
+        filtros_comun.append(Ticket.empresa_id == empresa_id)
+
+    creacion_local = Ticket.fecha_creacion.op("AT TIME ZONE")("UTC").op("AT TIME ZONE")(tz)
+    resolucion_local = Ticket.fecha_resolucion.op("AT TIME ZONE")("UTC").op("AT TIME ZONE")(tz)
+
+    stmt_creados = (
+        select(
+            func.date(creacion_local).label("dia"),
+            func.count(Ticket.id).label("cantidad"),
+        )
+        .where(*filtros_comun)
+        .group_by(func.date(creacion_local))
+    )
+    creados = {
+        row.dia: row.cantidad
+        for row in (await db.execute(stmt_creados)).all()
+        if row.dia is not None
+    }
+
+    stmt_resueltos = (
+        select(
+            func.date(resolucion_local).label("dia"),
+            func.count(Ticket.id).label("cantidad"),
+        )
+        .where(
+            Ticket.fecha_resolucion.isnot(None),
+            Ticket.fecha_resolucion >= datetime.combine(fecha_inicio, time.min),
+            Ticket.fecha_resolucion <= datetime.combine(fecha_fin, time.max),
+            *([Ticket.empresa_id == empresa_id] if empresa_id is not None else []),
+        )
+        .group_by(func.date(resolucion_local))
+    )
+    resueltos = {
+        row.dia: row.cantidad
+        for row in (await db.execute(stmt_resueltos)).all()
+        if row.dia is not None
+    }
+
+    por_dia: list[ItemTendencia] = []
+    total_dias = (fecha_fin - fecha_inicio).days + 1
+    for i in range(total_dias):
+        d = fecha_inicio + timedelta(days=i)
+        por_dia.append(
+            ItemTendencia(
+                dia=d.isoformat(),
+                creados=creados.get(d, 0),
+                resueltos=resueltos.get(d, 0),
+            )
+        )
+    return MetricasTendencia(por_dia=por_dia)
+
+
+@router.get("/distribucion", response_model=MetricasDistribucion)
+async def distribucion(
+    fecha_inicio: date | None = Query(None),
+    fecha_fin: date | None = Query(None),
+    empresa_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_mesa_ayuda),
+) -> MetricasDistribucion:
+    """Heatmap de tickets creados por dia de la semana (0=Domingo..6=Sabado)
+    y hora del dia (0..23). El bucketing se hace en la zona horaria del negocio
+    (settings.app_timezone) para que la hora local coincida con la del operario."""
+    if fecha_fin is None:
+        fecha_fin = date.today()
+    if fecha_inicio is None:
+        fecha_inicio = fecha_fin - timedelta(days=29)
+
+    tz = settings.app_timezone
+    filtros: list = [
+        Ticket.fecha_creacion >= datetime.combine(fecha_inicio, time.min),
+        Ticket.fecha_creacion <= datetime.combine(fecha_fin, time.max),
+    ]
+    if empresa_id is not None:
+        filtros.append(Ticket.empresa_id == empresa_id)
+
+    # El bucket dow/hora debe caer en la zona horaria del operario. La columna
+    # `fecha_creacion` es timestamp without time zone en UTC; la doble conversion
+    # (UTC -> timestamptz -> timestamp local) deja el valor en hora de COL y
+    # EXTRACT(hour FROM timestamp) extrae la hora local. Si la columna pasa a
+    # timestamptz en el futuro, basta con aplicar una sola `AT TIME ZONE tz`.
+    creacion_local = Ticket.fecha_creacion.op("AT TIME ZONE")("UTC").op("AT TIME ZONE")(tz)
+    stmt = (
+        select(
+            func.extract("dow", creacion_local).label("dow"),
+            func.extract("hour", creacion_local).label("hora"),
+            func.count(Ticket.id).label("cantidad"),
+        )
+        .where(*filtros)
+        .group_by("dow", "hora")
+    )
+    rows = (await db.execute(stmt)).all()
+    celdas = [
+        CeldaDistribucion(dow=int(r.dow), hora=int(r.hora), cantidad=int(r.cantidad)) for r in rows
+    ]
+    total = sum(c.cantidad for c in celdas)
+    return MetricasDistribucion(por_dia_hora=celdas, total=total)
 
 
 @router.get("/infraestructura", response_model=MetricasInfraestructura)
