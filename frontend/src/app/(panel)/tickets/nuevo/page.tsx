@@ -18,10 +18,10 @@ const ELEMENTOS: { value: ElementoInfraestructura; label: string }[] = [
 ];
 
 const CAMPOS_RED = [
-  { key: "ip_pcs", label: "IP's PC's", placeholder: "Ej: 192.168.1.10, 192.168.1.11" },
-  { key: "ip_antena", label: "IP Antena", placeholder: "Ej: 10.0.0.1" },
-  { key: "mascara_red", label: "Máscara de red", placeholder: "Ej: 255.255.255.0" },
-  { key: "puerta_enlace", label: "Puerta de enlace", placeholder: "Ej: 192.168.1.1" },
+  { key: "ip_pcs", label: "IP's PC's", placeholder: "Ej: 10.90.1.10, 10.90.1.11" },
+  { key: "ip_antena", label: "IP Antena", placeholder: "Ej: 10.90.1.1" },
+  { key: "mascara_red", label: "Máscara de red", placeholder: "Ej: 255.255.255.248" },
+  { key: "puerta_enlace", label: "Puerta de enlace", placeholder: "Ej: 10.90.1.1" },
 ] as const;
 
 export default function NuevoTicketPage() {

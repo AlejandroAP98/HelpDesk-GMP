@@ -187,6 +187,24 @@ export function useTicketsList() {
     setPage(1);
   };
 
+  const limpiarTodo = () => {
+    setEstado("todos");
+    setPrioridad("todas");
+    setFiltroEmpresaId("");
+    setFiltroAgenteId("");
+    setFechaInicio("");
+    setFechaFin("");
+    setPage(1);
+  };
+
+  const activeFilterCount =
+    (estado !== "todos" ? 1 : 0) +
+    (prioridad !== "todas" ? 1 : 0) +
+    (filtroEmpresaId ? 1 : 0) +
+    (filtroAgenteId ? 1 : 0) +
+    (fechaInicio ? 1 : 0) +
+    (fechaFin ? 1 : 0);
+
   return {
     tickets, total, totalPages, page, setPage,
     estado, setEstado, prioridad, setPrioridad, vista,
@@ -194,7 +212,8 @@ export function useTicketsList() {
     cargando, viewMode, orden,
     filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
     empresas, agentes, busqueda, setBusqueda,
-    hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda,
+    hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda, limpiarTodo,
+    activeFilterCount,
     cambiarVista, cambiarModo, cambiarOrden,
     usuario, esAdminOMesaAyuda,
   };

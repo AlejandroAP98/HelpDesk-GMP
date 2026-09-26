@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/Table";
 import { ViewModeToggle } from "@/components/ui/ViewModeToggle";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import { TicketCard } from "@/components/TicketCard";
 import { buildTicketTableColumns, TICKET_LISTADO_FECHA } from "@/components/tickets/ticketTableColumns";
 import NewTicketIcon from "@/app/assets/icons/NewTicketIcon";
@@ -70,14 +71,70 @@ export default function TicketsListPage() {
     cargando, viewMode, orden,
     filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
     empresas, agentes, busqueda, setBusqueda,
-    hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda,
+    limpiarTodo, limpiarBusqueda,
+    activeFilterCount,
     cambiarVista, cambiarModo, cambiarOrden,
     usuario, esAdminOMesaAyuda,
   } = useTicketsList();
 
+  const filtrosControls = (
+    <>
+      <Select
+        label="Estado"
+        value={estado}
+        onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+        options={ESTADOS_POR_VISTA[vista]}
+      />
+      <Select
+        label="Prioridad"
+        value={prioridad}
+        onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
+        options={PRIORIDADES}
+      />
+      {esAdminOMesaAyuda && (
+        <Select
+          label="Empresa"
+          value={filtroEmpresaId}
+          onChange={(e) => { setFiltroEmpresaId(e.target.value); setPage(1); }}
+          options={[{ value: "", label: "Todas" }, ...empresas.map((e) => ({ value: String(e.id), label: e.nombre }))]}
+        />
+      )}
+      {esAdminOMesaAyuda && (
+        <Select
+          label="Agente"
+          value={filtroAgenteId}
+          onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
+          options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
+        />
+      )}
+      <div className="flex flex-col">
+        <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+          Desde
+        </label>
+        <input
+          type="date"
+          value={fechaInicio}
+          onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
+          className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+        />
+      </div>
+      <div className="flex flex-col">
+        <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+          Hasta
+        </label>
+        <input
+          type="date"
+          value={fechaFin}
+          onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
+          className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+        />
+      </div>
+    </>
+  );
+
   return (
     <div className="flex flex-col h-full min-h-[calc(100dvh-7rem)] justify-between gap-2">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <PageHeader
           title="Tickets"
           subtitle={`Hola, ${usuario?.nombre?.split(" ")[0]}, gestiona tus tickets aquí`}
@@ -125,88 +182,47 @@ export default function TicketsListPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m4 15 3 3 3-3M7 6v12M17 3a2 2 0 0 1 2 2v3a2 2 0 1 1-4 0V5a2 2 0 0 1 2-2m-2 13a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/><path d="M19 16v3a2 2 0 0 1-2 2h-1.5"/></svg>
                   )}
             </button>
+            <TotalBadge total={total} />
             </div>
             <ViewModeToggle value={viewMode} onChange={cambiarModo} />
           </div>
-          <div className="flex flex-col-reverse 2xl:flex-row w-full gap-2 justify-between">
-            <div className="relative flex sm:max-w-sm w-full 2xl:mt-4 self-start">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-              <input
-                type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por #ticket o titulo..."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:font-regular placeholder-gray-300 focus:border-brand-500 focus:ring-1 focus:ring-brandCustom focus:bg-white outline-none transition-all"
-              />
-              {busqueda && (
-                <button
-                  onClick={limpiarBusqueda}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-                </button>
-              )}
-            </div>
-            <div className="grid xl:flex grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1 w-full xl:justify-end">
-              <Select
-                label="Estado"
-                value={estado}
-                onChange={(e) => { setEstado(e.target.value); setPage(1); }}
-                options={ESTADOS_POR_VISTA[vista]}
-              />
-              <Select
-                label="Prioridad"
-                value={prioridad}
-                onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
-                options={PRIORIDADES}
-              />
-              {esAdminOMesaAyuda && (
-                <Select
-                  label="Empresa"
-                  value={filtroEmpresaId}
-                  onChange={(e) => { setFiltroEmpresaId(e.target.value); setPage(1); }}
-                  options={[{ value: "", label: "Todas" }, ...empresas.map((e) => ({ value: String(e.id), label: e.nombre }))]}
-                />
-              )}
-              {esAdminOMesaAyuda && (
-                <Select
-                  label="Agente"
-                  value={filtroAgenteId}
-                  onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
-                  options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
-                />
-              )}
-              <div className="flex flex-col">
-                <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
-                  Desde
-                </label>
+          <div className="flex flex-col w-full gap-2">
+            <div className="flex items-center gap-1 w-full justify-between">
+              <div className="relative flex sm:max-w-sm w-full xl:mt-3 mt-0">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
                 <input
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
-                  className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
+                  type="text"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar por #ticket o titulo..."
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:font-regular placeholder-gray-300 focus:border-brand-500 focus:ring-1 focus:ring-brandCustom focus:bg-white outline-none transition-all"
                 />
+                {busqueda && (
+                  <button
+                    onClick={limpiarBusqueda}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                  </button>
+                )}
               </div>
-              <div className="flex flex-col">
-                <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
-                  Hasta
-                </label>
-                <input
-                  type="date"
-                  value={fechaFin}
-                  onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
-                  className="rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed bg-gray-50 text-gray-700 px-2.5 py-2 text-xs focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer"
-                />
+              <FilterDropdown
+                activeCount={activeFilterCount}
+                onClear={limpiarTodo}
+              >
+                {filtrosControls}
+              </FilterDropdown>
+              <div className="hidden xl:flex flex-wrap items-center gap-1 justify-end w-full">
+                {filtrosControls}
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={limpiarTodo}
+                    className="self-end text-xs text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
+                  >
+                    Limpiar todo
+                  </button>
+                )}
               </div>
-              <TotalBadge total={total} />
-              {hayFiltrosFecha && (
-                <button
-                  onClick={limpiarFiltrosFecha}
-                  className="text-xs self-end text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
-                >
-                  Limpiar fechas
-                </button>
-              )}
             </div>
           </div>
         </div>
