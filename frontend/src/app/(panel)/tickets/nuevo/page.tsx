@@ -54,7 +54,7 @@ export default function NuevoTicketPage() {
                 options={empresas.map((emp) => ({ value: String(emp.id), label: emp.nombre }))}
               />
               <div className="flex flex-col gap-1">
-                <span className="sm:text-xs text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+                <span className="sm:!text-[11px] !text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
                   Cliente
                 </span>
                 <SearchableSelect
@@ -118,7 +118,7 @@ export default function NuevoTicketPage() {
             )}
           </div>
           <Input
-            label="Titulo"
+            label="Título"
             type="text"
             required
             maxLength={150}
@@ -129,7 +129,7 @@ export default function NuevoTicketPage() {
 
           <div className="mt-5">
             <Textarea
-              label="Descripcion"
+              label="Descripción"
               required
               rows={5}
               value={descripcion}

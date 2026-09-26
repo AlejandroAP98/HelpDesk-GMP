@@ -158,14 +158,14 @@ export default function MetricasPage() {
               className="bg-yellowCustom"
             />
             <StatsCard
-              label="% FRT cumplido"
+              label="% Primera respuesta cumplido"
               value={
                 tiempos?.porcentaje_frt_cumplido != null
                   ? `${tiempos.porcentaje_frt_cumplido}%`
                   : "—"
               }
               icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-check" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/><path d="m9 14 2 2 4-4"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-2-search" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h5m-1 8-.5-.5L9 18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4.5"/><path d="M15 18a3 3 0 1 0 6 0 3 3 0 1 0-6 0m5.2 2.2L22 22"/></svg>
               }
               className={
                 tiempos?.porcentaje_frt_cumplido == null
@@ -187,8 +187,7 @@ export default function MetricasPage() {
               label="Con Primera respuesta"
               value={tiempos?.tickets_con_primera_respuesta ?? 0}
               icon={
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>
-              }
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-message-check" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M8 9h8m-8 4h6m-3.01 6.206L8 21v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6m-6 6 2 2 4-4"/></svg>}
               className="bg-violetCustom"
             />
           </div>
@@ -426,29 +425,29 @@ export default function MetricasPage() {
 
       {/* Sección 6: Cumplimiento SLA */}
       <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
+        <div className="flex items-center justify-between flex-col-reverse sm:flex-row w-full">
           <div>
-            <h2 className="text-base font-medium text-gray-900 tracking-tight">Cumplimiento SLA</h2>
             {sla && (
               <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
                 <div className="bg-yellowCustom/5 border border-yellowCustom/20 rounded-xl p-3">
                   <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Primera Respuesta</span>
-                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_frt_horas}h</p>
+                  <p className="text-md sm:text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_frt_horas}h</p>
                 </div>
                 <div className="bg-redCustom/5 border border-redCustom/20 rounded-xl p-3">
                   <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Urgente / Alta</span>
-                  <p className="text-lg font-semibold text-gray-800 mt-1.5">Torre y Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Puntos de Venta ≤ {sla.sla_objetivo_mttr_horas}h · Remotos ≤ {sla.sla_objetivo_mttr_remoto_horas}h</p>
+                  <p className="text-md sm:text-lg font-semibold text-gray-800 mt-1.5">Torre y Celda ≤ {sla.sla_objetivo_mttr_torre_celda_horas}h</p>
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5">Puntos de Venta ≤ {sla.sla_objetivo_mttr_horas}h · Remotos ≤ {sla.sla_objetivo_mttr_remoto_horas}h</p>
                 </div>
                 <div className="bg-brandCustom/5 border border-brandCustom/20 rounded-xl p-3">
                   <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Media</span>
-                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_media_horas}h</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">4 días · para todo</p>
+                  <p className="text-md sm:text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_media_horas}h</p>
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5">4 días · para todo</p>
                 </div>
                 <div className="bg-grayCustom/5 border border-grayCustom/20 rounded-xl p-3">
                   <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Baja</span>
-                  <p className="text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_baja_horas}h</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">6 días · para todo</p>
+                  <p className="text-md sm:text-lg font-semibold text-gray-800 mt-1.5">≤ {sla.sla_objetivo_mttr_baja_horas}h</p>
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5">6 días · para todo</p>
                 </div>
               </div>
             )}
@@ -492,7 +491,7 @@ export default function MetricasPage() {
               a.click();
               URL.revokeObjectURL(url);
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-greenCustom px-3 py-2 text-[11px] font-medium text-white hover:bg-greenCustom/80 transition-colors"
+            className="inline-flex sm:self-start self-end items-center gap-1.5 rounded-xl bg-greenCustom px-3 py-2 text-[11px] font-medium text-white hover:bg-greenCustom/80 transition-colors"
           >
             Descargar 
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-file-type-csv" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M7 16.5a1.5 1.5 0 0 0-3 0v3a1.5 1.5 0 0 0 3 0m3 .75c0 .414.336.75.75.75H12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1h-1a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75 2 6 2-6"/></svg>
