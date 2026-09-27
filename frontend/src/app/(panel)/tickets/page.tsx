@@ -154,14 +154,14 @@ export default function TicketsListPage() {
           }
         />
         <div className="flex gap-4 flex-col-reverse justify-between">
-          <div className="flex rounded-lg sm:gap-8 gap-2 justify-between items-end">
+          <div className="flex rounded-lg sm:gap-8 gap-1 justify-between items-end">
             <div className="flex items-center gap-1">
               <div className="flex w-fit border-b border-grayCustom/50 bg-grayCustom/10 gap-0 rounded-lg h-fit">
               {VISTAS.map((v) => (
               <button
                 key={v.value}
                 onClick={() => cambiarVista(v.value)}
-                className={`px-4 py-1.5 text-xs transition-all duration-100 ease-in rounded-md font-normal last:border-none border-grayCustom ${
+                className={`px-2.5 sm:px-4 py-1.5 text-xs transition-all duration-100 ease-in rounded-md font-normal last:border-none border-grayCustom ${
                   vista === v.value
                     ? "bg-brandCustom text-white"
                     : "text-gray-500 hover:text-gray-700"
@@ -182,7 +182,9 @@ export default function TicketsListPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="m4 15 3 3 3-3M7 6v12M17 3a2 2 0 0 1 2 2v3a2 2 0 1 1-4 0V5a2 2 0 0 1 2-2m-2 13a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/><path d="M19 16v3a2 2 0 0 1-2 2h-1.5"/></svg>
                   )}
             </button>
-            <TotalBadge total={total} />
+            <div className="sm:flex">
+              <TotalBadge total={total} />
+            </div>
             </div>
             <ViewModeToggle value={viewMode} onChange={cambiarModo} />
           </div>

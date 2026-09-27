@@ -66,8 +66,8 @@ export function PrioridadBadge({ prioridad }: { prioridad: string }) {
 
 export function TotalBadge({ total }: { total: number }) {
   return (
-    <span className="flex h-auto justify-center items-center text-nowrap flex-nowrap text-[11px] font-normal text-brandCustom bg-brandCustom/5 px-2 py-1 rounded-lg  border-brandCustom/40">
-      {total} ticket{total !== 1 ? "s" : ""}
+    <span className="flex h-auto justify-center items-center text-nowrap text-[11px] font-normal text-brandCustom bg-brandCustom/5 px-2 py-1 rounded-lg  border-brandCustom/40">
+      {total} {<span className="sm:block hidden ml-1">ticket{total !== 1 ? "s" : ""}</span>}
     </span>
   );
 }
