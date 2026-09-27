@@ -20,16 +20,20 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingState />
+      <div className="min-h-screen bg-gray-50">
+        <div className="pt-16 flex justify-center">
+          <LoadingState />
+        </div>
       </div>
     );
   }
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingState />
+      <div className="min-h-screen">
+        <div className="pt-16 flex justify-center">
+          <LoadingState />
+        </div>
       </div>
     );
   }

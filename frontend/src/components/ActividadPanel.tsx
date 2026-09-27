@@ -155,7 +155,7 @@ export function ActividadPanel({ items }: ActividadPanelProps) {
   return (
     <div className="w-full px-2 h-full">
       <h2 className="text-sm font-semibold text-gray-700 mb-3">Actividad reciente</h2>
-      <div className="space-y-2 max-h-60 overflow-y-auto">
+      <div className="space-y-2 max-h-60 overflow-y-auto [scrollbar-gutter:stable]">
         {items.map((item, index) => (
           <div
             key={`${item.fecha}-${index}`}
