@@ -64,7 +64,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Configuracion</h2>
+                <h2 className="text-lg font-medium text-gray-900">Configuración</h2>
                 <button
                   onClick={() => setShowSettings(false)}
                   className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
