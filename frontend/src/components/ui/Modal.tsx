@@ -11,7 +11,7 @@ interface ModalProps {
 export function Modal({ open, children }: ModalProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <Card className="w-full max-w-md mx-4">{children}</Card>
     </div>
   );

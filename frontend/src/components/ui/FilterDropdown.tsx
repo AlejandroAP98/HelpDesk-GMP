@@ -71,7 +71,7 @@ export function FilterDropdown({
         <div
           role="dialog"
           aria-label="Filtros"
-          className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-2rem)] max-w-xs origin-top-right rounded-xl border border-gray-200 bg-white p-4 shadow-lg"
+          className="absolute right-0 top-full z-[60] mt-2 w-[calc(100vw-2rem)] max-w-xs origin-top-right rounded-xl border border-gray-200 bg-white p-4 shadow-lg"
         >
           <div className="flex items-center justify-end">
             <button

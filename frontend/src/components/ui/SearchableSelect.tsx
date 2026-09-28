@@ -196,7 +196,7 @@ export function SearchableSelect({
       {open && (
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-0 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-96 overflow-y-auto"
+          className="absolute z-[60] w-full mt-0 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-96 overflow-y-auto"
           role="listbox"
         >
           {loading ? (

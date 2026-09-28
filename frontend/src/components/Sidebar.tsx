@@ -104,13 +104,13 @@ export default function Sidebar({ open, onClose, onOpenNotifications, onOpenPass
     <>
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/30 lg:hidden animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/30 lg:hidden animate-fade-in"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-48 min-w-48 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-48 min-w-48 bg-bgSiderBar flex flex-col shrink-0 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-40 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

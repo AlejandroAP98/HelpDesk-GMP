@@ -326,7 +326,7 @@ export function AdjuntosGallery({
       )}
       {lightboxIndex !== null && adjuntos[lightboxIndex] && (
         <div
-          className="fixed min-h-screen inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed min-h-screen top-0 lg:left-48 right-0 left-0 z-[60] bg-black/90 flex items-center justify-center p-4"
           onClick={cerrarLightbox}
         >
           {adjuntos.length > 1 && (
