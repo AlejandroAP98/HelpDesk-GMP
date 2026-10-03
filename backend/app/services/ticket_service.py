@@ -517,6 +517,7 @@ async def listar(
     fecha_fin: date | None = None,
     orden: str | None = None,
     q: str | None = None,
+    punto_venta_id: int | None = None,
 ) -> Pagina[tuple[Ticket, str | None, str | None]]:
     from datetime import datetime, time, timezone
 
@@ -560,6 +561,10 @@ async def listar(
     if cliente_id is not None:
         base = base.where(Ticket.cliente_id == cliente_id)
         count_base = count_base.where(Ticket.cliente_id == cliente_id)
+    if punto_venta_id is not None:
+        filt = Ticket.punto_venta_id == punto_venta_id
+        base = base.where(filt)
+        count_base = count_base.where(filt)
 
     if fecha_inicio is not None:
         dt_inicio = datetime.combine(fecha_inicio, time.min, tzinfo=timezone.utc).replace(

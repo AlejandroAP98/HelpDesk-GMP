@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ticketApi, adminApi, empresaApi, type Ticket, type Empresa, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
+import { ticketApi, adminApi, empresaApi, puntoVentaApi, type Ticket, type Empresa, type PuntoVenta, type EstadoTicket, type PrioridadTicket, type VistaTicket } from "@/lib/endpoints";
 import type { Usuario } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
@@ -37,11 +37,17 @@ export function useTicketsList() {
   const [orden, setOrden] = useState<OrdenMode>(getInitialOrdenMode);
   const [filtroEmpresaId, setFiltroEmpresaId] = useState("");
   const [filtroAgenteId, setFiltroAgenteId] = useState("");
+  const [filtroPuntoVentaId, setFiltroPuntoVentaId] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [agentes, setAgentes] = useState<Usuario[]>([]);
+  const [pvResults, setPvResults] = useState<PuntoVenta[]>([]);
+  const [pvSearch, setPvSearch] = useState("");
+  const [pvSearchDebounced, setPvSearchDebounced] = useState("");
+  const [pvLoading, setPvLoading] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaDebounced, setBusquedaDebounced] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pvDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
   const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
@@ -61,6 +67,48 @@ export function useTicketsList() {
       }).catch(() => {});
     }
   }, [esAdminOMesaAyuda]);
+
+  useEffect(() => {
+    if (pvDebounceRef.current) clearTimeout(pvDebounceRef.current);
+    pvDebounceRef.current = setTimeout(() => {
+      setPvSearchDebounced(pvSearch.trim());
+    }, 300);
+    return () => { if (pvDebounceRef.current) clearTimeout(pvDebounceRef.current); };
+  }, [pvSearch]);
+
+  useEffect(() => {
+    if (usuario?.rol === "agente") return;
+    let cancelado = false;
+    const empresaEfectiva = usuario?.rol === "cliente"
+      ? usuario.empresa_id
+      : (filtroEmpresaId ? Number(filtroEmpresaId) : null);
+    const buscar = async () => {
+      try {
+        setPvLoading(true);
+        const r = await puntoVentaApi.listar({
+          empresa_id: empresaEfectiva ?? undefined,
+          q: pvSearchDebounced || undefined,
+          size: 50,
+          activo: true,
+        });
+        if (!cancelado) {
+          setPvResults(r.items);
+        }
+      } catch {
+        if (!cancelado) setPvResults([]);
+      } finally {
+        if (!cancelado) setPvLoading(false);
+      }
+    };
+    buscar();
+    return () => { cancelado = true; };
+  }, [pvSearchDebounced, filtroEmpresaId, usuario?.rol, usuario?.empresa_id]);
+
+  useEffect(() => {
+    setFiltroPuntoVentaId("");
+    setPvSearch("");
+    setPvSearchDebounced("");
+  }, [filtroEmpresaId]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -84,6 +132,7 @@ export function useTicketsList() {
         if (orden === "fecha") params.orden = "fecha";
         if (filtroEmpresaId) params.empresa_id = filtroEmpresaId;
         if (filtroAgenteId) params.agente_id = filtroAgenteId;
+        if (filtroPuntoVentaId) params.punto_venta_id = filtroPuntoVentaId;
         if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
         const data = await ticketApi.listar(params);
         setTickets(data.items);
@@ -96,7 +145,7 @@ export function useTicketsList() {
         setCargando(false);
       }
     })();
-  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, busquedaDebounced]);
+  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, filtroPuntoVentaId, busquedaDebounced]);
 
   const hayFiltrosFecha = fechaInicio || fechaFin;
   const limpiarFiltrosFecha = () => {
@@ -192,9 +241,11 @@ export function useTicketsList() {
     setPrioridad("todas");
     setFiltroEmpresaId("");
     setFiltroAgenteId("");
+    setFiltroPuntoVentaId("");
     setFechaInicio("");
     setFechaFin("");
     setPage(1);
+    setPvSearch("");
   };
 
   const activeFilterCount =
@@ -202,6 +253,7 @@ export function useTicketsList() {
     (prioridad !== "todas" ? 1 : 0) +
     (filtroEmpresaId ? 1 : 0) +
     (filtroAgenteId ? 1 : 0) +
+    (filtroPuntoVentaId ? 1 : 0) +
     (fechaInicio ? 1 : 0) +
     (fechaFin ? 1 : 0);
 
@@ -211,7 +263,9 @@ export function useTicketsList() {
     fechaInicio, setFechaInicio, fechaFin, setFechaFin,
     cargando, viewMode, orden,
     filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
-    empresas, agentes, busqueda, setBusqueda,
+    filtroPuntoVentaId, setFiltroPuntoVentaId,
+    empresas, agentes, pvResults, pvSearch, setPvSearch, pvLoading,
+    busqueda, setBusqueda,
     hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda, limpiarTodo,
     activeFilterCount,
     cambiarVista, cambiarModo, cambiarOrden,

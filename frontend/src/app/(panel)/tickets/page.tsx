@@ -8,6 +8,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/ui/Table";
 import { ViewModeToggle } from "@/components/ui/ViewModeToggle";
@@ -70,6 +71,7 @@ export default function TicketsListPage() {
     fechaInicio, setFechaInicio, fechaFin, setFechaFin,
     cargando, viewMode, orden,
     filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
+    filtroPuntoVentaId, setFiltroPuntoVentaId, pvResults, setPvSearch, pvLoading,
     empresas, agentes, busqueda, setBusqueda,
     limpiarTodo, limpiarBusqueda,
     activeFilterCount,
@@ -106,6 +108,26 @@ export default function TicketsListPage() {
           onChange={(e) => { setFiltroAgenteId(e.target.value); setPage(1); }}
           options={[{ value: "", label: "Todos" }, ...agentes.map((a) => ({ value: a.id, label: a.nombre }))]}
         />
+      )}
+      {usuario?.rol !== "agente" && (
+        <div className="flex flex-col">
+          <span className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+            Punto de venta
+          </span>
+          <SearchableSelect
+            value={filtroPuntoVentaId}
+            onChange={(v) => { setFiltroPuntoVentaId(v); setPage(1); }}
+            onInputChange={(q) => setPvSearch(q)}
+            loading={pvLoading}
+            placeholder="Buscar..."
+            emptyMessage="Sin resultados"
+            options={pvResults.map((pv) => ({
+              value: String(pv.id),
+              label: pv.nombre,
+              sublabel: pv.ciudad ?? undefined,
+            }))}
+          />
+        </div>
       )}
       <div className="flex flex-col">
         <label className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">

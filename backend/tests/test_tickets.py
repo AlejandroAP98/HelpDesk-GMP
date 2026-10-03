@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock
 
+from app.models.punto_venta import PuntoVenta
 from tests.helpers import (
     auth_header,
     get_usuario_by_email,
@@ -1475,3 +1476,110 @@ async def test_ambos_se_envian_si_notificaciones_email_true(  # type: ignore[no-
     await asyncio.sleep(0.1)
     assert spy_created.call_count == 1
     assert spy_urgent.call_count == 1
+
+
+async def test_listar_filtra_por_punto_venta_id(client, db_session):  # type: ignore[no-untyped-def]
+    """GET /api/tickets?punto_venta_id=N debe devolver solo los tickets cuyo
+    FK punto_venta_id coincide. Cobertura del filtro dedicado de PV."""
+    await seed_empresa(db_session, pk=1)
+    await seed_usuario(
+        db_session,
+        email="c@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_usuario(
+        db_session,
+        email="m@test.com",
+        password="Password12345",
+        rol="mesa_ayuda",
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    pv_a = PuntoVenta(empresa_id=1, nombre="PV A", ciudad="Manizales")
+    pv_b = PuntoVenta(empresa_id=1, nombre="PV B", ciudad="Manizales")
+    db_session.add_all([pv_a, pv_b])
+    await db_session.commit()
+    await db_session.refresh(pv_a)
+    await db_session.refresh(pv_b)
+
+    tok_c = await login_token(client, "c@test.com", "Password12345")
+    tok_m = await login_token(client, "m@test.com", "Password12345")
+
+    r1 = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(titulo="T A1", punto_venta_id=pv_a.id),
+    )
+    assert r1.status_code == 201, r1.text
+    r2 = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(titulo="T A2", punto_venta_id=pv_a.id),
+    )
+    assert r2.status_code == 201, r2.text
+    r3 = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok_c),
+        json=_ticket_body(titulo="T B1", punto_venta_id=pv_b.id),
+    )
+    assert r3.status_code == 201, r3.text
+
+    r = await client.get(
+        "/api/tickets",
+        params={"punto_venta_id": pv_a.id},
+        headers=auth_header(tok_m),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["total"] == 2
+    titulos = sorted(t["titulo"] for t in body["items"])
+    assert titulos == ["T A1", "T A2"]
+
+    r = await client.get(
+        "/api/tickets",
+        params={"punto_venta_id": pv_b.id},
+        headers=auth_header(tok_m),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == 1
+    assert r.json()["items"][0]["titulo"] == "T B1"
+
+
+async def test_listar_filtro_punto_venta_respeta_tenant_cliente(client, db_session):  # type: ignore[no-untyped-def]
+    """Cliente solo puede filtrar por PVs de su empresa; pasar uno de otra
+    empresa no debe devolver tickets de esa empresa (tenant_filter + clear)."""
+    await seed_empresa(db_session, pk=1)
+    await seed_empresa(db_session, pk=2)
+    await seed_usuario(
+        db_session,
+        email="c@test.com",
+        password="Password12345",
+        rol="cliente",
+        empresa_id=1,
+    )
+    await seed_categoria(db_session, nombre="HW")
+    await seed_subcategoria(db_session, categoria_id=1, nombre="HW")
+    pv_propio = PuntoVenta(empresa_id=1, nombre="PV Propio", ciudad="Manizales")
+    pv_ajeno = PuntoVenta(empresa_id=2, nombre="PV Ajeno", ciudad="Pereira")
+    db_session.add_all([pv_propio, pv_ajeno])
+    await db_session.commit()
+    await db_session.refresh(pv_propio)
+    await db_session.refresh(pv_ajeno)
+
+    tok = await login_token(client, "c@test.com", "Password12345")
+    r = await client.post(
+        "/api/tickets",
+        headers=auth_header(tok),
+        json=_ticket_body(titulo="T Propio", punto_venta_id=pv_propio.id),
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(
+        "/api/tickets",
+        params={"punto_venta_id": pv_ajeno.id},
+        headers=auth_header(tok),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["total"] == 0
