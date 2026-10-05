@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Ticket } from "@/lib/endpoints";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
+import { useAuthStore } from "@/store/authStore";
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -8,6 +9,8 @@ interface TicketCardProps {
 }
 
 export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
+  const usuario = useAuthStore((s) => s.usuario);
+  const esCliente = usuario?.rol === "cliente";
   return (
     <div
       className={`group relative bg-white border border-brandCustom/30 rounded-xl
@@ -20,7 +23,7 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
     >
       <div className="flex items-center justify-between gap-2 bg-brandCustom/95 p-1 rounded-t-[0.6rem]">
         <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
-          {ticket.empresa_nombre || "Empresa Desconocida"}
+          {esCliente ? ticket.cliente_nombre : ticket.empresa_nombre || "Desconocido"}
         </span>
         <span className="text-white uppercase transition-colors line-clamp-2 text-[10px] px-2 py-1 rounded-full w-fit h-fit">
           {ticket.elemento_afectado.replace("_", " ") || "Elemento Desconocido"}

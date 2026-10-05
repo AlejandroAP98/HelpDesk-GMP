@@ -92,8 +92,8 @@ export default function TicketDetallePage() {
             <dl className="flex sm:flex-row flex-col items-center justify-between gap-2 w-full mb-2 bg-brandCustom rounded-t-[0.6rem] sm:px-6 px-4 py-2">
              <div className="flex sm:justify-start w-full justify-between sm:gap-5 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
-                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Empresa</dt>
-                  <dd className="font-regular text-white text-[11px]">{ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
+                  <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">{esCliente ? "Creado por" : "Empresa"}</dt>
+                  <dd className="font-regular text-white text-[11px]">{esCliente ? `${ticket.cliente_nombre ?? `#${ticket.cliente_id}`}` : ticket.empresa_nombre ?? `#${ticket.empresa_id}`}</dd>
                 </div>
                 <div>
                   <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Subcategoría</dt>
@@ -122,6 +122,7 @@ export default function TicketDetallePage() {
             <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-2">
               <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0" >
                 <span className="font-medium text-gray-500 tracking-wide font-mono uppercase text-xs">#{ticket.id.split("-")[0]}</span>
+                {!esCliente && <span className="text-gray-500 uppercase transition-colors line-clamp-2 sm:text-[11px] text-[9px]">{ticket.cliente_nombre}</span>}
                 <EstadoBadge estado={ticket.estado} />
                 <PrioridadBadge prioridad={ticket.prioridad} />
               </div>

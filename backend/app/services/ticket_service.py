@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.deps import tenant_filter
 from app.models.categoria import Categoria
@@ -518,16 +519,21 @@ async def listar(
     orden: str | None = None,
     q: str | None = None,
     punto_venta_id: int | None = None,
-) -> Pagina[tuple[Ticket, str | None, str | None]]:
+) -> Pagina[tuple[Ticket, str | None, str | None, str | None]]:
     from datetime import datetime, time, timezone
 
     p = paginacion(page, size)
+    cliente_alias = aliased(Usuario, name="cliente")
     base = (
         select(
-            Ticket, Empresa.nombre.label("empresa_nombre"), Usuario.nombre.label("agente_nombre")
+            Ticket,
+            Empresa.nombre.label("empresa_nombre"),
+            Usuario.nombre.label("agente_nombre"),
+            cliente_alias.nombre.label("cliente_nombre"),
         )
         .outerjoin(Empresa, Ticket.empresa_id == Empresa.id)
         .outerjoin(Usuario, Ticket.agente_id == Usuario.id)
+        .outerjoin(cliente_alias, Ticket.cliente_id == cliente_alias.id)
     )
     count_base = select(func.count(Ticket.id))
 
@@ -604,7 +610,7 @@ async def listar(
 
     rows = (await db.execute(query.offset(p.offset).limit(p.limit))).all()
 
-    items = [(ticket, emp_nombre, agente_nombre) for ticket, emp_nombre, agente_nombre in rows]
+    items = [(ticket, emp_nombre, agente_nombre, cliente_nombre) for ticket, emp_nombre, agente_nombre, cliente_nombre in rows]
     return Pagina.of(items, total, p.page, p.size)
 
 

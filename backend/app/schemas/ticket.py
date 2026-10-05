@@ -65,6 +65,7 @@ class TicketOut(BaseModel):
     empresa_id: int
     empresa_nombre: str | None = None
     cliente_id: UUID
+    cliente_nombre: str | None = None
     agente_id: UUID | None
     agente_nombre: str | None = None
     modificado_por_id: UUID | None = None

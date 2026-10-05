@@ -11,6 +11,7 @@ export interface Ticket {
   empresa_id: number;
   empresa_nombre?: string | null;
   cliente_id: string;
+  cliente_nombre?: string | null;
   agente_id: string | null;
   agente_nombre?: string | null;
   modificado_por_id: string | null;

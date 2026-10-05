@@ -35,8 +35,12 @@ async def _ticket_to_out(ticket: Ticket, db: AsyncSession) -> TicketOut:
     emp = (await db.execute(
         select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
     )).scalar_one_or_none()
+    cli = (await db.execute(
+        select(Usuario.nombre).where(Usuario.id == ticket.cliente_id)
+    )).scalar_one_or_none()
     out = TicketOut.model_validate(ticket)
     out.empresa_nombre = emp
+    out.cliente_nombre = cli
     return out
 
 
@@ -72,6 +76,7 @@ async def listar(
                 empresa_id=t.empresa_id,
                 empresa_nombre=emp_nombre,
                 cliente_id=t.cliente_id,
+                cliente_nombre=cliente_nombre,
                 agente_id=t.agente_id,
                 agente_nombre=agente_nombre,
                 modificado_por_id=t.modificado_por_id,
@@ -93,7 +98,7 @@ async def listar(
                 fecha_primera_respuesta=t.fecha_primera_respuesta,
                 fecha_resolucion=t.fecha_resolucion,
             )
-            for t, emp_nombre, agente_nombre in pagina.items
+            for t, emp_nombre, agente_nombre, cliente_nombre in pagina.items
         ],
         pagina.total, pagina.page, pagina.size,
     )

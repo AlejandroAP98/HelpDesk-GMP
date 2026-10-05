@@ -11,6 +11,7 @@ export interface TicketColumnsOptions {
   fechaOpts: Intl.DateTimeFormatOptions;
   prioridadConEstado?: boolean;
   asignadoDestacar?: boolean;
+  creadoPor?: string;
 }
 
 export function buildTicketTableColumns({
@@ -19,6 +20,7 @@ export function buildTicketTableColumns({
   fechaOpts,
   prioridadConEstado = false,
   asignadoDestacar = false,
+  creadoPor = ""
 }: TicketColumnsOptions): Column<Ticket>[] {
   return [
     {
@@ -61,6 +63,15 @@ export function buildTicketTableColumns({
       cell: (t: Ticket) => (
         <span className="text-gray-500 sm:text-xs text-[10px]">
           {t.empresa_nombre}
+        </span>
+      ),
+    },
+    {
+      key: "creado_por",
+      header: "Creado",
+      cell: (t: Ticket) => (
+        <span className="text-gray-500 sm:text-xs text-[10px]">
+          {t.cliente_nombre ?? "-"}
         </span>
       ),
     },
