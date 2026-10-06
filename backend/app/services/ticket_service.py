@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import String, cast, func, select
@@ -22,6 +22,7 @@ from app.schemas.ticket import (
     AsignacionRequest,
     EstadoUpdate,
     HistorialEstadoOut,
+    PausaRequest,
     PrioridadUpdate,
     TicketAdminCreate,
     TicketCreate,
@@ -519,6 +520,7 @@ async def listar(
     orden: str | None = None,
     q: str | None = None,
     punto_venta_id: int | None = None,
+    en_pausa: bool | None = None,
 ) -> Pagina[tuple[Ticket, str | None, str | None, str | None]]:
     from datetime import datetime, time, timezone
 
@@ -571,6 +573,10 @@ async def listar(
         filt = Ticket.punto_venta_id == punto_venta_id
         base = base.where(filt)
         count_base = count_base.where(filt)
+    if en_pausa is not None:
+        filt = Ticket.en_pausa == en_pausa
+        base = base.where(filt)
+        count_base = count_base.where(filt)
 
     if fecha_inicio is not None:
         dt_inicio = datetime.combine(fecha_inicio, time.min, tzinfo=timezone.utc).replace(
@@ -610,7 +616,10 @@ async def listar(
 
     rows = (await db.execute(query.offset(p.offset).limit(p.limit))).all()
 
-    items = [(ticket, emp_nombre, agente_nombre, cliente_nombre) for ticket, emp_nombre, agente_nombre, cliente_nombre in rows]
+    items = [
+        (ticket, emp_nombre, agente_nombre, cliente_nombre)
+        for ticket, emp_nombre, agente_nombre, cliente_nombre in rows
+    ]
     return Pagina.of(items, total, p.page, p.size)
 
 
@@ -677,6 +686,10 @@ async def obtener_detalle(ticket_id: UUID, current: Usuario, db: AsyncSession) -
         fecha_asignacion=ticket.fecha_asignacion,
         fecha_primera_respuesta=ticket.fecha_primera_respuesta,
         fecha_resolucion=ticket.fecha_resolucion,
+        en_pausa=ticket.en_pausa,
+        motivo_pausa=ticket.motivo_pausa,
+        fecha_pausa=ticket.fecha_pausa,
+        segundos_pausa_acumulado=ticket.segundos_pausa_acumulado,
         cliente_nombre=cliente_nombre,
         agente_nombre=agente_nombre,
         modificado_por_nombre=modificado_por_nombre,
@@ -837,6 +850,8 @@ async def cambiar_estado(
     ticket.modificado_por_id = current.id
     if nuevo in (EstadoTicket.resuelto, EstadoTicket.cerrado) and ticket.fecha_resolucion is None:
         ticket.fecha_resolucion = func.now()
+    if nuevo in (EstadoTicket.resuelto, EstadoTicket.cerrado) and ticket.en_pausa:
+        _acumular_tiempo_pausa(ticket)
     await _registrar_historial(ticket.id, current.id, estado_anterior, nuevo, db)
     await db.commit()
     await db.refresh(ticket)
@@ -920,6 +935,131 @@ async def cambiar_prioridad(
         },
     )
     return ticket
+
+
+def _acumular_tiempo_pausa(ticket: Ticket) -> None:
+    """Acumula el tiempo transcurrido desde fecha_pausa en segundos_pausa_acumulado
+    y limpia flag/fecha/motivo. Usado al reanudar o al transicionar a un estado
+    final (resuelto/cerrado) estando en pausa.
+    """
+    if not ticket.en_pausa or ticket.fecha_pausa is None:
+        return
+    ahora = datetime.now(timezone.utc).replace(tzinfo=None)
+    delta = max(int((ahora - ticket.fecha_pausa).total_seconds()), 0)
+    ticket.segundos_pausa_acumulado = (ticket.segundos_pausa_acumulado or 0) + delta
+    ticket.en_pausa = False
+    ticket.motivo_pausa = None
+    ticket.fecha_pausa = None
+
+
+async def poner_en_pausa(
+    ticket_id: UUID, data: PausaRequest, current: Usuario, db: AsyncSession
+) -> Ticket:
+    """Pausa un ticket que espera algo externo (permiso del cliente, repuesto,
+    aprobacion gerencial, etc.). Permisos: admin o mesa de ayuda. Solo valido
+    en estados activo/asignado/en_progreso.
+    """
+    if current.rol not in (
+        RolUsuario.administrador.value,
+        RolUsuario.mesa_ayuda.value,
+    ):
+        raise PermisoDenegado("Solo administradores o mesa de ayuda pueden pausar tickets")
+    ticket = await obtener(ticket_id, current, db)
+    if ticket.estado not in (EstadoTicket.asignado, EstadoTicket.en_progreso):
+        raise Conflicto(f"Ticket en estado {ticket.estado.value} no se puede pausar")
+    if ticket.en_pausa:
+        raise Conflicto("El ticket ya esta en pausa")
+    ticket.en_pausa = True
+    ticket.motivo_pausa = data.motivo
+    ticket.fecha_pausa = func.now()
+    ticket.modificado_por_id = current.id
+    await db.commit()
+    await db.refresh(ticket)
+    empresa_nombre = (
+        await db.execute(select(Empresa.nombre).where(Empresa.id == ticket.empresa_id))
+    ).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    await _publicar_pausa(ticket, empresa_nombre, pausado=True)
+    from app.services import actividad_service
+
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_paused",
+        metadata={"motivo": data.motivo},
+    )
+    return ticket
+
+
+async def reanudar(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket:
+    """Reanuda un ticket previamente pausado. Permisos: admin o mesa de ayuda."""
+    if current.rol not in (
+        RolUsuario.administrador.value,
+        RolUsuario.mesa_ayuda.value,
+    ):
+        raise PermisoDenegado("Solo administradores o mesa de ayuda pueden reanudar tickets")
+    ticket = await obtener(ticket_id, current, db)
+    if not ticket.en_pausa:
+        raise Conflicto("El ticket no esta en pausa")
+    motivo_previo = ticket.motivo_pausa
+    _acumular_tiempo_pausa(ticket)
+    ticket.modificado_por_id = current.id
+    await db.commit()
+    await db.refresh(ticket)
+    empresa_nombre = (
+        await db.execute(select(Empresa.nombre).where(Empresa.id == ticket.empresa_id))
+    ).scalar_one_or_none()
+    await _publicar_evento_ticket(ticket, "ticket:updated", empresa_nombre)
+    await _publicar_pausa(ticket, empresa_nombre, pausado=False, motivo_previo=motivo_previo)
+    from app.services import actividad_service
+
+    await actividad_service.registrar(
+        empresa_id=ticket.empresa_id,
+        usuario_id=current.id,
+        usuario_nombre=current.nombre,
+        ticket_id=ticket.id,
+        tipo_evento="ticket_resumed",
+        metadata={"motivo": motivo_previo},
+    )
+    return ticket
+
+
+async def _publicar_pausa(
+    ticket: Ticket,
+    empresa_nombre: str | None,
+    pausado: bool,
+    motivo_previo: str | None = None,
+) -> None:
+    """Publica ticket:paused o ticket:resumed al agente asignado + roles internos."""
+    from app.websockets.pubsub import publish_to_roles, publish_to_users
+
+    event_type = "ticket:paused" if pausado else "ticket:resumed"
+    payload = _ticket_payload(ticket, event_type, empresa_nombre)
+    payload["motivo"] = ticket.motivo_pausa if pausado else motivo_previo
+    targets: list[UUID] = []
+    if ticket.agente_id:
+        targets.append(ticket.agente_id)
+    try:
+        await publish_to_roles(
+            roles=[
+                RolUsuario.mesa_ayuda.value,
+                RolUsuario.administrador.value,
+            ],
+            event=payload,
+        )
+        if targets:
+            await publish_to_users(targets, event=payload)
+        _logger.info(
+            "Evento %s publicado para ticket %s",
+            event_type,
+            ticket.id,
+        )
+    except Exception:
+        _logger.warning(
+            "No se pudo publicar %s para ticket %s", event_type, ticket.id, exc_info=True
+        )
 
 
 async def reabrir(ticket_id: UUID, current: Usuario, db: AsyncSession) -> Ticket:

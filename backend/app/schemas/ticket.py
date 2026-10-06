@@ -58,6 +58,10 @@ class PrioridadUpdate(BaseModel):
     prioridad: PrioridadTicket
 
 
+class PausaRequest(BaseModel):
+    motivo: str = Field(..., min_length=3, max_length=500)
+
+
 class TicketOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +91,10 @@ class TicketOut(BaseModel):
     fecha_asignacion: DatetimeUTC | None = None
     fecha_primera_respuesta: DatetimeUTC | None = None
     fecha_resolucion: DatetimeUTC | None = None
+    en_pausa: bool = False
+    motivo_pausa: str | None = None
+    fecha_pausa: DatetimeUTC | None = None
+    segundos_pausa_acumulado: int = 0
 
 
 class TicketDetalle(TicketOut):

@@ -5,6 +5,7 @@ export interface TimeLineItem {
   subtitle: string;
   date: Date | null;
   duration?: string;
+  extraLabel?: string;
   color: string;
   dotColor: string;
   icon: React.ReactNode;
@@ -29,6 +30,14 @@ export function parseTicketDate(d: string | null | undefined): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
+export function tiempoEnPausaSeg(ticket: Ticket): number {
+  const base = ticket.segundos_pausa_acumulado ?? 0;
+  if (!ticket.en_pausa || !ticket.fecha_pausa) return base;
+  const inicio = new Date(ticket.fecha_pausa).getTime();
+  if (Number.isNaN(inicio)) return base;
+  return base + Math.max(0, Math.floor((Date.now() - inicio) / 1000));
+}
+
 export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
   const creacion = parseTicketDate(ticket.fecha_creacion);
   const asignacion = parseTicketDate(ticket.fecha_asignacion);
@@ -36,6 +45,13 @@ export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
   const resolucion = parseTicketDate(ticket.fecha_resolucion);
 
   const fmt = (d: Date) => d.toLocaleString(undefined, { timeZone: "America/Bogota", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+
+  const tiempoPausaSeg = tiempoEnPausaSeg(ticket);
+  const tiempoPausaMs = tiempoPausaSeg * 1000;
+  const duracionEfectiva =
+    creacion && resolucion
+      ? Math.max(resolucion.getTime() - creacion.getTime() - tiempoPausaMs, 0)
+      : null;
 
   const items: TimeLineItem[] = [
     {
@@ -74,7 +90,12 @@ export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
       label: "Resuelto",
       subtitle: resolucion ? fmt(resolucion) : "Sin resolver",
       date: resolucion,
-      duration: creacion && resolucion ? formatDuration(resolucion.getTime() - creacion.getTime()) : undefined,
+      duration:
+        duracionEfectiva != null ? formatDuration(duracionEfectiva) : undefined,
+      extraLabel:
+        tiempoPausaSeg > 0 && duracionEfectiva != null
+          ? `Pausado: ${formatDuration(tiempoPausaMs)}`
+          : undefined,
       color: "bg-greenCustom",
       dotColor: resolucion ? " text-white bg-greenCustom" : "border-gray-300 text-gray-300 bg-gray-50",
       icon: (

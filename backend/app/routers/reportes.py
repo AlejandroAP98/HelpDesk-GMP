@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import AsyncIterator
 from zoneinfo import ZoneInfo
 
@@ -51,7 +51,11 @@ CSV_HEADER = [
     "fecha_asignacion",
     "fecha_primera_respuesta",
     "fecha_resolucion",
-    "tiempo_resolucion_horas",
+    "tiempo_resolucion_minutos",
+    "tiempo_en_pausa_minutos",
+    "tiempo_resolucion_efectivo_minutos",
+    "en_pausa",
+    "motivo_pausa",
     "estados",
 ]
 
@@ -59,11 +63,15 @@ _CSV_DANGEROUS_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _csv_safe(value: str) -> str:
-    """Neutraliza CSV formula injection: prefija celdas que Excel podria
-    interpretar como formula (=, +, -, @)."""
+    """Neutraliza CSV formula injection y ambiguedad por comas internas.
+
+    Reemplaza comas internas por ';' para que parsers que no respetan
+    quotes (algunos scripts, parsers viejos) no confundan las comas de
+    descripciones con comas separadoras de columna.
+    """
     if value.startswith(_CSV_DANGEROUS_PREFIXES):
-        return f"'{value}"
-    return value
+        value = f"'{value}"
+    return value.replace(",", ";")
 
 
 async def _cargar_historial(
@@ -82,9 +90,13 @@ async def _cargar_historial(
     for row in result_hist.scalars().all():
         key = str(row.ticket_id)
         fecha_col = _a_bogota(row.fecha)
-        entry = f"{row.estado_anterior.value}->{row.estado_nuevo.value} ({fecha_col.strftime('%Y-%m-%d %H:%M')})" if fecha_col else ""
+        entry = (
+            f"{row.estado_anterior.value}->{row.estado_nuevo.value} ({fecha_col.strftime('%Y-%m-%d %H:%M')})"
+            if fecha_col
+            else ""
+        )
         historial_map.setdefault(key, []).append(entry)
-    return {k: ", ".join(v) for k, v in historial_map.items()}
+    return {k: " | ".join(v) for k, v in historial_map.items()}
 
 
 async def _generar_csv(
@@ -92,7 +104,7 @@ async def _generar_csv(
     filtros: list,
 ) -> AsyncIterator[bytes]:
     buf = io.StringIO()
-    writer = csv.writer(buf)
+    writer = csv.writer(buf, quoting=csv.QUOTE_ALL)
 
     buf.write("\ufeff")
     writer.writerow(CSV_HEADER)
@@ -128,10 +140,27 @@ async def _generar_csv(
             subcategoria_nombre = r[3] or ""
             agente_nombre = r[4] or ""
 
-            tiempo_horas: float | None = None
+            tiempo_minutos: int | None = None
+            tiempo_efectivo_minutos: int | None = None
             if ticket.fecha_resolucion is not None and ticket.fecha_creacion is not None:
                 delta = ticket.fecha_resolucion - ticket.fecha_creacion
-                tiempo_horas = round(delta.total_seconds() / 3600, 2)
+                tiempo_minutos = round(delta.total_seconds() / 60)
+                tiempo_pausa_seg = ticket.segundos_pausa_acumulado or 0
+                if ticket.en_pausa and ticket.fecha_pausa is not None:
+                    ahora_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+                    tiempo_pausa_seg += max(
+                        int((ahora_utc_naive - ticket.fecha_pausa).total_seconds()), 0
+                    )
+                efectivo_seg = max(delta.total_seconds() - tiempo_pausa_seg, 0)
+                tiempo_efectivo_minutos = round(efectivo_seg / 60)
+
+            tiempo_pausa_minutos: int | None = None
+            if ticket.segundos_pausa_acumulado or ticket.en_pausa:
+                pausa_seg = ticket.segundos_pausa_acumulado or 0
+                if ticket.en_pausa and ticket.fecha_pausa is not None:
+                    ahora_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+                    pausa_seg += max(int((ahora_utc_naive - ticket.fecha_pausa).total_seconds()), 0)
+                tiempo_pausa_minutos = round(pausa_seg / 60)
 
             fc = _a_bogota(ticket.fecha_creacion)
             fa = _a_bogota(ticket.fecha_asignacion)
@@ -153,7 +182,11 @@ async def _generar_csv(
                     fa.isoformat() if fa else "",
                     fpr.isoformat() if fpr else "",
                     fr.isoformat() if fr else "",
-                    tiempo_horas if tiempo_horas is not None else "",
+                    tiempo_minutos if tiempo_minutos is not None else "",
+                    tiempo_pausa_minutos if tiempo_pausa_minutos is not None else "",
+                    tiempo_efectivo_minutos if tiempo_efectivo_minutos is not None else "",
+                    "SI" if ticket.en_pausa else "NO",
+                    _csv_safe(ticket.motivo_pausa or ""),
                     historiales.get(str(ticket.id), ""),
                 ]
             )

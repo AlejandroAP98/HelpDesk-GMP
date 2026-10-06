@@ -112,6 +112,39 @@ function renderActividad(item: ActividadLog): ReactNode {
           <TicketLink ticketId={item.ticket_id}>{ticket}</TicketLink>
         </>
       );
+    case "ticket_paused":
+      return (
+        <>
+          <span className="font-medium text-gray-800">{nombre}</span>
+          {" pausó el ticket "}
+          <TicketLink ticketId={item.ticket_id}>{ticket}</TicketLink>
+          {meta.motivo ? (
+            <>
+              {" por: "}
+              <span className="inline-flex items-center rounded bg-amberCustom/10 px-1.5 py-0.5 text-[11px] font-medium text-amberCustom">
+                {meta.motivo}
+              </span>
+            </>
+          ) : null}
+        </>
+      );
+    case "ticket_resumed":
+      return (
+        <>
+          <span className="font-medium text-gray-800">{nombre}</span>
+          {" reanudó el ticket "}
+          <TicketLink ticketId={item.ticket_id}>{ticket}</TicketLink>
+          {meta.motivo ? (
+            <>
+              {" (pausa por: "}
+              <span className="inline-flex items-center rounded bg-amberCustom/10 px-1.5 py-0.5 text-[10px] font-medium text-amberCustom">
+                {meta.motivo}
+              </span>
+              {")"}
+            </>
+          ) : null}
+        </>
+      );
     case "comment_added":
       return (
         <>

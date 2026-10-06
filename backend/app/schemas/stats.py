@@ -1,4 +1,5 @@
 """Schema del endpoint de estadisticas del dashboard."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ class StatsOut(BaseModel):
     resueltos: int
     cerrados: int
     urgentes: int
+    en_pausa: int = 0
 
 
 class ItemEstado(BaseModel):

@@ -18,7 +18,7 @@ export function useDashboard() {
   const usuario = useAuthStore((s) => s.usuario);
   const [recientes, setRecientes] = useState<Ticket[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0, en_progreso: 0, asignados: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, abiertos: 0, urgentes: 0, resueltos: 0, cerrados: 0, en_progreso: 0, asignados: 0, en_pausa: 0 });
   const [graficas, setGraficas] = useState<Graficas | null>(null);
   const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
   const [fechaInicio, setFechaInicio] = useState("");

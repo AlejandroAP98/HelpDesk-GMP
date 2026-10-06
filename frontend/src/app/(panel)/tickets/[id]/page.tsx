@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -12,9 +13,12 @@ import {
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { getTicketTimeline } from "@/lib/ticketTimeline";
 import { EstadoBadge, PrioridadBadge, PRIORIDADES, prioridadLabels, estadoStyles } from "@/components/Badges";
+import { PausaBadge } from "@/components/PausaBadge";
+import { PausaModal } from "@/components/PausaModal";
 import UserCommentsIcon from "@/app/assets/icons/UserCommentsIcon";
 import ChangeStatusIcon from "@/app/assets/icons/ChangeStatusIcon";
 import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
+import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { AdjuntosGallery } from "@/components/AdjuntosGallery";
 import { QuickReplies } from "@/components/QuickReplies";
@@ -45,8 +49,10 @@ export default function TicketDetallePage() {
     historialPage, historialTotalPages, cargarMasHistorial,
     agentes, agenteSel, setAgenteSel, reasignando, reasignar,
     handleCopiar, campoCopiado,
-    enviarComentario, cambiarEstado, cerrar, reabrir, asignarme, setPrioridad, cargar,
+    enviarComentario, cambiarEstado, cerrar, reabrir, asignarme, setPrioridad, pausar, reanudar, cargar,
   } = useTicketDetail(ticketId);
+
+  const [pausaModalOpen, setPausaModalOpen] = useState(false);
 
   if (cargando) return (
     <LoadingState />
@@ -75,6 +81,11 @@ export default function TicketDetallePage() {
   const puedeReabrir = esAdmin;
   const puedeAutoasignar = (esAdmin || esMesaAyuda) && ticket.estado === "abierto";
   const puedeReasignar = (esAdmin || esMesaAyuda) && ticket.agente_id && ticket.estado !== "cerrado" && ticket.estado !== "resuelto";
+  const puedePausar =
+    (esAdmin || esMesaAyuda) &&
+    !ticket.en_pausa &&
+    (ticket.estado === "asignado" || ticket.estado === "en_progreso");
+  const puedeReanudar = (esAdmin || esMesaAyuda) && ticket.en_pausa;
   const estaCerrado = ticket.estado === "cerrado";
   return (
     <div className="space-y-1">
@@ -89,7 +100,7 @@ export default function TicketDetallePage() {
       <div className="flex flex-col lg:flex-row gap-6 ">
         <div className="flex flex-col gap-4 flex-1 min-w-0 ">
           <div className="bg-cardCustom shadow-card animate-fade-in rounded-xl border border-brandCustom/30">
-            <dl className="flex sm:flex-row flex-col items-center justify-between gap-2 w-full mb-2 bg-brandCustom rounded-t-[0.6rem] sm:px-6 px-4 py-2">
+            <dl className="flex sm:flex-row flex-col items-center justify-between gap-2 w-full bg-brandCustom rounded-t-[0.6rem] sm:px-6 px-4 py-2">
              <div className="flex sm:justify-start w-full justify-between sm:gap-5 gap-1 sm:pb-0 pb-1 sm:border-b-0 border-b">
                 <div>
                   <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">{esCliente ? "Creado por" : "Empresa"}</dt>
@@ -119,9 +130,20 @@ export default function TicketDetallePage() {
                 </div>
               </div>
             </dl>
+            <div className="pb-2">
+              {ticket.en_pausa && (
+                <PausaBadge
+                  motivo={ticket.motivo_pausa}
+                  fechaPausa={ticket.fecha_pausa}
+                  segundosAcumulado={ticket.segundos_pausa_acumulado}
+                  mostrarInfo={true}
+                  className="w-full justify-center"
+                />
+              )}
+            </div>
             <div className="flex flex-col md:flex-row-reverse md:items-start justify-between gap-4 px-4 pb-2">
-              <div className="flex flex-row md:flex-col items-center justify-end md:items-end gap-2 shrink-0" >
-                <span className="font-medium text-gray-500 tracking-wide font-mono uppercase text-xs">#{ticket.id.split("-")[0]}</span>
+              <div className="flex flex-row md:flex-col items-center justify-between md:items-end gap-2 shrink-0" >
+                <span className="font-medium text-gray-500 tracking-wide font-mono uppercase sm:text-xs text-[10px]">#{ticket.id.split("-")[0]}</span>
                 {!esCliente && <span className="text-gray-500 uppercase transition-colors line-clamp-2 sm:text-[11px] text-[9px]">{ticket.cliente_nombre}</span>}
                 <EstadoBadge estado={ticket.estado} />
                 <PrioridadBadge prioridad={ticket.prioridad} />
@@ -233,18 +255,41 @@ export default function TicketDetallePage() {
                   )}
                 </div>
                 {!esCliente && (
-                  <div className="flex flex-col self-end w-full">
-                    <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block self-end">Cambiar prioridad:</label>
-                    <select
-                      value={ticket.prioridad}
-                      onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
-                      disabled={accion !== null}
-                      className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                      {PRIORIDADES.map((p) => (
-                        <option key={p} value={p}>{prioridadLabels[p]}</option>
-                      ))}
-                    </select>
+                  <div className="flex justify-end w-full gap-2">
+                    <div className="flex flex-col">
+                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block ">Pausar</label>
+                      {puedePausar && (
+                        <button
+                          onClick={() => setPausaModalOpen(true)}
+                          disabled={accion !== null}
+                          className="self-end rounded-xl bg-slate-500 hover:bg-slate-400 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                        >
+                          Pausar ticket
+                        </button>
+                      )}
+                      {puedeReanudar && (
+                        <button
+                          onClick={reanudar}
+                          disabled={accion !== null}
+                          className="self-end rounded-xl bg-slate-500 hover:bg-slate-400 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
+                        >
+                          {accion === "reanudar" ? "Reanudando..." : "Reanudar"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block">Prioridad:</label>
+                      <select
+                        value={ticket.prioridad}
+                        onChange={(e) => setPrioridad(e.target.value as PrioridadTicket)}
+                        disabled={accion !== null}
+                        className="rounded-xl border border-gray-400 bg-gray-50 text-textCustom sm:text-xs text-[11px] px-3 py-2 sm:py-2.5 font-normal focus:border-brandCustom focus:ring-1 focus:ring-brandCustom outline-none transition-all cursor-pointer ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                        {PRIORIDADES.map((p) => (
+                          <option key={p} value={p}>{prioridadLabels[p]}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   )}
               </div>
@@ -321,7 +366,19 @@ export default function TicketDetallePage() {
                           </div>
                           <span className={`font-semibold text-xs ${c.usuario_nombre !== usuario?.nombre  ? 'text-brandCustom' : 'text-grayCustom'}`}>{c.usuario_nombre ? (c.usuario_nombre === usuario?.nombre ? "Yo" : c.usuario_nombre) : "Usuario" }</span>
                         </div>
-                        <span className="text-gray-400 text-[9px] self-start ">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
+                        <div className="flex items-center gap-1 self-start">
+                          {!esCliente && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopiar(`comentario-${c.id}`, c.contenido)}
+                              className={`shrink-0 transition-colors p-0.5 ${campoCopiado === `comentario-${c.id}` ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`}
+                              title="Copiar comentario"
+                            >
+                              <CopyInfoIcon copied={campoCopiado === `comentario-${c.id}`} />
+                            </button>
+                          )}
+                          <span className="text-gray-400 text-[9px]">{new Date(c.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota" })}</span>
+                        </div>
                       </div>
                     </div>
                     {c.es_nota_interna && (
@@ -411,13 +468,20 @@ export default function TicketDetallePage() {
                           {item.icon}
                         </div>
                         <div className="flex-1 min-w-0 pb-2">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <p className={`text-[11px] font-medium ${item.date ? "text-gray-800" : "text-gray-400"}`}>{item.label}</p>
-                            {item.duration && (
-                              <span className="text-[10px] font-semibold text-brandCustom bg-brandCustom/10 rounded-md px-1.5 py-0.5 shrink-0">
-                                {item.duration}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {item.extraLabel && (
+                                <span className="text-[10px] font-semibold text-brandCustom rounded-md px-1.5 py-0.5">
+                                  {item.extraLabel}
+                                </span>
+                              )}
+                              {item.duration && (
+                                <span className="text-[10px] font-semibold text-brandCustom bg-brandCustom/10 rounded-md px-1.5 py-0.5">
+                                  {item.duration}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <p className={`text-[10px] ${item.date ? "text-gray-500" : "text-gray-300"}`}>{item.subtitle}</p>
                         </div>
@@ -470,6 +534,15 @@ export default function TicketDetallePage() {
           </section>
         </div>
       </div>
+      <PausaModal
+        open={pausaModalOpen}
+        procesando={accion === "pausar"}
+        onClose={() => setPausaModalOpen(false)}
+        onConfirm={async (motivo) => {
+          await pausar(motivo);
+          setPausaModalOpen(false);
+        }}
+      />
     </div>
   );
 }

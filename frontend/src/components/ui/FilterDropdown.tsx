@@ -43,7 +43,7 @@ export function FilterDropdown({
   };
 
   return (
-    <div ref={containerRef} className={`relative xl:hidden ${className}`}>
+    <div ref={containerRef} className={`relative ${className}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

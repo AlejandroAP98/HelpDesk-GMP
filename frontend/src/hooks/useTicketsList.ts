@@ -46,6 +46,7 @@ export function useTicketsList() {
   const [pvLoading, setPvLoading] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaDebounced, setBusquedaDebounced] = useState("");
+  const [enPausaFiltro, setEnPausaFiltro] = useState<"todos" | "en_pausa" | "activos">("todos");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pvDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -134,6 +135,7 @@ export function useTicketsList() {
         if (filtroAgenteId) params.agente_id = filtroAgenteId;
         if (filtroPuntoVentaId) params.punto_venta_id = filtroPuntoVentaId;
         if (busquedaDebounced.length >= 2) params.q = busquedaDebounced;
+        if (enPausaFiltro === "en_pausa") params.en_pausa = true;
         const data = await ticketApi.listar(params);
         setTickets(data.items);
         setTotal(data.total);
@@ -145,7 +147,7 @@ export function useTicketsList() {
         setCargando(false);
       }
     })();
-  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, filtroPuntoVentaId, busquedaDebounced]);
+  }, [page, estado, prioridad, vista, fechaInicio, fechaFin, orden, filtroEmpresaId, filtroAgenteId, filtroPuntoVentaId, busquedaDebounced, enPausaFiltro]);
 
   const hayFiltrosFecha = fechaInicio || fechaFin;
   const limpiarFiltrosFecha = () => {
@@ -244,6 +246,7 @@ export function useTicketsList() {
     setFiltroPuntoVentaId("");
     setFechaInicio("");
     setFechaFin("");
+    setEnPausaFiltro("todos");
     setPage(1);
     setPvSearch("");
   };
@@ -255,7 +258,8 @@ export function useTicketsList() {
     (filtroAgenteId ? 1 : 0) +
     (filtroPuntoVentaId ? 1 : 0) +
     (fechaInicio ? 1 : 0) +
-    (fechaFin ? 1 : 0);
+    (fechaFin ? 1 : 0) +
+    (enPausaFiltro === "en_pausa" ? 1 : 0);
 
   return {
     tickets, total, totalPages, page, setPage,
@@ -266,6 +270,7 @@ export function useTicketsList() {
     filtroPuntoVentaId, setFiltroPuntoVentaId,
     empresas, agentes, pvResults, pvSearch, setPvSearch, pvLoading,
     busqueda, setBusqueda,
+    enPausaFiltro, setEnPausaFiltro,
     hayFiltrosFecha, limpiarFiltrosFecha, limpiarBusqueda, limpiarTodo,
     activeFilterCount,
     cambiarVista, cambiarModo, cambiarOrden,

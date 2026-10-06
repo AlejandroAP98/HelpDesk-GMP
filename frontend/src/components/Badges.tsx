@@ -1,3 +1,5 @@
+import TicketPauseIcon from "@/app/assets/icons/TicketPauseIcon";
+
 export const PRIORIDADES = ["baja", "media", "alta", "urgente"] as const;
 
 export const prioridadLabels: Record<string, string> = {
@@ -36,20 +38,37 @@ const porcentajeRellenos: Record<number, string> = {
   100: "M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0",
 };
 
-export function EstadoBadge({ estado }: { estado: string }) {
+export function EstadoBadge({ estado, pausa }: { estado: string, pausa?: boolean }) {
   const pct = estadoPorcentaje[estado];
   return (
     <span className={`inline-flex items-center gap-1 px-1.5 bg-brandCustom/5 text-nowrap rounded-md py-1 sm:text-[11px] text-[9px] font-medium tracking-wide uppercase ${estadoStyles[estado] ?? ""}`}>
-      {pct !== undefined && (
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#508484" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className={`icon icon-tabler icons-tabler-outline icon-tabler-percentage-${pct}`} viewBox="0 0 24 24">
-          <path fill="none" stroke="none" d="M0 0h24v24H0z" />
-          {pct > 0 && pct < 100 && <path fill="#508484" stroke="none" d={porcentajeRellenos[pct]} />}
-          {pct === 100
-            ? <path fill="#508484" stroke="none" d={porcentajeRellenos[100]} />
-            : <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />}
-        </svg>
+      {pausa ? (
+        <>
+          {pct !== undefined && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#95adb6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className={`icon icon-tabler icons-tabler-outline icon-tabler-percentage-${pct}`} viewBox="0 0 24 24">
+                <path fill="none" stroke="none" d="M0 0h24v24H0z" />
+                {pct > 0 && pct < 100 && <path fill="#95adb6" stroke="none" d={porcentajeRellenos[pct]} />}
+                {pct === 100
+                  ? <path fill="#95adb6" stroke="none" d={porcentajeRellenos[100]} />
+                  : <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />}
+              </svg>
+            )}
+          <span className="text-[#95adb6]" title="En espera de gestión">EN ESPERA...</span>
+        </>
+      ) : (
+        <>
+          {pct !== undefined && (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#508484" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className={`icon icon-tabler icons-tabler-outline icon-tabler-percentage-${pct}`} viewBox="0 0 24 24">
+              <path fill="none" stroke="none" d="M0 0h24v24H0z" />
+              {pct > 0 && pct < 100 && <path fill="#508484" stroke="none" d={porcentajeRellenos[pct]} />}
+              {pct === 100
+                ? <path fill="#508484" stroke="none" d={porcentajeRellenos[100]} />
+                : <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />}
+            </svg>
+          )}
+          <span title={`Progreso del ticket ${pct}%`} >{estado.replace("_", " ")}</span>
+        </>
       )}
-      <span title={`Progreso del ticket ${pct}%`} >{estado.replace("_", " ")}</span>
     </span>
   );
 }

@@ -35,6 +35,10 @@ export interface Ticket {
   fecha_primera_respuesta?: string | null;
   fecha_resolucion?: string | null;
   subcategoria_nombre?: string | null;
+  en_pausa?: boolean;
+  motivo_pausa?: string | null;
+  fecha_pausa?: string | null;
+  segundos_pausa_acumulado?: number;
 }
 
 export interface Pagina<T> {
@@ -117,6 +121,7 @@ export interface Stats {
   resueltos: number;
   cerrados: number;
   urgentes: number;
+  en_pausa: number;
 }
 
 export interface GraficaItemEstado {
@@ -339,6 +344,14 @@ export const ticketApi = {
   },
   reabrir: async (id: string) => {
     const r = await api.post(`/api/tickets/${id}/reabrir`);
+    return r.data as Ticket;
+  },
+  pausar: async (id: string, motivo: string) => {
+    const r = await api.post(`/api/tickets/${id}/pausar`, { motivo });
+    return r.data as Ticket;
+  },
+  reanudar: async (id: string) => {
+    const r = await api.post(`/api/tickets/${id}/reanudar`);
     return r.data as Ticket;
   },
   historial: async (id: string, params: Record<string, unknown> = {}) => {
@@ -740,7 +753,9 @@ export type TipoActividad =
   | "priority_changed"
   | "ticket_reopened"
   | "comment_added"
-  | "attachment_uploaded";
+  | "attachment_uploaded"
+  | "ticket_paused"
+  | "ticket_resumed";
 
 export interface ActividadLog {
   empresa_id: number;

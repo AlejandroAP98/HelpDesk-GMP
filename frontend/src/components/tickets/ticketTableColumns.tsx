@@ -78,7 +78,7 @@ export function buildTicketTableColumns({
     {
       key: "estado",
       header: "Estado",
-      cell: (t: Ticket) => <EstadoBadge estado={t.estado} />,
+      cell: (t: Ticket) => <EstadoBadge estado={t.estado} pausa={t.en_pausa} />,
     },
     {
       key: "prioridad",

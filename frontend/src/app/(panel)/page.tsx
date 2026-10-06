@@ -20,10 +20,10 @@ import { ESTADO_DONUT_COLORS, ESTADO_DONUT_LABELS, PRIORIDAD_DONUT_COLORS, PRIOR
 import NewTicketIcon from "../assets/icons/NewTicketIcon";
 import TicketIcon from "../assets/icons/TicketIcon";
 import TicketOpenedIcon from "../assets/icons/TicketOpenedIcon";
-import TicketAlertIcon from "../assets/icons/TicketAlertIcon";
 import TicketSolvedIcon from "../assets/icons/TicketSolvedIcon";
 import TicketClosedIcon from "../assets/icons/TicketClosedIcon";
 import TicketProgressIcon from "../assets/icons/TicketProgressIcon";
+import TicketPauseIcon from "../assets/icons/TicketPauseIcon";
 import AssingUserIcon from "../assets/icons/AssignUserIcon";
 
 const columnasRecientes = buildTicketTableColumns({
@@ -71,15 +71,12 @@ export default function PanelHomePage() {
           )
         }
       />
-      <section className={`grid grid-cols-3 md:grid-cols-4 ${!esCliente ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fade-in`}>
+      <section className={`grid grid-cols-3 md:grid-cols-4 xl:grid-cols-7 md:gap-4 gap-2 bg-cardCustom p-4 sm:p-6 rounded-2xl items-center animate-fade-in`}>
         <StatsCard label="Total tickets" value={stats.total} icon={<TicketIcon />}  className="bg-brandCustom animate-scale-in " />
         <StatsCard label="Abiertos" value={stats.abiertos} icon={<TicketOpenedIcon />}  className="animate-scale-in bg-blueCustom " />
-        {!esCliente && (
-          stats.urgentes > 0 ? <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-pulse bg-redCustom shadow-lg shadow-red-400/70 " />
-          : <StatsCard label="Urgentes" value={stats.urgentes} icon={<TicketAlertIcon />}  className="animate-scale-in bg-redCustom" />
-        )}
         <StatsCard label="Asignados" value={stats.asignados} icon={<AssingUserIcon />}  className="animate-scale-in bg-violetCustom" />
         <StatsCard label="En Progreso" value={stats.en_progreso} icon={<TicketProgressIcon />} className="animate-scale-in bg-yellowCustom" />
+        <StatsCard label="En Espera" value={stats.en_pausa ?? 0} icon={<TicketPauseIcon />} className="animate-scale-in bg-amberCustom" />
         <StatsCard label="Resueltos" value={stats.resueltos} icon={<TicketSolvedIcon />}  className="animate-scale-in bg-greenCustom" />
         <StatsCard label="Cerrados" value={stats.cerrados} icon={<TicketClosedIcon />}  className="animate-scale-in bg-grayCustom" />
       </section>

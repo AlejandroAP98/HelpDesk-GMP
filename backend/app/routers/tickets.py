@@ -1,4 +1,5 @@
 """Endpoints REST de Tickets."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -17,6 +18,7 @@ from app.schemas.ticket import (
     AsignacionRequest,
     EstadoUpdate,
     HistorialEstadoOut,
+    PausaRequest,
     PrioridadUpdate,
     TicketAdminCreate,
     TicketCreate,
@@ -32,12 +34,12 @@ router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 
 async def _ticket_to_out(ticket: Ticket, db: AsyncSession) -> TicketOut:
-    emp = (await db.execute(
-        select(Empresa.nombre).where(Empresa.id == ticket.empresa_id)
-    )).scalar_one_or_none()
-    cli = (await db.execute(
-        select(Usuario.nombre).where(Usuario.id == ticket.cliente_id)
-    )).scalar_one_or_none()
+    emp = (
+        await db.execute(select(Empresa.nombre).where(Empresa.id == ticket.empresa_id))
+    ).scalar_one_or_none()
+    cli = (
+        await db.execute(select(Usuario.nombre).where(Usuario.id == ticket.cliente_id))
+    ).scalar_one_or_none()
     out = TicketOut.model_validate(ticket)
     out.empresa_nombre = emp
     out.cliente_nombre = cli
@@ -54,20 +56,36 @@ async def listar(
     agente_id: UUID | None = Query(None),
     cliente_id: UUID | None = Query(None),
     vista: VistaTicket | None = Query(None),
-    fecha_inicio: date | None = Query(None, description="Filtrar tickets creados desde esta fecha (YYYY-MM-DD)"),
-    fecha_fin: date | None = Query(None, description="Filtrar tickets creados hasta esta fecha (YYYY-MM-DD)"),
+    fecha_inicio: date | None = Query(
+        None, description="Filtrar tickets creados desde esta fecha (YYYY-MM-DD)"
+    ),
+    fecha_fin: date | None = Query(
+        None, description="Filtrar tickets creados hasta esta fecha (YYYY-MM-DD)"
+    ),
     orden: str | None = Query(None, description="Ordenamiento: 'prioridad' (default) o 'fecha'"),
     q: str | None = Query(None, description="Buscar por #ticket o titulo"),
     punto_venta_id: int | None = Query(None, description="Filtrar por punto de venta (FK)"),
+    en_pausa: bool | None = Query(None, description="Filtrar por tickets en pausa"),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[TicketOut]:
     pagina = await ticket_service.listar(
-        current=current, db=db, page=page, size=size, estado=estado,
-        prioridad=prioridad, empresa_id=empresa_id,
-        agente_id=agente_id, cliente_id=cliente_id, vista=vista,
-        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, orden=orden,
-        q=q, punto_venta_id=punto_venta_id,
+        current=current,
+        db=db,
+        page=page,
+        size=size,
+        estado=estado,
+        prioridad=prioridad,
+        empresa_id=empresa_id,
+        agente_id=agente_id,
+        cliente_id=cliente_id,
+        vista=vista,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+        orden=orden,
+        q=q,
+        punto_venta_id=punto_venta_id,
+        en_pausa=en_pausa,
     )
     return Pagina.of(
         [
@@ -97,10 +115,16 @@ async def listar(
                 fecha_asignacion=t.fecha_asignacion,
                 fecha_primera_respuesta=t.fecha_primera_respuesta,
                 fecha_resolucion=t.fecha_resolucion,
+                en_pausa=t.en_pausa,
+                motivo_pausa=t.motivo_pausa,
+                fecha_pausa=t.fecha_pausa,
+                segundos_pausa_acumulado=t.segundos_pausa_acumulado,
             )
             for t, emp_nombre, agente_nombre, cliente_nombre in pagina.items
         ],
-        pagina.total, pagina.page, pagina.size,
+        pagina.total,
+        pagina.page,
+        pagina.size,
     )
 
 
@@ -121,9 +145,7 @@ async def historial(
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> Pagina[HistorialEstadoOut]:
-    return await ticket_service.listar_historial(
-        ticket_id, current, db, page=page, size=size
-    )
+    return await ticket_service.listar_historial(ticket_id, current, db, page=page, size=size)
 
 
 @router.post("", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
@@ -222,4 +244,31 @@ async def reabrir(
     current: Usuario = Depends(require_admin),
 ) -> TicketOut:
     ticket = await ticket_service.reabrir(ticket_id, current, db)
+    return await _ticket_to_out(ticket, db)
+
+
+@router.post("/{ticket_id}/pausar", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
+async def pausar(
+    ticket_id: UUID,
+    data: PausaRequest,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_mesa_ayuda),
+) -> TicketOut:
+    """Pausa un ticket que espera algo externo al equipo (permiso del cliente,
+    repuesto, aprobacion gerencial). Permisos: admin o mesa de ayuda. Solo
+    valido en estados asignado/en_progreso."""
+    ticket = await ticket_service.poner_en_pausa(ticket_id, data, current, db)
+    return await _ticket_to_out(ticket, db)
+
+
+@router.post("/{ticket_id}/reanudar", response_model=TicketOut)
+async def reanudar(
+    ticket_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current: Usuario = Depends(require_mesa_ayuda),
+) -> TicketOut:
+    """Reanuda un ticket pausado. Acumula el tiempo transcurrido en
+    segundos_pausa_acumulado para descontarlo del MTTR/SLA. Permisos:
+    admin o mesa de ayuda."""
+    ticket = await ticket_service.reanudar(ticket_id, current, db)
     return await _ticket_to_out(ticket, db)

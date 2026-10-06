@@ -1,4 +1,5 @@
 """Endpoint de estadisticas para el dashboard."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -40,7 +41,9 @@ async def obtener_stats(
         group_stmt = group_stmt.where(cond)
     group_stmt = group_stmt.group_by(Ticket.estado)
     rows = (await db.execute(group_stmt)).all()
-    by_estado: dict[str, int] = {row[0].value if hasattr(row[0], "value") else row[0]: row[1] for row in rows}
+    by_estado: dict[str, int] = {
+        row[0].value if hasattr(row[0], "value") else row[0]: row[1] for row in rows
+    }
 
     total = sum(by_estado.values())
 
@@ -53,6 +56,13 @@ async def obtener_stats(
         urgent_stmt = urgent_stmt.where(cond)
     urgentes = (await db.execute(urgent_stmt)).scalar_one()
 
+    en_pausa_stmt = select(func.count(Ticket.id)).where(
+        Ticket.en_pausa, Ticket.estado != EstadoTicket.cerrado
+    )
+    for cond in conditions:
+        en_pausa_stmt = en_pausa_stmt.where(cond)
+    en_pausa = (await db.execute(en_pausa_stmt)).scalar_one()
+
     return StatsOut(
         total=total,
         abiertos=by_estado.get("abierto", 0),
@@ -61,6 +71,7 @@ async def obtener_stats(
         resueltos=by_estado.get("resuelto", 0),
         cerrados=by_estado.get("cerrado", 0),
         urgentes=urgentes,
+        en_pausa=en_pausa,
     )
 
 

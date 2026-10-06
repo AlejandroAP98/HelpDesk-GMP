@@ -25,6 +25,8 @@ export type AccionTicket =
   | "reabrir"
   | "prioridad"
   | "reasignar"
+  | "pausar"
+  | "reanudar"
   | null;
 
 export function useTicketDetail(ticketId: string) {
@@ -302,6 +304,36 @@ export function useTicketDetail(ticketId: string) {
     }
   };
 
+  const pausar = async (motivo: string) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setAccion("pausar");
+    try {
+      await ticketApi.pausar(ticketId, motivo);
+      await cargar();
+    } catch {
+      setError("No se pudo pausar el ticket");
+    } finally {
+      busyRef.current = false;
+      setAccion(null);
+    }
+  };
+
+  const reanudar = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setAccion("reanudar");
+    try {
+      await ticketApi.reanudar(ticketId);
+      await cargar();
+    } catch {
+      setError("No se pudo reanudar el ticket");
+    } finally {
+      busyRef.current = false;
+      setAccion(null);
+    }
+  };
+
   return {
     ticket, comentarios, adjuntos, historial,
     nuevoComentario, setNuevoComentario,
@@ -313,6 +345,6 @@ export function useTicketDetail(ticketId: string) {
     historialPage, historialTotalPages, cargarMasHistorial,
     agentes, agenteSel, setAgenteSel, reasignando, reasignar,
     handleCopiar, campoCopiado,
-    enviarComentario, cambiarEstado, cerrar, reabrir, asignarme, setPrioridad, cargar,
+    enviarComentario, cambiarEstado, cerrar, reabrir, asignarme, setPrioridad, pausar, reanudar, cargar,
   };
 }

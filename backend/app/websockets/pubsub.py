@@ -22,7 +22,9 @@ Eventos que disparan Web Push:
     - ticket:urgent_created  -> push a roles mesa_ayuda+administrador
     - ticket:new             -> push a roles mesa_ayuda+administrador
     - ticket:assigned        -> push al usuario asignado (event["agente_id"])
+    - ticket:paused          -> push al agente asignado (event["agente_id"])
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -86,9 +88,7 @@ async def publish_to_users(user_ids: list[UUID], event: dict[str, Any]) -> None:
 
 async def _resolve_user_ids_by_roles(roles: list[str]) -> list[UUID]:
     async with AsyncSessionLocal() as session:
-        rows = await session.execute(
-            select(Usuario.id).where(Usuario.rol.in_(roles))
-        )
+        rows = await session.execute(select(Usuario.id).where(Usuario.rol.in_(roles)))
         return [r[0] for r in rows.all()]
 
 
@@ -155,6 +155,24 @@ async def _dispatch_push(event: dict[str, Any], connected: set[UUID]) -> None:
             logger.info("Push asignacion enviado a %s (conectado_ws=%s)", uid, uid in connected)
         else:
             logger.info("Push asignacion no entregado a %s (sin suscripciones o falló)", uid)
+
+    elif etype == "ticket:paused":
+        agente_id = event.get("agente_id")
+        if not agente_id:
+            return
+        try:
+            uid = UUID(agente_id)
+        except (TypeError, ValueError):
+            return
+        title = "Ticket en pausa"
+        motivo = event.get("motivo", "")
+        body = f"{event.get('titulo', '')}\n{motivo}"
+        url = f"/tickets/{event.get('ticket_id', '')}"
+        delivered = await send_push_to_user(uid, title, body, url, data=event)
+        if delivered:
+            logger.info("Push pausa enviado a %s (conectado_ws=%s)", uid, uid in connected)
+        else:
+            logger.info("Push pausa no entregado a %s (sin suscripciones o falló)", uid)
 
 
 async def pubsub_listener() -> None:

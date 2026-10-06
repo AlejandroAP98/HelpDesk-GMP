@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Ticket } from "@/lib/endpoints";
 import { EstadoBadge, PrioridadBadge } from "@/components/Badges";
+import { PausaBadge } from "@/components/PausaBadge";
 import { useAuthStore } from "@/store/authStore";
 
 interface TicketCardProps {
@@ -39,6 +40,13 @@ export function TicketCard({ ticket, index = 0 }: TicketCardProps) {
           })}
         </span>
       </div>
+      {ticket.en_pausa && (
+        <PausaBadge
+          motivo={ticket.motivo_pausa}
+          className="w-full justify-center"
+          mostrarInfo={false}
+        />
+      )}
       <div className="h-full space-y-1 flex-1 px-4">
         <div className="flex items-start justify-between gap-2 pt-2">
           <Link

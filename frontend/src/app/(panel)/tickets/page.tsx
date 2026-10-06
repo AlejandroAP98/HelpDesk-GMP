@@ -73,6 +73,7 @@ export default function TicketsListPage() {
     filtroEmpresaId, setFiltroEmpresaId, filtroAgenteId, setFiltroAgenteId,
     filtroPuntoVentaId, setFiltroPuntoVentaId, pvResults, setPvSearch, pvLoading,
     empresas, agentes, busqueda, setBusqueda,
+    enPausaFiltro, setEnPausaFiltro,
     limpiarTodo, limpiarBusqueda,
     activeFilterCount,
     cambiarVista, cambiarModo, cambiarOrden,
@@ -93,6 +94,29 @@ export default function TicketsListPage() {
         onChange={(e) => { setPrioridad(e.target.value); setPage(1); }}
         options={PRIORIDADES}
       />
+      {esAdminOMesaAyuda && (
+        <div className="flex flex-col">
+          <span className="sm:text-[11px] text-[10px] px-1 font-medium text-gray-500 uppercase tracking-normal">
+            En espera
+          </span>
+          <div className="flex gap-1 items-center h-[34px]">
+            <button
+              type="button"
+              onClick={() => { setEnPausaFiltro("todos"); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${enPausaFiltro === "todos" ? "bg-brandCustom text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEnPausaFiltro("en_pausa"); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${enPausaFiltro === "en_pausa" ? "bg-brandCustom text-white" : "bg-brandCustom/10 text-brandCustom hover:bg-brandCustom/20"}`}
+            >
+              En Espera
+            </button>
+          </div>
+        </div>
+      )}
       {esAdminOMesaAyuda && (
         <Select
           label="Empresa"
@@ -236,17 +260,7 @@ export default function TicketsListPage() {
               >
                 {filtrosControls}
               </FilterDropdown>
-              <div className="hidden xl:flex flex-wrap items-center gap-1 justify-end w-full">
-                {filtrosControls}
-                {activeFilterCount > 0 && (
-                  <button
-                    onClick={limpiarTodo}
-                    className="self-end text-xs text-gray-500 hover:text-gray-800 underline transition-colors mb-0.5"
-                  >
-                    Limpiar todo
-                  </button>
-                )}
-              </div>
+              
             </div>
           </div>
         </div>
@@ -263,7 +277,7 @@ export default function TicketsListPage() {
           keyExtractor={(t: Ticket) => t.id}
         />
         ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {tickets.map((t: Ticket, index: number) => (
             <TicketCard key={t.id} ticket={t} index={index} />
           ))}

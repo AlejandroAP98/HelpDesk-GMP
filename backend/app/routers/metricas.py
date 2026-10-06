@@ -61,7 +61,18 @@ async def tiempos(
         filtros.append(Ticket.empresa_id == empresa_id)
 
     stmt_resueltos = select(
-        func.avg(func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion) / 3600.0),
+        func.avg(
+            func.greatest(
+                func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+                - Ticket.segundos_pausa_acumulado
+                - case(
+                    (Ticket.en_pausa, func.extract("epoch", func.now() - Ticket.fecha_pausa)),
+                    else_=0,
+                ),
+                0,
+            )
+            / 3600.0
+        ),
         func.count(Ticket.id),
     ).where(
         Ticket.fecha_resolucion.isnot(None),
@@ -594,7 +605,12 @@ async def _calcular_sla_empresa(
 
     umbral_mttr = _umbral_mttr_segundos()
     frt_segundos = func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
-    mttr_segundos = func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+    mttr_bruto = func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
+    tiempo_pausa = Ticket.segundos_pausa_acumulado + case(
+        (Ticket.en_pausa, func.extract("epoch", func.now() - Ticket.fecha_pausa)),
+        else_=0,
+    )
+    mttr_efectivo_segundos = func.greatest(mttr_bruto - tiempo_pausa, 0)
     es_critico = Ticket.prioridad.in_([PrioridadTicket.urgente, PrioridadTicket.alta])
     es_media = Ticket.prioridad == PrioridadTicket.media
     es_baja = Ticket.prioridad == PrioridadTicket.baja
@@ -610,16 +626,21 @@ async def _calcular_sla_empresa(
                     & (frt_segundos <= SLA_FRT_HORAS * 3600)
                     & (
                         (Ticket.fecha_resolucion.is_(None))
-                        | (Ticket.fecha_resolucion.isnot(None) & (mttr_segundos <= umbral_mttr))
+                        | (
+                            Ticket.fecha_resolucion.isnot(None)
+                            & (mttr_efectivo_segundos <= umbral_mttr)
+                        )
                     ),
                     Integer,
                 )
             ).label("en_sla"),
             func.avg(frt_segundos / 3600.0).label("frt_horas"),
-            func.avg(mttr_segundos / 3600.0).label("mttr_horas"),
-            func.avg(case((es_critico, mttr_segundos / 3600.0))).label("mttr_urgente_horas"),
-            func.avg(case((es_media, mttr_segundos / 3600.0))).label("mttr_media_horas"),
-            func.avg(case((es_baja, mttr_segundos / 3600.0))).label("mttr_baja_horas"),
+            func.avg(mttr_efectivo_segundos / 3600.0).label("mttr_horas"),
+            func.avg(case((es_critico, mttr_efectivo_segundos / 3600.0))).label(
+                "mttr_urgente_horas"
+            ),
+            func.avg(case((es_media, mttr_efectivo_segundos / 3600.0))).label("mttr_media_horas"),
+            func.avg(case((es_baja, mttr_efectivo_segundos / 3600.0))).label("mttr_baja_horas"),
         )
         .join(Empresa, Ticket.empresa_id == Empresa.id)
         .outerjoin(PuntoVenta, Ticket.punto_venta_id == PuntoVenta.id)

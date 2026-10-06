@@ -26,6 +26,7 @@ const config: Config = {
         yellowCustom:"#c8963e",
         greenCustom:"#60993e",
         grayCustom:"#7e7f83",
+        amberCustom:"#95adb6",
       },
       animation: {
         'fade-in': 'fadeIn 0.35s ease-out forwards',
