@@ -38,7 +38,6 @@ _logger = __import__("logging").getLogger(__name__)
 
 VISTA_ESTADOS: dict[VistaTicket, list[EstadoTicket]] = {
     VistaTicket.activos: [EstadoTicket.abierto, EstadoTicket.asignado, EstadoTicket.en_progreso],
-    VistaTicket.historial: [EstadoTicket.resuelto, EstadoTicket.cerrado],
     VistaTicket.todos: [],
 }
 

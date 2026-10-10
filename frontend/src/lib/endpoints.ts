@@ -3,7 +3,7 @@ import type { Usuario } from "@/store/authStore";
 
 export type EstadoTicket = "abierto" | "asignado" | "en_progreso" | "resuelto" | "cerrado";
 export type PrioridadTicket = "baja" | "media" | "alta" | "urgente";
-export type VistaTicket = "activos" | "historial" | "todos";
+export type VistaTicket = "activos" | "todos";
 export type ElementoInfraestructura = "torre" | "celda" | "punto_venta";
 
 export interface Ticket {

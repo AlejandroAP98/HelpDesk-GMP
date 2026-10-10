@@ -36,5 +36,4 @@ class ElementoInfraestructura(str, Enum):
 
 class VistaTicket(str, Enum):
     activos = "activos"
-    historial = "historial"
     todos = "todos"

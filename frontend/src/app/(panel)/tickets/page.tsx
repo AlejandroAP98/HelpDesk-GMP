@@ -37,7 +37,6 @@ const PRIORIDADES: { value: string; label: string }[] = [
 
 const VISTAS: { value: VistaTicket; label: string }[] = [
   { value: "activos", label: "Activos" },
-  { value: "historial", label: "Historial" },
   { value: "todos", label: "Todos" },
 ];
 
@@ -47,11 +46,6 @@ const ESTADOS_POR_VISTA: Record<VistaTicket, { value: string; label: string }[]>
     { value: "abierto", label: "Abierto" },
     { value: "asignado", label: "Asignado" },
     { value: "en_progreso", label: "En progreso" },
-  ],
-  historial: [
-    { value: "todos", label: "Todos" },
-    { value: "resuelto", label: "Resuelto" },
-    { value: "cerrado", label: "Cerrado" },
   ],
   todos: ESTADOS,
 };

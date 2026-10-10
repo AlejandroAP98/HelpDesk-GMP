@@ -257,14 +257,14 @@ export default function TicketDetallePage() {
                 {!esCliente && (
                   <div className="flex justify-end w-full gap-2">
                     <div className="flex flex-col">
-                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block ">Pausar</label>
+                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block ">En espera</label>
                       {puedePausar && (
                         <button
                           onClick={() => setPausaModalOpen(true)}
                           disabled={accion !== null}
                           className="self-end rounded-xl bg-slate-500 hover:bg-slate-400 disabled:bg-gray-300 disabled:hover:bg-gray-300 disabled:text-white/70 disabled:cursor-not-allowed sm:px-4 px-2 py-2 sm:py-2.5 sm:text-xs text-[11px] font-normal text-white active:scale-[0.98] transition-all animate-fade-in-place"
                         >
-                          Pausar ticket
+                          Pausar
                         </button>
                       )}
                       {puedeReanudar && (
