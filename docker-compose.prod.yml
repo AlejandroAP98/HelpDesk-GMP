@@ -99,6 +99,8 @@ services:
   prometheus:
     image: prom/prometheus:latest
     restart: always
+    expose:
+      - "9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
