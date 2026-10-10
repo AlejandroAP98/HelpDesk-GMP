@@ -5,6 +5,7 @@ import { ticketApi, adminApi, empresaApi, puntoVentaApi, type Ticket, type Empre
 import type { Usuario } from "@/store/authStore";
 import { useWsTicketStore } from "@/store/wsTicketStore";
 import { useAuthStore } from "@/store/authStore";
+import { useTicketsFilterStore } from "@/store/ticketsFilterStore";
 
 export type VistaMode = "cards" | "table";
 export type OrdenMode = "prioridad" | "fecha";
@@ -26,29 +27,41 @@ export function useTicketsList() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
-  const [estado, setEstado] = useState("todos");
-  const [prioridad, setPrioridad] = useState("todas");
-  const [vista, setVista] = useState<VistaTicket>("activos");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
   const [cargando, setCargando] = useState(true);
   const [viewMode, setViewMode] = useState<VistaMode>(getInitialVistaMode);
   const [orden, setOrden] = useState<OrdenMode>(getInitialOrdenMode);
-  const [filtroEmpresaId, setFiltroEmpresaId] = useState("");
-  const [filtroAgenteId, setFiltroAgenteId] = useState("");
-  const [filtroPuntoVentaId, setFiltroPuntoVentaId] = useState("");
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [agentes, setAgentes] = useState<Usuario[]>([]);
   const [pvResults, setPvResults] = useState<PuntoVenta[]>([]);
   const [pvSearch, setPvSearch] = useState("");
   const [pvSearchDebounced, setPvSearchDebounced] = useState("");
   const [pvLoading, setPvLoading] = useState(false);
-  const [busqueda, setBusqueda] = useState("");
   const [busquedaDebounced, setBusquedaDebounced] = useState("");
-  const [enPausaFiltro, setEnPausaFiltro] = useState<"todos" | "en_pausa" | "activos">("todos");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pvDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const estado = useTicketsFilterStore((s) => s.estado);
+  const setEstado = useTicketsFilterStore((s) => s.setEstado);
+  const prioridad = useTicketsFilterStore((s) => s.prioridad);
+  const setPrioridad = useTicketsFilterStore((s) => s.setPrioridad);
+  const vista = useTicketsFilterStore((s) => s.vista);
+  const setVista = useTicketsFilterStore((s) => s.setVista);
+  const fechaInicio = useTicketsFilterStore((s) => s.fechaInicio);
+  const setFechaInicio = useTicketsFilterStore((s) => s.setFechaInicio);
+  const fechaFin = useTicketsFilterStore((s) => s.fechaFin);
+  const setFechaFin = useTicketsFilterStore((s) => s.setFechaFin);
+  const filtroEmpresaId = useTicketsFilterStore((s) => s.filtroEmpresaId);
+  const setFiltroEmpresaId = useTicketsFilterStore((s) => s.setFiltroEmpresaId);
+  const filtroAgenteId = useTicketsFilterStore((s) => s.filtroAgenteId);
+  const setFiltroAgenteId = useTicketsFilterStore((s) => s.setFiltroAgenteId);
+  const filtroPuntoVentaId = useTicketsFilterStore((s) => s.filtroPuntoVentaId);
+  const setFiltroPuntoVentaId = useTicketsFilterStore((s) => s.setFiltroPuntoVentaId);
+  const busqueda = useTicketsFilterStore((s) => s.busqueda);
+  const setBusqueda = useTicketsFilterStore((s) => s.setBusqueda);
+  const enPausaFiltro = useTicketsFilterStore((s) => s.enPausaFiltro);
+  const setEnPausaFiltro = useTicketsFilterStore((s) => s.setEnPausaFiltro);
+  const page = useTicketsFilterStore((s) => s.page);
+  const setPage = useTicketsFilterStore((s) => s.setPage);
 
   const setOnTicketUpdated = useWsTicketStore((s) => s.setOnTicketUpdated);
   const setOnTicketAssigned = useWsTicketStore((s) => s.setOnTicketAssigned);
@@ -109,7 +122,7 @@ export function useTicketsList() {
     setFiltroPuntoVentaId("");
     setPvSearch("");
     setPvSearchDebounced("");
-  }, [filtroEmpresaId]);
+  }, [filtroEmpresaId, setFiltroPuntoVentaId]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -118,7 +131,7 @@ export function useTicketsList() {
       setPage(1);
     }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [busqueda]);
+  }, [busqueda, setPage]);
 
   useEffect(() => {
     (async () => {
@@ -239,15 +252,7 @@ export function useTicketsList() {
   };
 
   const limpiarTodo = () => {
-    setEstado("todos");
-    setPrioridad("todas");
-    setFiltroEmpresaId("");
-    setFiltroAgenteId("");
-    setFiltroPuntoVentaId("");
-    setFechaInicio("");
-    setFechaFin("");
-    setEnPausaFiltro("todos");
-    setPage(1);
+    useTicketsFilterStore.getState().limpiarTodo();
     setPvSearch("");
   };
 
