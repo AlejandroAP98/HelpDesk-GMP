@@ -788,3 +788,40 @@ Fase 19 completada: Email urgente desacoplado del toggle del cliente.
   (el agente) a `_enviar_emails_post_creacion` en vez del `cliente` real,
   lo que haria que `send_ticket_created` se envie al email del agente y
   se gatee con su toggle. No incluido en este PR (D1).
+
+Fase 20 completada: Notificaciones de Telegram (grupo compartido, gratis).
+
+- Motivacion: mesa de ayuda / admins no necesitan tener la app abierta
+  para enterarse de la actividad: reciben mensajes en el grupo
+  compartido de ops (como un canal de Slack).
+- Backend `services/telegram_service.py` (nuevo): Telegram Bot API
+  (100% gratis, sin cuota) via httpx async. Si `TELEGRAM_BOT_TOKEN` o
+  `TELEGRAM_CHAT_ID` estan vacios, se desactiva (no-op). Retries con
+  backoff (2/4s) solo en errores de red; 4xx no se reintenta.
+- Throttle: max 1 mensaje por (tipo_evento, ticket_id) cada 60s via
+  Redis (`helpdesk:telegram:throttle:*`, nx ex=60) para que un ticket muy
+  activo no inunde el grupo. Si Redis falla, envia igualmente.
+- Backend `websockets/pubsub.py`: `_dispatch_telegram()` lanzada en
+  background (asyncio.create_task con ref en `_telegram_tasks` para no
+  bloquear el listener de WS ni el push dispatcher). Dispara contra
+  `ticket:urgent_created`, `ticket:new`, `ticket:commented`,
+  `ticket:state_changed`, `ticket:assigned`, `actividad:nueva`.
+- Regla anti-duplicado/co-cobertura: `ticket:new` con prioridad urgente se
+  OMITE en Telegram (el mensaje de `ticket:urgent_created` ya lo cubre).
+  `ticket:paused` NO se notifica (es puramente para el agente asignado).
+- Formato: HTML de Telegram (bold + link con URL
+  `https://soporte.gmpredes.online/tickets/{id}`) y emoji por tipo
+  (🔴 [URGENTE], 🆕 nuevo, 💬 comentario, 🔄 estado, 📌 asignado,
+  ⚡ actividad). Escape `html.escape` en contenido de usuario.
+- Env vars `core/config.py` + `.env.example`: `TELEGRAM_BOT_TOKEN`,
+  `TELEGRAM_CHAT_ID` (chat_id negativo del grupo compartido, obtenido con
+  `getUpdates`). Setup en comentario del `.env.example` (BotFather +
+  grupo + getUpdates).
+- Tests `tests/test_telegram_service.py` (nuevo, 15): enabled flags,
+  omision sin token, omision de tipos no registrados, omision de
+  ticket:new urgente, payload correcto, marca URGENTE, trunc de
+  comentario, escape HTML, state_changed, actividad:nueva, 4xx sin
+  reintento, reintento en ConnectError, fallo definitivo, throttle por
+  tipo+ticket. `tests/conftest.py` fuerza `TELEGRAM_BOT_TOKEN=""` y
+  `TELEGRAM_CHAT_ID=""` (garantiza que pytest nunca envie mensajes
+  reales a Telegram).

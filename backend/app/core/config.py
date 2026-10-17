@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     sla_hora_inicio_laboral: int = 7
     sla_hora_fin_laboral: int = 21
 
+    # --- Telegram (alertas de grupo para mesa_ayuda/admin) ---
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
     # --- Resend (emails transaccionales) ---
     resend_api_key: str = ""
     resend_from_email: str = "HelpDesk <noreply@helpdesk.local>"

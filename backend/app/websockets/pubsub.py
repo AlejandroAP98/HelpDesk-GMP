@@ -23,6 +23,11 @@ Eventos que disparan Web Push:
     - ticket:new             -> push a roles mesa_ayuda+administrador
     - ticket:assigned        -> push al usuario asignado (event["agente_id"])
     - ticket:paused          -> push al agente asignado (event["agente_id"])
+
+Eventos que disparan mensaje de Telegram (grupo compartido mesa_ayuda/admin,
+via services/telegram_service.py con throttle 60s por tipo+ticket):
+    - ticket:urgent_created / ticket:new / ticket:commented
+    - ticket:state_changed / ticket:assigned / actividad:nueva
 """
 
 from __future__ import annotations
@@ -39,12 +44,15 @@ from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_client
 from app.models.enums import RolUsuario
 from app.models.usuario import Usuario
+from app.services import telegram_service
 from app.services.push_service import send_push_to_user, send_push_to_users
 from app.websockets.manager import manager
 
 logger = logging.getLogger(__name__)
 
 CHANNEL = "helpdesk:ws"
+
+_telegram_tasks: set["asyncio.Task[bool]"] = set()
 
 
 async def publish_to_roles(roles: list[str], event: dict[str, Any]) -> None:
@@ -90,6 +98,18 @@ async def _resolve_user_ids_by_roles(roles: list[str]) -> list[UUID]:
     async with AsyncSessionLocal() as session:
         rows = await session.execute(select(Usuario.id).where(Usuario.rol.in_(roles)))
         return [r[0] for r in rows.all()]
+
+
+async def _dispatch_telegram(event: dict[str, Any]) -> None:
+    """Lanza la notificacion Telegram en background (no bloquea WS ni push)."""
+    if not telegram_service.is_telegram_enabled():
+        return
+    try:
+        task = asyncio.create_task(telegram_service.notify_event(event))
+        _telegram_tasks.add(task)
+        task.add_done_callback(_telegram_tasks.discard)
+    except RuntimeError:
+        logger.debug("No se pudo lanzar notificacion Telegram (loop cerrado)")
 
 
 async def _dispatch_push(event: dict[str, Any], connected: set[UUID]) -> None:
@@ -214,6 +234,7 @@ async def pubsub_listener() -> None:
                     if not acquired:
                         continue
                 connected = manager.get_connected_user_ids()
+                await _dispatch_telegram(event)
                 await _dispatch_push(event, connected)
             except Exception:
                 logger.exception("Push dispatcher fallo (no afecta WS)")

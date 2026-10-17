@@ -33,6 +33,9 @@ os.environ["APP_ENV"] = "test"
 # ANTES de que app.core.config instancie settings.
 os.environ["RESEND_API_KEY"] = ""
 os.environ["RESEND_URGENT_RECIPIENTS"] = ""
+# Jamas enviar mensajes reales a Telegram desde tests.
+os.environ["TELEGRAM_BOT_TOKEN"] = ""
+os.environ["TELEGRAM_CHAT_ID"] = ""
 
 
 async def _asegurar_db_test() -> None:
