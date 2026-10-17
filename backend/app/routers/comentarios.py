@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -30,8 +32,15 @@ async def listar(
 @router.post("", response_model=ComentarioOut, status_code=status.HTTP_201_CREATED)
 async def crear(
     ticket_id: UUID,
-    data: ComentarioCreate,
+    contenido: Annotated[str | None, Form()] = None,
+    es_nota_interna: Annotated[bool, Form()] = False,
+    files: list[UploadFile] = File(default=[]),
     db: AsyncSession = Depends(get_db),
     current: Usuario = Depends(get_current_user),
 ) -> ComentarioOut:
-    return await comentario_service.crear(ticket_id, data, current, db)
+    data = ComentarioCreate(contenido=contenido, es_nota_interna=es_nota_interna)
+    file_data: list[tuple[str, str, bytes]] = []
+    for f in files:
+        body = await f.read()
+        file_data.append((f.filename or "archivo", f.content_type or "application/octet-stream", body))
+    return await comentario_service.crear(ticket_id, data, current, db, files=file_data)

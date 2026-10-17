@@ -30,6 +30,7 @@ from app.schemas.ticket import (
     TicketUpdate,
 )
 from app.services.estados import es_estado_final, es_transicion_valida
+from app.services.horario_laboral import tiempo_pausa_sla_transcurrido
 from app.services.prioridad import calcular_prioridad
 from app.utils.exceptions import Conflicto, PermisoDenegado, RecursoNoEncontrado
 from app.utils.pagination import Pagina, paginacion
@@ -944,8 +945,17 @@ def _acumular_tiempo_pausa(ticket: Ticket) -> None:
     if not ticket.en_pausa or ticket.fecha_pausa is None:
         return
     ahora = datetime.now(timezone.utc).replace(tzinfo=None)
-    delta = max(int((ahora - ticket.fecha_pausa).total_seconds()), 0)
+    inicio_pausa = ticket.fecha_pausa
+    delta = max(int((ahora - inicio_pausa).total_seconds()), 0)
+    delta_sla = int(
+        tiempo_pausa_sla_transcurrido(
+            ticket.fecha_creacion, inicio_pausa, ahora
+        ).total_seconds()
+    )
     ticket.segundos_pausa_acumulado = (ticket.segundos_pausa_acumulado or 0) + delta
+    ticket.segundos_pausa_sla_acumulado = (
+        ticket.segundos_pausa_sla_acumulado or 0
+    ) + delta_sla
     ticket.en_pausa = False
     ticket.motivo_pausa = None
     ticket.fecha_pausa = None

@@ -1,4 +1,5 @@
 import type { Ticket } from "@/lib/endpoints";
+import { tiempoSlaTranscurridoMs } from "@/lib/horarioLaboral";
 
 export interface TimeLineItem {
   label: string;
@@ -50,7 +51,10 @@ export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
   const tiempoPausaMs = tiempoPausaSeg * 1000;
   const duracionEfectiva =
     creacion && resolucion
-      ? Math.max(resolucion.getTime() - creacion.getTime() - tiempoPausaMs, 0)
+      ? Math.max(
+          tiempoSlaTranscurridoMs(creacion, resolucion) - tiempoPausaMs,
+          0
+        )
       : null;
 
   const items: TimeLineItem[] = [
@@ -68,7 +72,10 @@ export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
       label: "Asignado a agente",
       subtitle: asignacion ? fmt(asignacion) : "Sin asignar",
       date: asignacion,
-      duration: creacion && asignacion ? formatDuration(asignacion.getTime() - creacion.getTime()) : undefined,
+      duration:
+        creacion && asignacion
+          ? formatDuration(tiempoSlaTranscurridoMs(creacion, asignacion))
+          : undefined,
       color: "bg-violetCustom",
       dotColor: asignacion ? "text-white bg-violetCustom" : "border-gray-300 text-gray-300 bg-gray-50",
       icon: (
@@ -79,7 +86,10 @@ export function getTicketTimeline(ticket: Ticket): TimeLineItem[] {
       label: "Primera respuesta",
       subtitle: primeraResp ? fmt(primeraResp) : "Sin respuesta",
       date: primeraResp,
-      duration: creacion && primeraResp ? formatDuration(primeraResp.getTime() - creacion.getTime()) : undefined,
+      duration:
+        creacion && primeraResp
+          ? formatDuration(tiempoSlaTranscurridoMs(creacion, primeraResp))
+          : undefined,
       color: "bg-yellowCustom",
       dotColor: primeraResp ? "text-white bg-yellowCustom" : "border-gray-300 text-gray-300 bg-gray-50",
       icon: (

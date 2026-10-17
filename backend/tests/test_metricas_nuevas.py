@@ -5,7 +5,8 @@ conftest fuerza RESEND_API_KEY="" para que ningun test consuma cuota real.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -168,7 +169,7 @@ async def test_tendencia_filtra_por_empresa(client, db_session, db_engine):  # t
         )
     await db_session.commit()
 
-    hoy = date.today().isoformat()
+    hoy = datetime.now(ZoneInfo("America/Bogota")).date().isoformat()
     mesa = await login_token(client, "mesa@test.com", "Password12345")
     r = await client.get(
         f"/api/metricas/tendencia?fecha_inicio={hoy}&fecha_fin={hoy}&empresa_id=1",

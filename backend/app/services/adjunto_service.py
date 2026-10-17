@@ -1,9 +1,11 @@
 """Servicio de adjuntos: subir/listar/eliminar en MinIO + metadatos en DB."""
 from __future__ import annotations
 
+import logging
 from io import BytesIO
 from uuid import UUID, uuid4
 
+from botocore.exceptions import ClientError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,7 +52,7 @@ def _validate_magic_bytes(data: bytes, declared_mime: str) -> None:
             raise Conflicto("El archivo no es un WebP valido")
 
 
-def _to_out(adjunto: Adjunto) -> AdjuntoOut:
+def to_out(adjunto: Adjunto) -> AdjuntoOut:
     """Serializa un Adjunto con `archivo_url` apuntando al endpoint proxy del backend.
     Es una ruta relativa, asi el navegador la resuelve contra el host actual
     (LAN https://helpdesk.local o Cloudflare https://soporte.gmpredes.online)."""
@@ -88,37 +90,16 @@ async def listar(
         )
     ).scalars().all()
     return Pagina.of(
-        [_to_out(a) for a in items],
+        [to_out(a) for a in items],
         total, p.page, p.size,
     )
 
 
-async def subir(
-    ticket_id: UUID,
-    file_name: str,
-    content_type: str,
-    data: bytes,
-    current: Usuario,
-    db: AsyncSession,
-) -> AdjuntoOut:
-    """Sube una imagen a MinIO y registra metadatos en `adjuntos`.
-    Solo acepta JPEG, PNG y WebP."""
-    ticket = await ticket_service.obtener(ticket_id, current, db)
-    if es_estado_final(ticket.estado):
-        raise Conflicto("Ticket cerrado, no admite nuevos adjuntos")
-
+def validar_imagen(file_name: str, content_type: str, data: bytes) -> tuple[str, str]:
+    """Valida MIME, extension y magic bytes de una imagen.
+    Retorna (normalized_mime, extension_real)."""
     if len(data) > MAX_BYTES:
         raise Conflicto(f"Archivo excede {MAX_BYTES // (1024 * 1024)} MB")
-
-    total_adjuntos = (
-        await db.execute(
-            select(func.count(Adjunto.id)).where(Adjunto.ticket_id == ticket_id)
-        )
-    ).scalar_one()
-    if total_adjuntos >= MAX_ADJUNTOS_POR_TICKET:
-        raise Conflicto(
-            f"El ticket alcanzó el límite de {MAX_ADJUNTOS_POR_TICKET} adjuntos"
-        )
 
     normalized_mime = (content_type or "").split(";", 1)[0].strip().lower()
     if normalized_mime not in ALLOWED_MIME_TYPES:
@@ -135,14 +116,57 @@ async def subir(
         )
 
     _validate_magic_bytes(data, normalized_mime)
+    return normalized_mime, MIME_TO_EXT[normalized_mime]
 
-    object_key = f"tickets/{ticket_id}/{uuid4().hex}{MIME_TO_EXT[normalized_mime]}"
 
+async def _contar_adjuntos_ticket(ticket_id: UUID, db: AsyncSession) -> int:
+    return (
+        await db.execute(
+            select(func.count(Adjunto.id)).where(Adjunto.ticket_id == ticket_id)
+        )
+    ).scalar_one()
+
+
+async def subir_a_storage(
+    ticket_id: UUID,
+    file_name: str,
+    content_type: str,
+    data: bytes,
+) -> tuple[str, str, str]:
+    """Sube una imagen validada a MinIO y retorna (object_key, nombre_archivo, tipo_mime)."""
+    normalized_mime, ext = validar_imagen(file_name, content_type, data)
+    object_key = f"tickets/{ticket_id}/{uuid4().hex}{ext}"
     await s3_upload_fileobj(
         Fileobj=BytesIO(data),
         Bucket=settings.minio_bucket,
         Key=object_key,
         ExtraArgs={"ContentType": normalized_mime},
+    )
+    return object_key, file_name, normalized_mime
+
+
+async def subir(
+    ticket_id: UUID,
+    file_name: str,
+    content_type: str,
+    data: bytes,
+    current: Usuario,
+    db: AsyncSession,
+) -> AdjuntoOut:
+    """Sube una imagen a MinIO y registra metadatos en `adjuntos`.
+    Solo acepta JPEG, PNG y WebP."""
+    ticket = await ticket_service.obtener(ticket_id, current, db)
+    if es_estado_final(ticket.estado):
+        raise Conflicto("Ticket cerrado, no admite nuevos adjuntos")
+
+    total_adjuntos = await _contar_adjuntos_ticket(ticket_id, db)
+    if total_adjuntos >= MAX_ADJUNTOS_POR_TICKET:
+        raise Conflicto(
+            f"El ticket alcanzó el límite de {MAX_ADJUNTOS_POR_TICKET} adjuntos"
+        )
+
+    object_key, file_name, normalized_mime = await subir_a_storage(
+        ticket_id, file_name, content_type, data
     )
 
     adjunto = Adjunto(
@@ -165,7 +189,7 @@ async def subir(
         tipo_evento="attachment_uploaded",
         metadata={"nombre_archivo": file_name},
     )
-    return _to_out(adjunto)
+    return to_out(adjunto)
 
 
 async def eliminar(
@@ -182,6 +206,8 @@ async def eliminar(
         raise RecursoNoEncontrado("Adjunto no encontrado")
 
     ticket = await ticket_service.obtener(ticket_id, current, db)
+    if es_estado_final(ticket.estado):
+        raise Conflicto("Ticket cerrado, no se pueden borrar adjuntos")
     if current.rol == RolUsuario.cliente.value and ticket.cliente_id != current.id:
         raise PermisoDenegado("No puedes borrar adjuntos de tickets ajenos")
     if current.rol == RolUsuario.agente.value and ticket.agente_id != current.id:
@@ -192,7 +218,24 @@ async def eliminar(
         await s3_delete_object(Bucket=settings.minio_bucket, Key=object_key)
     except Exception:
         pass
+
+    comentario_id = adjunto.comentario_id
     await db.delete(adjunto)
+    await db.flush()
+
+    if comentario_id:
+        restantes = (
+            await db.execute(
+                select(func.count(Adjunto.id)).where(Adjunto.comentario_id == comentario_id)
+            )
+        ).scalar_one()
+        if restantes == 0:
+            comentario = (
+                await db.execute(select(Comentario).where(Comentario.id == comentario_id))
+            ).scalar_one_or_none()
+            if comentario and (not comentario.contenido or not comentario.contenido.strip()):
+                await db.delete(comentario)
+
     await db.commit()
 
 
@@ -220,7 +263,7 @@ async def attach_to_comentario(
     adjunto.comentario_id = comentario_id
     await db.commit()
     await db.refresh(adjunto)
-    return _to_out(adjunto)
+    return to_out(adjunto)
 
 
 async def stream_archivo(
@@ -248,8 +291,12 @@ async def stream_archivo(
 
     try:
         obj = await s3_get_object(**get_params)
-    except Exception as e:
-        if "NoSuchKey" in type(e).__name__ or "404" in str(e):
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code == "NoSuchKey":
+            logging.warning(
+                "Adjunto %s no encontrado en MinIO (key=%s)", adjunto_id, object_key
+            )
             raise RecursoNoEncontrado("Archivo no encontrado en storage")
         raise
 

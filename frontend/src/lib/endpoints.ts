@@ -54,9 +54,10 @@ export interface Comentario {
   ticket_id: string;
   usuario_id: string;
   usuario_nombre: string | null;
-  contenido: string;
+  contenido: string | null;
   es_nota_interna: boolean;
   fecha_creacion: string;
+  adjuntos: Adjunto[];
 }
 
 export interface Adjunto {
@@ -365,8 +366,10 @@ export const comentarioApi = {
     const r = await api.get(`/api/tickets/${ticketId}/comentarios`, { params });
     return r.data as Pagina<Comentario>;
   },
-  crear: async (ticketId: string, data: { contenido: string; es_nota_interna?: boolean }) => {
-    const r = await api.post(`/api/tickets/${ticketId}/comentarios`, data);
+  crear: async (ticketId: string, data: FormData) => {
+    const r = await api.post(`/api/tickets/${ticketId}/comentarios`, data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return r.data as Comentario;
   },
 };

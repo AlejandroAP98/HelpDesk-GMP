@@ -1,11 +1,6 @@
 """Tests de adjuntos: validacion de tipo MIME, magic bytes, descarga y permisos."""
 from __future__ import annotations
 
-from io import BytesIO
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 from tests.helpers import (
     auth_header,
     login_token,
@@ -19,44 +14,6 @@ from tests.helpers import (
 JPEG_MAGIC = b"\xff\xd8\xff\xe0"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 PDF_MAGIC = b"%PDF-1.4\n"
-
-
-def _fake_s3(body: bytes = b"fake-image-bytes") -> MagicMock:
-    mock = MagicMock()
-    stored: dict[str, bytes] = {}
-
-    def _upload(Fileobj=None, **_kwargs):  # type: ignore[no-untyped-def]
-        if Fileobj is not None:
-            data = Fileobj.read() if hasattr(Fileobj, "read") else Fileobj
-            stored[_kwargs.get("Key", "")] = bytes(data)
-
-    mock.upload_fileobj = MagicMock(side_effect=_upload)
-    mock.delete_object = MagicMock(return_value=None)
-
-    def _get(Bucket=None, Key=None, Range=None, **_kwargs):  # type: ignore[no-untyped-def]
-        data = stored.get(Key or "", body)
-        total = len(data)
-        if Range:
-            _range, end = Range.replace("bytes=", "").split("-")
-            start = int(_range)
-            end = int(end) if end else total - 1
-            data = data[start : end + 1]
-        return {
-            "Body": BytesIO(data),
-            "ContentLength": len(data),
-            "ContentRange": f"bytes {0}-{len(data) - 1}/{total}" if Range else None,
-        }
-
-    mock.get_object = MagicMock(side_effect=_get)
-    return mock
-
-
-@pytest.fixture
-def s3_mock():
-    """Parchea el cliente S3 singleton del storage para evitar tocar MinIO real."""
-    mock = _fake_s3()
-    with patch("app.core.storage._s3_client", mock):
-        yield mock
 
 
 async def _crear_ticket(client, tok):  # type: ignore[no-untyped-def]
@@ -252,3 +209,26 @@ async def test_stream_con_range_206(client, db_session, s3_mock):  # type: ignor
     assert r.status_code == 206
     assert r.headers.get("content-range") == f"bytes 0-99/{len(contenido)}"
     assert r.content == contenido[:100]
+
+
+async def test_descarga_archivo_inexistente_en_storage_404(client, db_session, s3_mock):  # type: ignore[no-untyped-def]
+    """Si el registro existe en BD pero el archivo no esta en MinIO, devuelve 404 sin romper."""
+    from botocore.exceptions import ClientError
+
+    await _setup_basico(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    tid = await _crear_ticket(client, tok)
+    data, _ = await _subir_jpeg(client, tok, tid)
+    adj_id = data["id"]
+
+    s3_mock.get_object.side_effect = ClientError(
+        {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
+        "GetObject",
+    )
+
+    r = await client.get(
+        f"/api/tickets/{tid}/adjuntos/{adj_id}/archivo",
+        headers=auth_header(tok),
+    )
+    assert r.status_code == 404, r.text
+    assert "no encontrado" in r.json()["detail"].lower()

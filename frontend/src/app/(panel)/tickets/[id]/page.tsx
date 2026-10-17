@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
+  adjuntoApi,
+  type Adjunto,
   type Comentario,
   type EstadoTicket,
   type HistorialEstado,
@@ -12,6 +14,7 @@ import {
 } from "@/lib/endpoints";
 import { useTicketDetail } from "@/hooks/useTicketDetail";
 import { getTicketTimeline } from "@/lib/ticketTimeline";
+import { OutsideHoursBadge } from "@/components/OutsideHoursBadge";
 import { EstadoBadge, PrioridadBadge, PRIORIDADES, prioridadLabels, estadoStyles } from "@/components/Badges";
 import { PausaBadge } from "@/components/PausaBadge";
 import { PausaModal } from "@/components/PausaModal";
@@ -20,11 +23,11 @@ import ChangeStatusIcon from "@/app/assets/icons/ChangeStatusIcon";
 import SendCommentIcon from "@/app/assets/icons/SendCommentIcon";
 import CopyInfoIcon from "@/app/assets/icons/CopyInfoIcon";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { AdjuntosGallery } from "@/components/AdjuntosGallery";
-import { QuickReplies } from "@/components/QuickReplies";
+import { AdjuntosInline } from "@/components/AdjuntosInline";
 import { LoadMoreButton } from "@/components/ui/LoadMoreButton";
 import { CopyField } from "@/components/ui/CopyField";
 import BackIcon from "@/app/assets/icons/BackIcon";
+import { formatBytes } from "@/lib/imageUtils";
 
 const elementoLabels: Record<ElementoInfraestructura, string> = {
   torre: "Torre",
@@ -39,13 +42,13 @@ export default function TicketDetallePage() {
   const ticketId = String(params.id);
 
   const {
-    ticket, comentarios, adjuntos, historial,
+    ticket, comentarios, historial,
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
+    archivosSeleccionados, agregarArchivos, quitarArchivo,
     cargando, error, setError,
     comentando, accion,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,
-    adjuntosPage, adjuntosTotalPages, cargarMasAdjuntos,
     historialPage, historialTotalPages, cargarMasHistorial,
     agentes, agenteSel, setAgenteSel, reasignando, reasignar,
     handleCopiar, campoCopiado,
@@ -53,6 +56,30 @@ export default function TicketDetallePage() {
   } = useTicketDetail(ticketId);
 
   const [pausaModalOpen, setPausaModalOpen] = useState(false);
+  const [borrandoAdjuntoId, setBorrandoAdjuntoId] = useState<string | null>(null);
+
+  const puedeBorrarAdjunto = (c: Comentario, a: Adjunto) => {
+    if (!usuario || !ticket) return false;
+    if (usuario.rol === "administrador") return true;
+    if (usuario.rol === "mesa_ayuda") return true;
+    if (c.usuario_id === usuario.id) return true;
+    if (ticket.agente_id === usuario.id) return true;
+    return false;
+  };
+
+  const borrarAdjunto = async (c: Comentario, a: Adjunto) => {
+    if (!puedeBorrarAdjunto(c, a)) return;
+    if (!confirm(`Borrar "${a.nombre_archivo}"?`)) return;
+    setBorrandoAdjuntoId(a.id);
+    try {
+      await adjuntoApi.eliminar(ticketId, a.id);
+      await cargar();
+    } catch {
+      setError("No se pudo borrar el adjunto");
+    } finally {
+      setBorrandoAdjuntoId(null);
+    }
+  };
 
   if (cargando) return (
     <LoadingState />
@@ -118,15 +145,21 @@ export default function TicketDetallePage() {
               <div className="flex sm:justify-end justify-between w-full sm:gap-4 gap-2">
                 <div>
                   <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Creado</dt>
-                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short'})}</dd>
+                  <dd className="font-regular text-white text-[11px] inline-flex items-center gap-1">
+                    <OutsideHoursBadge fecha={ticket.fecha_creacion} size={11} />
+                    {new Date(ticket.fecha_creacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short'})}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Actualizado</dt>
-                  <dd className="font-regular text-white text-[11px]">{new Date(ticket.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short' })}</dd>
+                  <dd className="font-regular text-white text-[11px] inline-flex items-center gap-1">
+                    <OutsideHoursBadge fecha={ticket.fecha_actualizacion} size={11} />
+                    {new Date(ticket.fecha_actualizacion).toLocaleString(undefined, { timeZone: "America/Bogota", dateStyle: 'short', timeStyle: 'short' })}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-[10px] font-medium text-white/70 tracking-wider mb-0.5">Agente</dt>
-                  <dd className="font-regular text-white text-[11px]">{ticket.agente_nombre ?? "Sin asignar"}</dd>
+                  <dd className="font-regular text-white text-[11px] inline-flex items-center">{ticket.agente_nombre ?? "Sin asignar"}</dd>
                 </div>
               </div>
             </dl>
@@ -257,7 +290,7 @@ export default function TicketDetallePage() {
                 {!esCliente && (
                   <div className="flex justify-end w-full gap-2">
                     <div className="flex flex-col">
-                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block ">En espera</label>
+                      <label className="sm:text-xs text-[10px] font-medium text-gray-600 tracking-wider mb-2 block text-nowrap ">En espera</label>
                       {puedePausar && (
                         <button
                           onClick={() => setPausaModalOpen(true)}
@@ -343,7 +376,7 @@ export default function TicketDetallePage() {
               {comentarios.map((c: Comentario, index: number) => (
                 <div
                   key={c.id}
-                  className={`rounded-3xl border p-2.5 transition-all opacity-0 animate-fade-in w-fit ${
+                  className={`rounded-3xl border p-2.5 transition-all opacity-0 animate-fade-in w-fit max-w-xs ${
                     c.es_nota_interna
                       ? "border-accentCustom/40 bg-accentCustom/10 w-full !rounded-t-2xl"
                       : c.usuario_nombre
@@ -367,10 +400,10 @@ export default function TicketDetallePage() {
                           <span className={`font-semibold text-xs ${c.usuario_nombre !== usuario?.nombre  ? 'text-brandCustom' : 'text-grayCustom'}`}>{c.usuario_nombre ? (c.usuario_nombre === usuario?.nombre ? "Yo" : c.usuario_nombre) : "Usuario" }</span>
                         </div>
                         <div className="flex items-center gap-1 self-start">
-                          {!esCliente && (
+                          {!esCliente && c.contenido && (
                             <button
                               type="button"
-                              onClick={() => handleCopiar(`comentario-${c.id}`, c.contenido)}
+                              onClick={() => handleCopiar(`comentario-${c.id}`, c.contenido ?? "")}
                               className={`shrink-0 transition-colors p-0.5 ${campoCopiado === `comentario-${c.id}` ? "text-greenCustom" : "text-gray-400 hover:text-brandCustom"}`}
                               title="Copiar comentario"
                             >
@@ -387,8 +420,21 @@ export default function TicketDetallePage() {
                       </span>
                     )}
                   </div>
-                  <p className="sm:text-sm text-xs pl-2 whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
-
+                  {c.contenido && (
+                    <p className="sm:text-sm text-xs pl-2 whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
+                  )}
+                  {c.adjuntos && c.adjuntos.length > 0 && (
+                    <div className="pt-2">
+                      <AdjuntosInline
+                        adjuntos={c.adjuntos}
+                        esMiComentario={c.usuario_nombre === usuario?.nombre}
+                        onDelete={(a) => borrarAdjunto(c, a)}
+                        deletingId={borrandoAdjuntoId}
+                        className="max-w-xs overflow-hidden"
+                        estaCerrado={estaCerrado}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -397,9 +443,17 @@ export default function TicketDetallePage() {
               <LoadMoreButton onClick={cargarMasComentarios} label="Cargar mas comentarios..." />
             )}
             {!estaCerrado && (
-              <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4 space-y-3">
+              <form onSubmit={enviarComentario} className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
                 {!esCliente && (
-                  <QuickReplies onInsert={(text) => setNuevoComentario((prev) => prev + text)} />
+                  <label className="text-xs font-normal text-gray-600 flex items-center gap-2 cursor-pointer select-none pb-2">
+                    <input
+                      type="checkbox"
+                      checked={esNotaInterna}
+                      onChange={(e) => setEsNotaInterna(e.target.checked)}
+                      className="rounded border-borderCustom text-brandCustom focus:ring-brandCustom focus:ring-offset-0"
+                    />
+                    Nota interna
+                  </label>
                 )}
                 <textarea
                   rows={3}
@@ -410,24 +464,44 @@ export default function TicketDetallePage() {
                   ${esNotaInterna ? "bg-accentCustom/5 focus:ring-accentCustom" : " focus:ring-brandCustom"}
                   rounded-xl px-4 py-2.5 sm:text-sm text-xs text-gray-900 placeholder-gray-400 focus:border-brandCustom focus:ring-1 focus:bg-white outline-none transition-all resize-none`}
                 />
-                <div className="flex sm:flex-row items-center sm:items-center justify-between gap-2">
-                  {!esCliente && (
-                    <label className="text-xs font-normal text-gray-600 flex items-center gap-2 cursor-pointer select-none">
+                {archivosSeleccionados.length > 0 && (
+                  <div className="flex flex-wrap gap-2 bg-gray-100 rounded-xl p-1 w-fit mb-1">
+                    {archivosSeleccionados.map((f, idx) => (
+                      <div key={`${f.name}-${idx}`} className="relative group flex flex-col rounded-lg border border-gray-200 bg-gray-50 p-1 max-w-[90px]">
+                        <span className="text-[9px] text-gray-500 font-mono">{formatBytes(f.size)}</span>
+                        <svg  width="18" height="18" fill="none" stroke="#9ca3af" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" className="icon self-center icon-tabler icons-tabler-outline icon-tabler-photo" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M15 8h.01M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="m3 16 5-5c.928-.893 2.072-.893 3 0l5 5"/><path d="m14 14 1-1c.928-.893 2.072-.893 3 0l3 3"/></svg>
+                        <p className="text-[9px] text-gray-700 truncate" title={f.name}>{f.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => quitarArchivo(idx)}
+                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-gray-300 text-white hover:bg-red-500 flex items-center justify-center transition-colors"
+                          title="Quitar"
+                        >
+                         <svg width="12" height="12" fill="none" stroke="#fff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="icon icon-tabler icons-tabler-outline icon-tabler-trash-x" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M4 7h16M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-5 5 4 4m0-4-4 4"/></svg></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex sm:flex-row items-center justify-between gap-2">
+                  <div className="flex items-center">
+                    <label title="Adjuntar imágenes" className="cursor-pointer bg-gray-50 rounded-md px-2 py-1 inline-flex items-center gap-1 sm:text-sm text-xs text-gray-600 hover:text-brandCustom transition-colors select-none">
                       <input
-                        type="checkbox"
-                        checked={esNotaInterna}
-                        onChange={(e) => setEsNotaInterna(e.target.checked)}
-                        className="rounded border-borderCustom text-brandCustom focus:ring-brandCustom focus:ring-offset-0"
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => agregarArchivos(e.target.files)}
                       />
-                      Nota interna
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" className="icon icon-tabler icons-tabler-outline icon-tabler-photo-up" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M15 8h.01M12.5 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6.5"/><path d="m3 16 5-5c.928-.893 2.072-.893 3 0l3.5 3.5"/><path d="m14 14 1-1c.679-.653 1.473-.829 2.214-.526M19 22v-6m3 3-3-3-3 3"/></svg>
+                      Adjuntar
                     </label>
-                  )}
+                  </div>
                   <button
                     type="submit"
-                    disabled={comentando}
-                    className="sm:ml-auto rounded-xl bg-brandCustom px-4 py-2 sm:text-sm text-[12px] font-regular text-white hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
+                    disabled={comentando || (!nuevoComentario.trim() && archivosSeleccionados.length === 0)}
+                    className="rounded-xl bg-brandCustom px-4 py-2 sm:text-sm text-[12px] font-regular text-white hover:bg-brandCustom/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-brand active:scale-[0.98] transition-all flex items-center gap-2"
                   >
-                    {comentando ? "Enviando..." : "Comentar"}
+                    {comentando ? "Enviando..." : "Enviar"}
                     <SendCommentIcon className="w-5 h-5" />
                   </button>
                 </div>
@@ -436,22 +510,6 @@ export default function TicketDetallePage() {
           </section>
         </div>
         <div className="w-full lg:w-80 shrink-0 space-y-6">
-          <section className="space-y-2">
-            <h2 className="text-sm sm:text-md font-semibold tracking-tight text-brandCustom">Adjuntos ({adjuntos.length})</h2>
-            <div className="bg-cardCustom rounded-2xl border border-gray-100 shadow-card p-4">
-              <AdjuntosGallery
-                ticketId={ticketId}
-                adjuntos={adjuntos}
-                puedeSubir={!estaCerrado}
-                puedeBorrar={() => true}
-                onChanged={cargar}
-                onError={setError}
-              />
-              {adjuntosPage < adjuntosTotalPages && (
-                <LoadMoreButton onClick={cargarMasAdjuntos} label="Cargar mas adjuntos..." />
-              )}
-            </div>
-          </section>
           <section className="space-y-2">
             <h2 className="text-sm sm:text-md font-semibold tracking-tight text-brandCustom mb-3">Tiempos</h2>
             {(() => {

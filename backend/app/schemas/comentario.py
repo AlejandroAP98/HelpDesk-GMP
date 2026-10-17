@@ -6,10 +6,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas import DatetimeUTC
+from app.schemas.adjunto import AdjuntoOut
 
 
 class ComentarioCreate(BaseModel):
-    contenido: str = Field(..., min_length=1, max_length=5000)
+    contenido: str | None = Field(default=None, max_length=5000)
     es_nota_interna: bool = False
 
 
@@ -20,6 +21,7 @@ class ComentarioOut(BaseModel):
     ticket_id: UUID
     usuario_id: UUID
     usuario_nombre: str | None = None
-    contenido: str
+    contenido: str | None
     es_nota_interna: bool
     fecha_creacion: DatetimeUTC
+    adjuntos: list[AdjuntoOut] = []

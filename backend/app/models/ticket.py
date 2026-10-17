@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Boolean, Computed, Enum as SAEnum
-from sqlalchemy import ForeignKey, Index, Integer, SmallInteger, String, Text, func
+from sqlalchemy import ForeignKey, Index, Integer, SmallInteger, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -86,11 +86,14 @@ class Ticket(Base):
     fecha_primera_respuesta: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     fecha_resolucion: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     en_pausa: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default=func.false()
+        Boolean, nullable=False, default=False, server_default=text("false")
     )
     motivo_pausa: Mapped[str | None] = mapped_column(String(500), nullable=True)
     fecha_pausa: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     segundos_pausa_acumulado: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    segundos_pausa_sla_acumulado: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
     peso_orden: Mapped[int] = mapped_column(

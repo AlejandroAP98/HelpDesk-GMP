@@ -31,9 +31,13 @@ export function useAdjuntoBlob(relativeUrl: string | null | undefined): {
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          setError("No se pudo cargar la imagen");
+          const msg =
+            err instanceof Error && err.message === "not_found"
+              ? "Imagen no disponible"
+              : "No se pudo cargar la imagen";
+          setError(msg);
           setLoading(false);
         }
       });

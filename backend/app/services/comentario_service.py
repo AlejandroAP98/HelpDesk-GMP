@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import timezone
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.models.adjunto import Adjunto
 from app.models.comentario import Comentario
 from app.models.enums import RolUsuario
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
 from app.schemas.comentario import ComentarioCreate, ComentarioOut
-from app.services import ticket_service
+from app.services import adjunto_service, ticket_service
 from app.services.estados import es_estado_final
 from app.utils.exceptions import Conflicto, PermisoDenegado
 from app.utils.pagination import Pagina, paginacion
@@ -55,6 +58,18 @@ async def _resolve_implicated_user_ids(
     return list(implicated)
 
 
+def _comentario_to_out(
+    comentario: Comentario, usuario_nombre: str | None, adjuntos: list[Adjunto]
+) -> ComentarioOut:
+    return ComentarioOut.model_validate(
+        {
+            **{k: getattr(comentario, k) for k in comentario.__table__.columns.keys()},
+            "usuario_nombre": usuario_nombre,
+            "adjuntos": [adjunto_service.to_out(a) for a in adjuntos],
+        }
+    )
+
+
 async def listar(
     ticket_id: UUID,
     current: Usuario,
@@ -84,14 +99,23 @@ async def listar(
         )
     ).all()
 
+    comentario_ids = [c.id for c, _ in rows]
+    adjuntos_por_comentario: dict[UUID, list[Adjunto]] = defaultdict(list)
+    if comentario_ids:
+        adjuntos_rows = await db.execute(
+            select(Adjunto)
+            .where(Adjunto.comentario_id.in_(comentario_ids))
+            .order_by(Adjunto.fecha_creacion.asc())
+        )
+        for adjunto in adjuntos_rows.scalars().all():
+            if adjunto.comentario_id is not None:
+                adjuntos_por_comentario[adjunto.comentario_id].append(adjunto)
+
     out: list[ComentarioOut] = []
     for c, usuario_nombre in rows:
         out.append(
-            ComentarioOut.model_validate(
-                {
-                    **{k: getattr(c, k) for k in c.__table__.columns.keys()},
-                    "usuario_nombre": usuario_nombre,
-                }
+            _comentario_to_out(
+                c, usuario_nombre, adjuntos_por_comentario.get(c.id, [])
             )
         )
     return Pagina.of(out, total, p.page, p.size)
@@ -102,18 +126,30 @@ async def crear(
     data: ComentarioCreate,
     current: Usuario,
     db: AsyncSession,
+    files: list[tuple[str, str, bytes]] | None = None,
 ) -> ComentarioOut:
-    """Crea comentario. Clientes no pueden emitir notas internas."""
+    """Crea comentario. Clientes no pueden emitir notas internas.
+    `files` es una lista de (file_name, content_type, data)."""
+    files = files or []
     ticket = await _resolve_ticket(ticket_id, current, db)
     if es_estado_final(ticket.estado):
         raise Conflicto("Ticket cerrado, no admite nuevos comentarios")
     if data.es_nota_interna and current.rol == RolUsuario.cliente.value:
         raise PermisoDenegado("Solo agentes/admins pueden agregar notas internas")
+    contenido = data.contenido.strip() if data.contenido else None
+    if not contenido and not files:
+        raise Conflicto("El comentario debe tener texto o al menos una imagen")
+
+    total_adjuntos = await adjunto_service._contar_adjuntos_ticket(ticket_id, db)
+    if total_adjuntos + len(files) > adjunto_service.MAX_ADJUNTOS_POR_TICKET:
+        raise Conflicto(
+            f"El ticket alcanzaría el límite de {adjunto_service.MAX_ADJUNTOS_POR_TICKET} adjuntos"
+        )
 
     comentario = Comentario(
         ticket_id=ticket_id,
         usuario_id=current.id,
-        contenido=data.contenido,
+        contenido=contenido,
         es_nota_interna=data.es_nota_interna,
     )
     db.add(comentario)
@@ -123,10 +159,30 @@ async def crear(
         ticket.fecha_primera_respuesta = func.now()
         marco_frt = True
 
+    await db.flush()
+
+    adjuntos: list[Adjunto] = []
+    for file_name, content_type, file_data in files:
+        object_key, _, normalized_mime = await adjunto_service.subir_a_storage(
+            ticket_id, file_name, content_type, file_data
+        )
+        adjunto = Adjunto(
+            ticket_id=ticket_id,
+            comentario_id=comentario.id,
+            archivo_url=f"{settings.minio_bucket}/{object_key}",
+            nombre_archivo=file_name,
+            tipo_mime=normalized_mime,
+            tamano_bytes=len(file_data) or None,
+        )
+        db.add(adjunto)
+        adjuntos.append(adjunto)
+
     await db.commit()
     await db.refresh(comentario)
     if marco_frt:
         await db.refresh(ticket)
+    for a in adjuntos:
+        await db.refresh(a)
 
     try:
         from app.websockets.pubsub import publish_to_users
@@ -137,9 +193,10 @@ async def crear(
             "comentario_id": str(comentario.id),
             "usuario_id": str(current.id),
             "usuario_nombre": current.nombre,
-            "contenido": data.contenido,
+            "contenido": contenido,
             "es_nota_interna": data.es_nota_interna,
             "fecha_creacion": comentario.fecha_creacion.replace(tzinfo=timezone.utc).isoformat(),
+            "adjuntos": [adjunto_service.to_out(a).model_dump(mode="json") for a in adjuntos],
         }
         implicated = await _resolve_implicated_user_ids(
             ticket, current, db, es_nota_interna=data.es_nota_interna
@@ -160,12 +217,7 @@ async def crear(
         usuario_nombre=current.nombre,
         ticket_id=ticket_id,
         tipo_evento="comment_added",
-        metadata={"es_nota_interna": data.es_nota_interna},
+        metadata={"es_nota_interna": data.es_nota_interna, "adjuntos": len(files)},
     )
 
-    return ComentarioOut.model_validate(
-        {
-            **{k: getattr(comentario, k) for k in comentario.__table__.columns.keys()},
-            "usuario_nombre": current.nombre,
-        }
-    )
+    return _comentario_to_out(comentario, current.nombre, adjuntos)

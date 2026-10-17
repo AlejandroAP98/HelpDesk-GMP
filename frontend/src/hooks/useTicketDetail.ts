@@ -16,6 +16,7 @@ import {
   type PrioridadTicket,
   type Ticket,
 } from "@/lib/endpoints";
+import { optimizeImage } from "@/lib/imageUtils";
 import type { Usuario } from "@/store/authStore";
 
 export type AccionTicket =
@@ -40,6 +41,7 @@ export function useTicketDetail(ticketId: string) {
   const [historial, setHistorial] = useState<HistorialEstado[]>([]);
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [esNotaInterna, setEsNotaInterna] = useState(false);
+  const [archivosSeleccionados, setArchivosSeleccionados] = useState<File[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comentariosPage, setComentariosPage] = useState(1);
@@ -178,6 +180,7 @@ export function useTicketDetail(ticketId: string) {
             contenido: ev.contenido,
             es_nota_interna: ev.es_nota_interna,
             fecha_creacion: ev.fecha_creacion,
+            adjuntos: ev.adjuntos ?? [],
           },
         ];
       });
@@ -189,18 +192,36 @@ export function useTicketDetail(ticketId: string) {
     };
   }, [ticketId, usuario?.rol, setOnTicketUpdated, setOnTicketCommented]);
 
+  const agregarArchivos = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const nuevos = Array.from(files);
+    setArchivosSeleccionados((prev) => [...prev, ...nuevos]);
+  }, []);
+
+  const quitarArchivo = useCallback((index: number) => {
+    setArchivosSeleccionados((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const enviarComentario = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busyRef.current || !nuevoComentario.trim()) return;
+    if (busyRef.current) return;
+    const tieneTexto = nuevoComentario.trim().length > 0;
+    const tieneArchivos = archivosSeleccionados.length > 0;
+    if (!tieneTexto && !tieneArchivos) return;
     busyRef.current = true;
     setComentando(true);
     try {
-      await comentarioApi.crear(ticketId, {
-        contenido: nuevoComentario,
-        es_nota_interna: esNotaInterna,
-      });
+      const optimizados = await Promise.all(
+        archivosSeleccionados.map((f) => optimizeImage(f))
+      );
+      const form = new FormData();
+      if (tieneTexto) form.append("contenido", nuevoComentario.trim());
+      form.append("es_nota_interna", String(esNotaInterna));
+      optimizados.forEach((f) => form.append("files", f));
+      await comentarioApi.crear(ticketId, form);
       setNuevoComentario("");
       setEsNotaInterna(false);
+      setArchivosSeleccionados([]);
       await cargar();
     } catch {
       setError("No se pudo agregar el comentario");
@@ -338,6 +359,7 @@ export function useTicketDetail(ticketId: string) {
     ticket, comentarios, adjuntos, historial,
     nuevoComentario, setNuevoComentario,
     esNotaInterna, setEsNotaInterna,
+    archivosSeleccionados, agregarArchivos, quitarArchivo,
     cargando, error, setError,
     comentando, accion,
     comentariosPage, comentariosTotalPages, cargarMasComentarios,

@@ -210,6 +210,21 @@ aparecer "jumpy". Suficiente para señal básica; si se necesita exactitud, migr
 - Primera respuesta (FRT): 0.5h para todos, sin excepciones (`SLA_FRT_HORAS`).
 - Media/Baja ignoran elemento y ciudad (flat). Urgente/Alta aplican la matriz por
   elemento/ciudad; torre/celda valen 4h en cualquier ciudad.
+- **Horario laboral** (`SLA_HORA_INICIO_LABORAL`=7, `SLA_HORA_FIN_LABORAL`=21, por env): si
+  el ticket se crea DENTRO de la franja, el reloj de SLA arranca de inmediato y corre
+  continuo durante todo el ciclo de vida (asignación, primera respuesta, resolución).
+  Si se crea FUERA, el reloj arranca al próximo `SLA_HORA_INICIO_LABORAL`:00 y desde
+  ahí corre continuo, sin volver a pausarse por noches ni fines de semana (MVP).
+  Esto refleja los acuerdos con las empresas: la madrugada sin atención no cuenta al
+  inicio, pero una vez que el ticket "nace vivo" en horario, la responsabilidad se mide
+  en reloj de pared continuo. Implementado en `app/services/horario_laboral.py` y
+  replicado en `frontend/src/lib/horarioLaboral.ts` para los tiempos del timeline del
+  ticket. Los timestamps crudos (`fecha_creacion`, `fecha_primera_respuesta`,
+  `fecha_resolucion`) NO se modifican.
+- Cobertura del horario laboral: 30 tests Python en `tests/test_horario_laboral.py`
+  (7 casos `[FIX-HORARIO]` + 8 casos `[FIX-HORARIO-EXTRA]`) y 3 tests de integracion
+  en `tests/test_sla_sedes.py` que ejercen `/api/metricas/sla` con tickets nacidos
+  fuera de horario. Validacion cruzada del frontend: `npm run verify:horario`.
 - `SLA_CIUDADES_BASE` (default): Manizales, Villamaría, Chinchiná, Neira, Palestina,
   Anserma, Belalcázar, Viterbo, San José. Regla invertida: base=24h, cualquier otra
   ciudad con datos=48h. Comparación normalizada (minusculas, sin acentos).

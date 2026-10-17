@@ -37,6 +37,9 @@ export async function fetchAdjuntoBlob(
     });
     if (!res.ok) {
       inflight.delete(relativeUrl);
+      if (res.status === 404) {
+        throw new Error("not_found");
+      }
       throw new Error(`HTTP ${res.status}`);
     }
     const blob = await res.blob();

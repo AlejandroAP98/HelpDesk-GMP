@@ -59,6 +59,14 @@ class Settings(BaseSettings):
         "Viterbo",
         "San José",
     ]
+    # Franja de atencion del SLA. Regla:
+    #   - Si el ticket se crea dentro de la franja, el reloj arranca
+    #     de inmediato y corre continuo (no se vuelve a pausar).
+    #   - Si se crea fuera, arranca al proximo hora_inicio y desde ahi
+    #     corre continuo.
+    # Ver app/services/horario_laboral.py para detalles.
+    sla_hora_inicio_laboral: int = 7
+    sla_hora_fin_laboral: int = 21
 
     # --- Resend (emails transaccionales) ---
     resend_api_key: str = ""

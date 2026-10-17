@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 
+import type { Adjunto } from "@/lib/endpoints";
+
 export interface TicketCreatedEvent {
   type: "ticket:created";
   ticket_id: string;
@@ -51,9 +53,10 @@ export interface TicketCommentedEvent {
   comentario_id: string;
   usuario_id: string;
   usuario_nombre: string;
-  contenido: string;
+  contenido: string | null;
   es_nota_interna: boolean;
   fecha_creacion: string;
+  adjuntos?: Adjunto[];
 }
 
 export interface TicketStateChangedEvent {

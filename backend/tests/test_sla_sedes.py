@@ -4,6 +4,8 @@ Ningún test consume la cuota de Resend: conftest fuerza RESEND_API_KEY=""."""
 
 from __future__ import annotations
 
+from datetime import date, datetime, time, timedelta
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
@@ -73,19 +75,74 @@ async def _seed_escenario(db_session) -> None:  # type: ignore[no-untyped-def]
 async def _marcar_resuelto(
     engine: AsyncEngine, titulo: str, frt_min: int, resolucion_horas: float
 ) -> None:
-    """Marca un ticket como respondido y resuelto con offsets relativos a su creacion."""
+    """Marca un ticket como respondido y resuelto con offsets relativos a su creacion.
+
+    Fija `fecha_creacion` a las 14:00:00 UTC (= 09:00 Bogota) del dia de la
+    corrida para que el ticket nazca dentro del horario laboral (7-21h).
+    Con la regla actual del SLA ("si nacio en horario, el reloj corre continuo"),
+    el delta es igual al reloj de pared independientemente de si la resolucion
+    cae de noche. Esto hace los tests independientes del horario en que se ejecuten.
+    """
+    Session = async_sessionmaker(engine, expire_on_commit=False)
+    base = datetime.combine(date.today(), time(14, 0, 0))
+    primera_respuesta = base + timedelta(minutes=frt_min)
+    resolucion = base + timedelta(hours=resolucion_horas)
+    async with Session() as s:
+        await s.execute(
+            text(
+                "UPDATE tickets SET"
+                " fecha_creacion = :base,"
+                " fecha_actualizacion = :base,"
+                " fecha_primera_respuesta = :primera,"
+                " fecha_resolucion = :resol,"
+                " estado = 'resuelto'"
+                " WHERE titulo = :t"
+            ),
+            {
+                "base": base,
+                "primera": primera_respuesta,
+                "resol": resolucion,
+                "t": titulo,
+            },
+        )
+        await s.commit()
+
+
+async def _fijar_timestamps(
+    engine: AsyncEngine,
+    titulo: str,
+    fecha_creacion: datetime,
+    fecha_primera_respuesta: datetime | None,
+    fecha_resolucion: datetime | None,
+) -> None:
+    """Fija timestamps absolutos (UTC naive) para un ticket.
+
+    Util para ejercer la logica de horario laboral con valores conocidos
+    sin depender de la hora de ejecucion del test.
+    """
     Session = async_sessionmaker(engine, expire_on_commit=False)
     async with Session() as s:
         await s.execute(
             text(
                 "UPDATE tickets SET"
-                " fecha_primera_respuesta = fecha_creacion + make_interval(mins => :frt),"
-                " fecha_resolucion = fecha_creacion + make_interval(hours => :hrs),"
-                " estado = 'resuelto'"
+                " fecha_creacion = :c,"
+                " fecha_actualizacion = :c,"
+                " fecha_primera_respuesta = :p,"
+                " fecha_resolucion = :r"
                 " WHERE titulo = :t"
             ),
-            {"frt": frt_min, "hrs": resolucion_horas, "t": titulo},
+            {
+                "c": fecha_creacion,
+                "p": fecha_primera_respuesta,
+                "r": fecha_resolucion,
+                "t": titulo,
+            },
         )
+        if fecha_resolucion is not None:
+            await s.execute(
+                text("UPDATE tickets SET estado = 'resuelto' WHERE titulo = :t"),
+                {"t": titulo},
+            )
         await s.commit()
 
 
@@ -338,3 +395,117 @@ async def test_sla_municipios_base_24h_en_urgente(
         assert esta_en_sla, f"{ciudad} con {resolucion_horas}h debe estar EN SLA (umbral 24h)"
     else:
         assert not esta_en_sla, f"{ciudad} con {resolucion_horas}h debe estar FUERA de SLA (24h)"
+
+
+async def test_sla_respeta_horario_laboral_nacido_de_noche(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre urgente creada 02:00 Bogota y resuelta 10:00 Bogota.
+
+    Reloj de pared: 8h (fuera del umbral 4h). Horario laboral: 3h (dentro).
+    """
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    t = await _crear_ticket(
+        client, tok, titulo="Horario noche 3h", elemento_afectado="torre", punto_venta_id=None
+    )
+    await _fijar_prioridad(client, t["id"], "urgente")
+    await _fijar_timestamps(
+        db_engine,
+        "Horario noche 3h",
+        datetime(2026, 10, 10, 7, 0, 0),    # 02:00 Bogota
+        datetime(2026, 10, 10, 12, 10, 0),  # 07:10 Bogota -> FRT 10min
+        datetime(2026, 10, 10, 15, 0, 0),
+    )
+
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+    assert abs(d["mttr_urgente_horas"] - 3.0) < 0.05
+
+
+async def test_sla_agente_hero_antes_del_arranque(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Torre urgente creada 22:00 Bogota y resuelta 05:00 dia siguiente.
+
+    Reloj de pared: 7h (fuera del umbral 4h). Horario laboral: 0h (dentro).
+    """
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    t = await _crear_ticket(
+        client, tok, titulo="Horario heroe 0h", elemento_afectado="torre", punto_venta_id=None
+    )
+    await _fijar_prioridad(client, t["id"], "urgente")
+    await _fijar_timestamps(
+        db_engine,
+        "Horario heroe 0h",
+        datetime(2026, 10, 11, 3, 0, 0),     # 22:00 Bogota dia 10
+        datetime(2026, 10, 11, 10, 10, 0),  # 05:10 Bogota dia 11 -> FRT 0
+        datetime(2026, 10, 11, 10, 10, 0),
+    )
+
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+    assert d["mttr_urgente_horas"] == 0.0
+
+
+async def test_sla_horario_laboral_no_pausa_noches(client, db_session, db_engine):  # type: ignore[no-untyped-def]
+    """Ticket media creado 18:00 Bogota y resuelto 09:00 al dia siguiente.
+
+    Debe dar 15h (continuo desde que nacio en horario), no solo las horas
+    dentro de la franja 7-21.
+    """
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    t = await _crear_ticket(client, tok, titulo="Horario continuo 15h")
+    await _fijar_prioridad(client, t["id"], "media")
+    await _fijar_timestamps(
+        db_engine,
+        "Horario continuo 15h",
+        datetime(2026, 10, 10, 23, 0, 0),    # 18:00 Bogota
+        datetime(2026, 10, 10, 23, 10, 0),  # 18:10 Bogota -> FRT 10min
+        datetime(2026, 10, 11, 14, 0, 0),   # 09:00 Bogota dia 11
+    )
+
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 1
+    assert abs(d["mttr_media_horas"] - 15.0) < 0.05
+
+
+async def test_sla_no_descuenta_pausa_antes_del_arranque_del_reloj(
+    client, db_session, db_engine
+):  # type: ignore[no-untyped-def]
+    """Una pausa 04:00-06:00 de Bogota no se resta si el SLA arranca a las 07:00."""
+    await _seed_escenario(db_session)
+    tok = await login_token(client, "c@test.com", "Password12345")
+    t = await _crear_ticket(
+        client,
+        tok,
+        titulo="Pausa antes del SLA",
+        elemento_afectado="torre",
+        punto_venta_id=None,
+    )
+    await _fijar_prioridad(client, t["id"], "urgente")
+
+    hoy = date.today()
+    creado = datetime.combine(hoy, time(3, 0))  # 22:00 Bogota del dia anterior
+    primera_respuesta = datetime.combine(hoy, time(12, 10))  # 07:10 Bogota
+    resolucion = datetime.combine(hoy, time(17, 0))  # 12:00 Bogota
+    await _fijar_timestamps(
+        db_engine,
+        "Pausa antes del SLA",
+        creado,
+        primera_respuesta,
+        resolucion,
+    )
+
+    Session = async_sessionmaker(db_engine, expire_on_commit=False)
+    async with Session() as s:
+        await s.execute(
+            text(
+                "UPDATE tickets SET segundos_pausa_acumulado = 7200, "
+                "segundos_pausa_sla_acumulado = 0 WHERE titulo = :t"
+            ),
+            {"t": "Pausa antes del SLA"},
+        )
+        await s.commit()
+
+    d = await _sla_por_empresa(client)
+    assert d["tickets_en_sla"] == 0
+    assert abs(d["mttr_urgente_horas"] - 5.0) < 0.05

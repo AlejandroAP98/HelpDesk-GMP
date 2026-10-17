@@ -20,7 +20,7 @@ class Comentario(Base):
     usuario_id: Mapped[UUID] = mapped_column(
         ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False
     )
-    contenido: Mapped[str] = mapped_column(Text, nullable=False)
+    contenido: Mapped[str | None] = mapped_column(Text, nullable=True)
     es_nota_interna: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

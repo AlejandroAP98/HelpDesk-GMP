@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from collections import defaultdict
+from datetime import date, datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 from dateutil.relativedelta import relativedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import ColumnElement, Integer, case, func, select
+from sqlalchemy import Integer, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -39,6 +42,10 @@ from app.schemas.metricas import (
     TiempoResolucionAgente,
     TopUbicacion,
     VolumenPorEmpresa,
+)
+from app.services.horario_laboral import (
+    tiempo_pausa_sla_transcurrido,
+    tiempo_sla_transcurrido,
 )
 
 router = APIRouter(prefix="/api/metricas", tags=["metricas"])
@@ -200,15 +207,26 @@ async def tendencia(
     Si no se pasan fechas, usa los últimos 30 dias. Los dias sin movimiento se
     devuelven con creados=0 y resueltos=0 para que la linea sea continua.
     """
+    tz = settings.app_timezone
+    zona = ZoneInfo(tz)
     if fecha_fin is None:
-        fecha_fin = date.today()
+        fecha_fin = datetime.now(zona).date()
     if fecha_inicio is None:
         fecha_inicio = fecha_fin - timedelta(days=29)
 
-    tz = settings.app_timezone
+    inicio_utc = (
+        datetime.combine(fecha_inicio, time.min, tzinfo=zona)
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
+    fin_utc = (
+        datetime.combine(fecha_fin, time.max, tzinfo=zona)
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
     filtros_comun: list = [
-        Ticket.fecha_creacion >= datetime.combine(fecha_inicio, time.min),
-        Ticket.fecha_creacion <= datetime.combine(fecha_fin, time.max),
+        Ticket.fecha_creacion >= inicio_utc,
+        Ticket.fecha_creacion <= fin_utc,
     ]
     if empresa_id is not None:
         filtros_comun.append(Ticket.empresa_id == empresa_id)
@@ -237,8 +255,8 @@ async def tendencia(
         )
         .where(
             Ticket.fecha_resolucion.isnot(None),
-            Ticket.fecha_resolucion >= datetime.combine(fecha_inicio, time.min),
-            Ticket.fecha_resolucion <= datetime.combine(fecha_fin, time.max),
+            Ticket.fecha_resolucion >= inicio_utc,
+            Ticket.fecha_resolucion <= fin_utc,
             *([Ticket.empresa_id == empresa_id] if empresa_id is not None else []),
         )
         .group_by(func.date(resolucion_local))
@@ -544,50 +562,31 @@ SLA_MTTR_BAJA_HORAS: float = settings.sla_mttr_baja_horas
 SLA_CIUDADES_BASE: frozenset[str] = _ciudades_base_normalizadas()
 
 
-def _normalizar_ciudad() -> ColumnElement[str]:
-    """Expresion SQL que normaliza pv.ciudad (minusculas, sin acentos)."""
-    return func.lower(
-        func.translate(
-            PuntoVenta.ciudad,
-            "áéíóúüñÁÉÍÓÚÜÑ",
-            "aeiouunAEIOUUN",
-        )
-    )
+def _umbral_mttr_horas_para(
+    prioridad: PrioridadTicket,
+    elemento: ElementoInfraestructura,
+    ciudad: str | None,
+) -> float:
+    """Replica en Python de la matriz SLA para decidir el umbral por ticket."""
+    if prioridad == PrioridadTicket.media:
+        return SLA_MTTR_MEDIA_HORAS
+    if prioridad == PrioridadTicket.baja:
+        return SLA_MTTR_BAJA_HORAS
+    if elemento in (ElementoInfraestructura.torre, ElementoInfraestructura.celda):
+        return SLA_MTTR_TORRE_CELDA_HORAS
+    if (
+        elemento == ElementoInfraestructura.punto_venta
+        and ciudad is not None
+        and _normalizar_texto(ciudad) not in SLA_CIUDADES_BASE
+    ):
+        return SLA_MTTR_REMOTO_HORAS
+    return SLA_MTTR_HORAS
 
 
-def _es_sede_remota() -> ColumnElement[bool]:
-    """True si el ticket es de punto de venta con ciudad fuera de las ciudades base."""
-    ciudad = _normalizar_ciudad()
-    return (
-        (Ticket.elemento_afectado == ElementoInfraestructura.punto_venta)
-        & Ticket.punto_venta_id.isnot(None)
-        & ciudad.isnot(None)
-        & ciudad.notin_(SLA_CIUDADES_BASE)
-    )
-
-
-def _es_torre_celda() -> ColumnElement[bool]:
-    """True si el ticket es de torre o celda (SLA corto, sin importar la ciudad)."""
-    return Ticket.elemento_afectado.in_(
-        [ElementoInfraestructura.torre, ElementoInfraestructura.celda]
-    )
-
-
-def _umbral_mttr_segundos() -> ColumnElement[float]:
-    """Umbral MTTR por ticket (prioridad en vivo + elemento + ciudad):
-    - media: 96h (4 dias), baja: 144h (6 dias), sin importar elemento ni ciudad.
-    - urgente/alta: torre/celda 4h, punto de venta remoto 48h, resto 24h."""
-    es_media = Ticket.prioridad == PrioridadTicket.media
-    es_baja = Ticket.prioridad == PrioridadTicket.baja
-    return case(
-        (es_media, SLA_MTTR_MEDIA_HORAS * 3600),
-        (es_baja, SLA_MTTR_BAJA_HORAS * 3600),
-        else_=case(
-            (_es_torre_celda(), SLA_MTTR_TORRE_CELDA_HORAS * 3600),
-            (_es_sede_remota(), SLA_MTTR_REMOTO_HORAS * 3600),
-            else_=SLA_MTTR_HORAS * 3600,
-        ),
-    )
+def _promedio_horas(deltas: list[float]) -> float | None:
+    if not deltas:
+        return None
+    return round(sum(deltas) / len(deltas), 2)
 
 
 async def _calcular_sla_empresa(
@@ -596,6 +595,18 @@ async def _calcular_sla_empresa(
     fecha_fin: datetime,
     empresa_id: int | None = None,
 ) -> dict:
+    """Agrega las metricas de SLA por empresa respetando el horario laboral.
+
+    Estrategia: en una sola query se trae el set minimo de campos por ticket
+    (timestamps + prioridad + elemento + ciudad del PV + empresa). El calculo
+    de FRT y MTTR se hace en Python con `tiempo_sla_transcurrido(...)`, lo que
+    permite aplicar la regla "nacido en horario -> continuo, nacido fuera ->
+    arranca al proximo inicio" sin replicarla como CASE en SQL.
+
+    El umbral MTTR por ticket se decide tambien en Python segun la matriz
+    prioridad+elemento+ciudad. La agregacion final por empresa es un
+    promedio simple sobre los tickets que tienen la metrica.
+    """
     filtros: list = [
         Ticket.fecha_creacion >= fecha_inicio,
         Ticket.fecha_creacion <= fecha_fin,
@@ -603,73 +614,121 @@ async def _calcular_sla_empresa(
     if empresa_id is not None:
         filtros.append(Ticket.empresa_id == empresa_id)
 
-    umbral_mttr = _umbral_mttr_segundos()
-    frt_segundos = func.extract("epoch", Ticket.fecha_primera_respuesta - Ticket.fecha_creacion)
-    mttr_bruto = func.extract("epoch", Ticket.fecha_resolucion - Ticket.fecha_creacion)
-    tiempo_pausa = Ticket.segundos_pausa_acumulado + case(
-        (Ticket.en_pausa, func.extract("epoch", func.now() - Ticket.fecha_pausa)),
-        else_=0,
-    )
-    mttr_efectivo_segundos = func.greatest(mttr_bruto - tiempo_pausa, 0)
-    es_critico = Ticket.prioridad.in_([PrioridadTicket.urgente, PrioridadTicket.alta])
-    es_media = Ticket.prioridad == PrioridadTicket.media
-    es_baja = Ticket.prioridad == PrioridadTicket.baja
-
-    stmt_total = (
+    stmt = (
         select(
+            Ticket.id,
             Ticket.empresa_id,
             Empresa.nombre.label("empresa_nombre"),
-            func.count(Ticket.id).label("total"),
-            func.sum(
-                func.cast(
-                    (Ticket.fecha_primera_respuesta.isnot(None))
-                    & (frt_segundos <= SLA_FRT_HORAS * 3600)
-                    & (
-                        (Ticket.fecha_resolucion.is_(None))
-                        | (
-                            Ticket.fecha_resolucion.isnot(None)
-                            & (mttr_efectivo_segundos <= umbral_mttr)
-                        )
-                    ),
-                    Integer,
-                )
-            ).label("en_sla"),
-            func.avg(frt_segundos / 3600.0).label("frt_horas"),
-            func.avg(mttr_efectivo_segundos / 3600.0).label("mttr_horas"),
-            func.avg(case((es_critico, mttr_efectivo_segundos / 3600.0))).label(
-                "mttr_urgente_horas"
-            ),
-            func.avg(case((es_media, mttr_efectivo_segundos / 3600.0))).label("mttr_media_horas"),
-            func.avg(case((es_baja, mttr_efectivo_segundos / 3600.0))).label("mttr_baja_horas"),
+            Ticket.prioridad,
+            Ticket.elemento_afectado,
+            Ticket.fecha_creacion,
+            Ticket.fecha_primera_respuesta,
+            Ticket.fecha_resolucion,
+            Ticket.segundos_pausa_sla_acumulado,
+            Ticket.en_pausa,
+            Ticket.fecha_pausa,
+            PuntoVenta.ciudad,
         )
         .join(Empresa, Ticket.empresa_id == Empresa.id)
         .outerjoin(PuntoVenta, Ticket.punto_venta_id == PuntoVenta.id)
         .where(*filtros)
     )
 
-    stmt_grupo = stmt_total.group_by(Ticket.empresa_id, Empresa.nombre).order_by(
-        func.count(Ticket.id).desc()
+    ahora = datetime.now(timezone.utc)
+    h_inicio = settings.sla_hora_inicio_laboral
+    h_fin = settings.sla_hora_fin_laboral
+
+    acum: dict[int, dict] = defaultdict(
+        lambda: {
+            "empresa_nombre": None,
+            "total": 0,
+            "en_sla": 0,
+            "frt_deltas": [],
+            "mttr_deltas": [],
+            "mttr_urgente_deltas": [],
+            "mttr_media_deltas": [],
+            "mttr_baja_deltas": [],
+        }
     )
 
-    rows = (await db.execute(stmt_grupo)).all()
+    for row in (await db.execute(stmt)).all():
+        bucket = acum[row.empresa_id]
+        bucket["empresa_nombre"] = row.empresa_nombre
+        bucket["total"] += 1
+
+        # Descontar solo pausas superpuestas al reloj SLA.
+        segundos_pausa_sla = int(row.segundos_pausa_sla_acumulado or 0)
+        if row.en_pausa and row.fecha_pausa is not None:
+            segundos_pausa_sla += int(
+                tiempo_pausa_sla_transcurrido(
+                    row.fecha_creacion,
+                    row.fecha_pausa,
+                    ahora,
+                    h_inicio,
+                    h_fin,
+                ).total_seconds()
+            )
+        tiempo_pausa_sla = timedelta(seconds=max(segundos_pausa_sla, 0))
+
+        # FRT en horario laboral.
+        if row.fecha_primera_respuesta is not None:
+            frt_real = tiempo_sla_transcurrido(
+                row.fecha_creacion, row.fecha_primera_respuesta, h_inicio, h_fin
+            )
+        else:
+            frt_real = None
+
+        # MTTR en horario laboral.
+        if row.fecha_resolucion is not None:
+            mttr_lab = tiempo_sla_transcurrido(
+                row.fecha_creacion, row.fecha_resolucion, h_inicio, h_fin
+            )
+            if mttr_lab > tiempo_pausa_sla:
+                mttr_efectivo = mttr_lab - tiempo_pausa_sla
+            else:
+                mttr_efectivo = timedelta(0)
+        else:
+            mttr_efectivo = None
+
+        # Flags en SLA.
+        if frt_real is not None:
+            frt_ok = frt_real.total_seconds() <= SLA_FRT_HORAS * 3600
+        else:
+            frt_ok = False
+        if mttr_efectivo is not None:
+            umbral_horas = _umbral_mttr_horas_para(
+                row.prioridad, row.elemento_afectado, row.ciudad
+            )
+            mttr_ok = mttr_efectivo.total_seconds() <= umbral_horas * 3600
+        else:
+            mttr_ok = True
+        if frt_real is not None and frt_ok and (mttr_efectivo is None or mttr_ok):
+            bucket["en_sla"] += 1
+
+        if frt_real is not None:
+            bucket["frt_deltas"].append(frt_real.total_seconds() / 3600.0)
+        if mttr_efectivo is not None:
+            mttr_horas_val = mttr_efectivo.total_seconds() / 3600.0
+            bucket["mttr_deltas"].append(mttr_horas_val)
+            if row.prioridad == PrioridadTicket.urgente or row.prioridad == PrioridadTicket.alta:
+                bucket["mttr_urgente_deltas"].append(mttr_horas_val)
+            elif row.prioridad == PrioridadTicket.media:
+                bucket["mttr_media_deltas"].append(mttr_horas_val)
+            elif row.prioridad == PrioridadTicket.baja:
+                bucket["mttr_baja_deltas"].append(mttr_horas_val)
+
     return {
-        r.empresa_id: {
-            "empresa_nombre": r.empresa_nombre,
-            "total": r.total,
-            "en_sla": r.en_sla or 0,
-            "frt_horas": round(r.frt_horas, 2) if r.frt_horas is not None else None,
-            "mttr_horas": round(r.mttr_horas, 2) if r.mttr_horas is not None else None,
-            "mttr_urgente_horas": (
-                round(r.mttr_urgente_horas, 2) if r.mttr_urgente_horas is not None else None
-            ),
-            "mttr_media_horas": (
-                round(r.mttr_media_horas, 2) if r.mttr_media_horas is not None else None
-            ),
-            "mttr_baja_horas": (
-                round(r.mttr_baja_horas, 2) if r.mttr_baja_horas is not None else None
-            ),
+        eid: {
+            "empresa_nombre": data["empresa_nombre"],
+            "total": data["total"],
+            "en_sla": data["en_sla"],
+            "frt_horas": _promedio_horas(data["frt_deltas"]),
+            "mttr_horas": _promedio_horas(data["mttr_deltas"]),
+            "mttr_urgente_horas": _promedio_horas(data["mttr_urgente_deltas"]),
+            "mttr_media_horas": _promedio_horas(data["mttr_media_deltas"]),
+            "mttr_baja_horas": _promedio_horas(data["mttr_baja_deltas"]),
         }
-        for r in rows
+        for eid, data in acum.items()
     }
 
 

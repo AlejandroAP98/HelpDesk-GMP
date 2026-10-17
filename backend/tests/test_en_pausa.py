@@ -303,11 +303,10 @@ async def test_resolver_en_pausa_acumula_tiempo(client, db_session, monkeypatch)
 
 async def test_pausar_publica_evento_al_agente(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
     monkeypatch.setattr("app.websockets.pubsub.publish_to_roles", AsyncMock())
-    captured: dict = {}
+    calls: list = []
 
     async def _capture_users(user_ids, event):  # type: ignore[no-untyped-def]
-        captured["user_ids"] = list(user_ids)
-        captured["event"] = event
+        calls.append((list(user_ids), event))
 
     monkeypatch.setattr("app.websockets.pubsub.publish_to_users", _capture_users)
     tokens = await _setup_flujo(client, db_session)
@@ -321,10 +320,11 @@ async def test_pausar_publica_evento_al_agente(client, db_session, monkeypatch):
     )
     assert r.status_code == 201, r.text
 
-    assert "user_ids" in captured
-    assert agente.id in captured["user_ids"]
-    assert captured["event"]["type"] == "ticket:paused"
-    assert captured["event"]["motivo"] == "Permiso de acceso"
+    pausa_calls = [c for c in calls if c[1].get("type") == "ticket:paused"]
+    assert pausa_calls
+    user_ids, event = pausa_calls[-1]
+    assert agente.id in user_ids
+    assert event["motivo"] == "Permiso de acceso"
 
 
 async def test_listar_filtro_en_pausa_true(client, db_session, monkeypatch):  # type: ignore[no-untyped-def]
@@ -415,10 +415,14 @@ async def test_sla_descuenta_tiempo_en_pausa(client, db_session, db_engine, monk
         await s.execute(
             text(
                 "UPDATE tickets SET"
-                " fecha_primera_respuesta = fecha_creacion + make_interval(mins => 1),"
+                " fecha_creacion = date_trunc('day', current_timestamp) + interval '12 hours',"
+                " fecha_primera_respuesta = date_trunc('day', current_timestamp)"
+                " + interval '12 hours' + make_interval(mins => 1),"
                 " segundos_pausa_acumulado = 40 * 3600,"
+                " segundos_pausa_sla_acumulado = 40 * 3600,"
                 " estado = 'resuelto',"
-                " fecha_resolucion = fecha_creacion + make_interval(hours => 100),"
+                " fecha_resolucion = date_trunc('day', current_timestamp)"
+                " + interval '12 hours' + make_interval(hours => 100),"
                 " motivo_pausa = NULL, fecha_pausa = NULL, en_pausa = false"
                 " WHERE id = :tid"
             ),

@@ -346,7 +346,7 @@ async def test_ticket_cerrado_no_admite_comentarios(client, db_session, db_engin
     r2 = await client.post(
         f"/api/tickets/{tid}/comentarios",
         headers=auth_header(tok),
-        json={"contenido": "hola"},
+        data={"contenido": "hola"},
     )
     assert r2.status_code == 409
 

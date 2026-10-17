@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+from io import BytesIO
 from typing import AsyncIterator
+from unittest.mock import MagicMock, patch
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -126,3 +129,41 @@ async def client(db_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
+
+
+def _fake_s3(body: bytes = b"fake-image-bytes") -> MagicMock:
+    mock = MagicMock()
+    stored: dict[str, bytes] = {}
+
+    def _upload(Fileobj=None, **_kwargs):  # type: ignore[no-untyped-def]
+        if Fileobj is not None:
+            data = Fileobj.read() if hasattr(Fileobj, "read") else Fileobj
+            stored[_kwargs.get("Key", "")] = bytes(data)
+
+    mock.upload_fileobj = MagicMock(side_effect=_upload)
+    mock.delete_object = MagicMock(return_value=None)
+
+    def _get(Bucket=None, Key=None, Range=None, **_kwargs):  # type: ignore[no-untyped-def]
+        data = stored.get(Key or "", body)
+        total = len(data)
+        if Range:
+            _range, end = Range.replace("bytes=", "").split("-")
+            start = int(_range)
+            end = int(end) if end else total - 1
+            data = data[start : end + 1]
+        return {
+            "Body": BytesIO(data),
+            "ContentLength": len(data),
+            "ContentRange": f"bytes {0}-{len(data) - 1}/{total}" if Range else None,
+        }
+
+    mock.get_object = MagicMock(side_effect=_get)
+    return mock
+
+
+@pytest.fixture
+def s3_mock():
+    """Parchea el cliente S3 singleton del storage para evitar tocar MinIO real."""
+    mock = _fake_s3()
+    with patch("app.core.storage._s3_client", mock):
+        yield mock
