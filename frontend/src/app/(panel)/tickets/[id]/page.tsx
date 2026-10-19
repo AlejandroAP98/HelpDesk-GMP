@@ -370,13 +370,13 @@ export default function TicketDetallePage() {
               </div>
             </div>
           )}
-          <section className="w-full space-y-2">
+          <section className="w-full space-y-2 bg">
             <h2 className="text-sm sm:text-md font-semibold tracking-tight text-brandCustom">Comentarios ({comentarios.length})</h2>
             <div className={`space-y-2.5 flex flex-col w-full p-4 ${comentarios.length > 0 ? 'bg-cardCustom rounded-xl' : 'bg-transparent'} `}>
               {comentarios.map((c: Comentario, index: number) => (
                 <div
                   key={c.id}
-                  className={`rounded-3xl border p-2.5 transition-all opacity-0 animate-fade-in w-fit max-w-xs ${
+                  className={`rounded-3xl border p-2.5 transition-all opacity-0 animate-fade-in w-fit  ${
                     c.es_nota_interna
                       ? "border-accentCustom/40 bg-accentCustom/10 w-full !rounded-t-2xl"
                       : c.usuario_nombre
@@ -424,7 +424,7 @@ export default function TicketDetallePage() {
                     <p className="sm:text-sm text-xs pl-2 whitespace-pre-wrap text-textCustom leading-relaxed">{c.contenido}</p>
                   )}
                   {c.adjuntos && c.adjuntos.length > 0 && (
-                    <div className="pt-2">
+                    <div className="pt-2 w-full flex items-center justify-end">
                       <AdjuntosInline
                         adjuntos={c.adjuntos}
                         esMiComentario={c.usuario_nombre === usuario?.nombre}
@@ -484,7 +484,7 @@ export default function TicketDetallePage() {
                 )}
                 <div className="flex sm:flex-row items-center justify-between gap-2">
                   <div className="flex items-center">
-                    <label title="Adjuntar imágenes" className="cursor-pointer bg-gray-50 rounded-md px-2 py-1 inline-flex items-center gap-1 sm:text-sm text-xs text-gray-600 hover:text-brandCustom transition-colors select-none">
+                    <label title="Adjuntar imágenes a los comentarios" className="cursor-pointer bg-gray-50 rounded-md font-medium px-2 py-1 inline-flex items-center gap-1 sm:text-sm text-xs text-gray-600 hover:text-brandCustom transition-colors select-none">
                       <input
                         type="file"
                         multiple
@@ -493,7 +493,7 @@ export default function TicketDetallePage() {
                         onChange={(e) => agregarArchivos(e.target.files)}
                       />
                       <svg width="24" height="24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" className="icon icon-tabler icons-tabler-outline icon-tabler-photo-up" viewBox="0 0 24 24"><path fill="none" stroke="none" d="M0 0h24v24H0z"/><path d="M15 8h.01M12.5 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6.5"/><path d="m3 16 5-5c.928-.893 2.072-.893 3 0l3.5 3.5"/><path d="m14 14 1-1c.679-.653 1.473-.829 2.214-.526M19 22v-6m3 3-3-3-3 3"/></svg>
-                      Adjuntar
+                      Subir imagen
                     </label>
                   </div>
                   <button
