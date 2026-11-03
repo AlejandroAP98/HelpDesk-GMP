@@ -41,10 +41,10 @@ def _a_bogota(dt: datetime | None) -> datetime | None:
 CSV_HEADER = [
     "id",
     "empresa",
-    "punto_venta",
     "categoria",
     "subcategoria",
     "elemento",
+    "punto_venta",
     "titulo",
     "descripcion",
     "asignado_a",
@@ -176,10 +176,10 @@ async def _generar_csv(
                 [
                     str(ticket.id),
                     _csv_safe(empresa_nombre),
-                    _csv_safe(punto_venta_nombre),
                     _csv_safe(categoria_nombre),
                     _csv_safe(subcategoria_nombre),
                     ticket.elemento_afectado.value,
+                    _csv_safe(punto_venta_nombre),
                     _csv_safe(ticket.titulo),
                     _csv_safe(ticket.descripcion),
                     _csv_safe(agente_nombre),
