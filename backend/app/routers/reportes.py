@@ -19,6 +19,7 @@ from app.models.categoria import Categoria
 from app.models.empresa import Empresa
 from app.models.enums import EstadoTicket, PrioridadTicket
 from app.models.historial_estado import HistorialEstado
+from app.models.punto_venta import PuntoVenta
 from app.models.subcategoria import Subcategoria
 from app.models.ticket import Ticket
 from app.models.usuario import Usuario
@@ -40,6 +41,7 @@ def _a_bogota(dt: datetime | None) -> datetime | None:
 CSV_HEADER = [
     "id",
     "empresa",
+    "punto_venta",
     "categoria",
     "subcategoria",
     "elemento",
@@ -119,11 +121,13 @@ async def _generar_csv(
             Categoria.nombre.label("categoria_nombre"),
             Subcategoria.nombre.label("subcategoria_nombre"),
             Usuario.nombre.label("agente_nombre"),
+            PuntoVenta.nombre.label("punto_venta_nombre"),
         )
         .outerjoin(Empresa, Ticket.empresa_id == Empresa.id)
         .outerjoin(Categoria, Ticket.categoria_id == Categoria.id)
         .outerjoin(Subcategoria, Ticket.subcategoria_id == Subcategoria.id)
         .outerjoin(Usuario, Ticket.agente_id == Usuario.id)
+        .outerjoin(PuntoVenta, Ticket.punto_venta_id == PuntoVenta.id)
         .where(*filtros)
         .order_by(Ticket.fecha_creacion)
     )
@@ -139,6 +143,7 @@ async def _generar_csv(
             categoria_nombre = r[2] or ""
             subcategoria_nombre = r[3] or ""
             agente_nombre = r[4] or ""
+            punto_venta_nombre = r[5] or ""
 
             tiempo_minutos: int | None = None
             tiempo_efectivo_minutos: int | None = None
@@ -171,6 +176,7 @@ async def _generar_csv(
                 [
                     str(ticket.id),
                     _csv_safe(empresa_nombre),
+                    _csv_safe(punto_venta_nombre),
                     _csv_safe(categoria_nombre),
                     _csv_safe(subcategoria_nombre),
                     ticket.elemento_afectado.value,
