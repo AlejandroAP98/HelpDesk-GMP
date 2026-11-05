@@ -1,7 +1,7 @@
 """Scheduler HelpDesk-GMP - cierre automatico de tickets resueltos + recordatorios de eventos.
 
 Conecta a Postgres via SQLAlchemy async, actualiza `tickets` a `cerrado` cuando
-estan en estado `resuelto` y su `fecha_actualizacion` supera `TICKET_AUTO_CLOSE_DAYS`.
+estan en estado `resuelto` y su `fecha_resolucion` supera `TICKET_AUTO_CLOSE_DAYS`.
 Tambien envia recordatorios por email de eventos programados.
 
 Como el microservicio es desechable y aislado, usa SQL directo (text) en lugar de
@@ -21,7 +21,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -35,12 +35,28 @@ DATABASE_URL = os.getenv(
 )
 
 
-def _build_engine():
+def _build_engine() -> AsyncEngine:
     return create_async_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5)
 
 
+_engine: AsyncEngine | None = None
+
+
+def _get_engine() -> AsyncEngine:
+    """Engine compartido entre jobs: reuso del pool (se dispone al apagar)."""
+    global _engine
+    if _engine is None:
+        _engine = _build_engine()
+    return _engine
+
+
 async def cerrar_tickets_resueltos() -> int:
-    """Cierra tickets en estado 'resuelto' con mas de N dias de inactividad.
+    """Cierra tickets en estado 'resuelto' con mas de N dias de resolucion.
+
+    El criterio usa `fecha_resolucion` (se fija exactamente cuando el ticket
+    pasa a 'resuelto' y no lo toca la actividad posterior: comentarios,
+    adjuntos, pausas). Fallback a `fecha_actualizacion` para filas legacy sin
+    fecha_resolucion.
 
     Returns:
         Numero de tickets cerrados.
@@ -48,8 +64,7 @@ async def cerrar_tickets_resueltos() -> int:
     dias = int(os.getenv("TICKET_AUTO_CLOSE_DAYS", "7"))
     logger.info("Buscando tickets en estado resuelto hace > %s dias", dias)
 
-    engine = _build_engine()
-    Session = async_sessionmaker(engine, expire_on_commit=False)
+    Session = async_sessionmaker(_get_engine(), expire_on_commit=False)
     try:
         async with Session() as db:
             stmt = text(
@@ -58,19 +73,24 @@ async def cerrar_tickets_resueltos() -> int:
                 SET estado = 'cerrado',
                     fecha_actualizacion = CURRENT_TIMESTAMP
                 WHERE estado = 'resuelto'
-                  AND fecha_actualizacion < CURRENT_TIMESTAMP - make_interval(days => :dias)
+                  AND coalesce(fecha_resolucion, fecha_actualizacion)
+                      < CURRENT_TIMESTAMP - make_interval(days => :dias)
+                RETURNING id
                 """
             ).bindparams(dias=dias)
             result = await db.execute(stmt)
             await db.commit()
             cerrados = result.rowcount or 0
-            logger.info("Cierre automatico: %s ticket(s) cerrados", cerrados)
+            ids = result.scalars().all()
+            logger.info(
+                "Cierre automatico: %s ticket(s) cerrados%s",
+                cerrados,
+                f": {[str(i) for i in ids]}" if cerrados else "",
+            )
             return cerrados
     except Exception:
         logger.exception("Error cerrando tickets resueltos")
         return 0
-    finally:
-        await engine.dispose()
 
 
 async def enviar_recordatorios_eventos() -> int:
@@ -91,10 +111,8 @@ async def enviar_recordatorios_eventos() -> int:
         logger.debug("Recordatorios omitidos: RESEND_API_KEY vacio")
         return 0
 
-    logger.info("Buscando eventos para recordatorio")
-
-    engine = _build_engine()
-    Session = async_sessionmaker(engine, expire_on_commit=False)
+    logger.debug("Buscando eventos para recordatorio")
+    Session = async_sessionmaker(_get_engine(), expire_on_commit=False)
     try:
         async with Session() as db:
             ahora = datetime.now(timezone.utc)
@@ -168,13 +186,14 @@ async def enviar_recordatorios_eventos() -> int:
                 except Exception as exc:
                     logger.warning("Error enviando recordatorio a %s: %s", email, exc)
 
-            logger.info("Recordatorios enviados: %d/%d", enviados, len(eventos))
+            if len(eventos):
+                logger.info("Recordatorios enviados: %d/%d", enviados, len(eventos))
+            else:
+                logger.debug("Recordatorios: sin eventos en ventana")
             return enviados
     except Exception:
         logger.exception("Error enviando recordatorios de eventos")
         return 0
-    finally:
-        await engine.dispose()
 
 
 def parse_cron(expr: str) -> dict:
@@ -197,7 +216,7 @@ async def main() -> None:
     )
     scheduler.add_job(
         enviar_recordatorios_eventos,
-        IntervalTrigger(minutes=1),
+        IntervalTrigger(minutes=5),
         id="enviar_recordatorios_eventos",
         replace_existing=True,
     )
@@ -207,13 +226,16 @@ async def main() -> None:
         cron_expr,
         os.getenv("TICKET_AUTO_CLOSE_DAYS", "7"),
     )
-    logger.info("Recordatorios de eventos: cada 1 minuto")
+    logger.info("Recordatorios de eventos: cada 5 minutos")
     try:
         while True:
             await asyncio.sleep(3600)
     except (KeyboardInterrupt, asyncio.CancelledError):
         scheduler.shutdown(wait=False)
         logger.info("Scheduler detenido")
+    finally:
+        if _engine is not None:
+            await _engine.dispose()
 
 
 if __name__ == "__main__":

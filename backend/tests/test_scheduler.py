@@ -27,7 +27,9 @@ async def _cerrar_resueltos(engine, dias: int) -> int:  # type: ignore[no-untype
             SET estado = 'cerrado',
                 fecha_actualizacion = CURRENT_TIMESTAMP
             WHERE estado = 'resuelto'
-              AND fecha_actualizacion < CURRENT_TIMESTAMP - make_interval(days => :dias)
+              AND coalesce(fecha_resolucion, fecha_actualizacion)
+                  < CURRENT_TIMESTAMP - make_interval(days => :dias)
+            RETURNING id
             """
         ).bindparams(dias=dias)
         result = await s.execute(stmt)
@@ -128,5 +130,36 @@ async def test_no_cierra_tickets_no_resueltos() -> None:
             await s.commit()
         c = await _cerrar_resueltos(engine, 7)
         assert c == 0
+    finally:
+        await engine.dispose()
+
+
+async def test_cierra_resuelto_aunque_actividad_reciente_bumpeo_fecha_actualizacion() -> None:
+    """Un comentario posterior a la resolucion NO repele el cierre.
+
+    Resuelto hace 30 dias (fecha_resolucion), comentario hace 1 dia bumpeo
+    fecha_actualizacion. El criterio viejo (fecha_actualizacion) no lo
+    cerraba; el nuevo (coalesce fecha_resolucion) si.
+    """
+    engine = create_async_engine(TEST_DB_URL, pool_pre_ping=True)
+    try:
+        await _limpiar_y_popular(engine, antiguo=True, reciente=False)
+        Session = async_sessionmaker(engine, expire_on_commit=False)
+        async with Session() as s:
+            uid = (await s.execute(text("SELECT id FROM usuarios WHERE email='s1@test.com'"))).scalar()
+            await s.execute(
+                text(
+                    "INSERT INTO tickets (empresa_id, cliente_id, categoria_id, subcategoria_id, elemento_afectado, titulo, descripcion, estado, prioridad, fecha_resolucion, fecha_actualizacion) "
+                    "VALUES (1, :u, 1, 1, 'punto_venta', 'T_comentario', 'D', 'resuelto', 'media', "
+                    "CURRENT_TIMESTAMP - INTERVAL '30 days', CURRENT_TIMESTAMP - INTERVAL '1 day')"
+                ),
+                {"u": uid},
+            )
+            await s.commit()
+        c = await _cerrar_resueltos(engine, 7)
+        assert c >= 1
+        async with Session() as s:
+            st = (await s.execute(text("SELECT estado FROM tickets WHERE titulo='T_comentario'"))).scalar()
+            assert st == "cerrado"
     finally:
         await engine.dispose()
