@@ -16,6 +16,10 @@ Basado en la especificacion definida en [`agent.md`](./agent.md).
 | Almacenamiento adjuntos | MinIO (S3-compatible) |
 | Scheduler | APScheduler (cierre automatico de tickets) |
 | Reverse proxy (prod) | Caddy 2 (TLS auto-firmado en LAN) |
+| Tunel externo | Cloudflare Tunnel + Zero Trust (OTP por email) |
+| Monitoreo | Prometheus + Grafana + Loki (solo prod) |
+| Notificaciones | Web Push (VAPID) + Resend (email) + Telegram Bot |
+| PWA | Instalable con service worker y shortcuts |
 
 ## Arquitectura de despliegue
 
@@ -23,20 +27,39 @@ Basado en la especificacion definida en [`agent.md`](./agent.md).
 - **Produccion**: Linux (Ubuntu Server 24.04 LTS) con Docker Engine nativo.
 - Un unico `docker-compose.yml` + overrides (`dev`/`prod`) portables entre hosts.
 
+## Funcionalidades principales
+
+- **Multi-tenant**: aislamiento por empresa en tickets, sedes y metricas (RBAC admin/agente/cliente).
+- **Tickets**: maquina de estados estricta, asignacion manual, prioridades, estado "en espera", reaperturas.
+- **SLA**: matriz por elemento/ciudad/prioridad (torre/celda 4h, base 24h, remoto 48h), FRT 0.5h, horario laboral configurable.
+- **Sedes**: puntos de venta sincronizados desde Supabase (GMP).
+- **Comentarios y adjuntos**: notas internas, adjuntos solo imagenes (optimizadas a WebP en el cliente, lightbox, adjuntos dentro de comentarios).
+- **Tiempo real**: WebSockets + Redis Pub/Sub con auth post-handshake, toasts y alertas urgentes.
+- **Notificaciones**: Web Push VAPID (multi-dispositivo), email transaccional (Resend), grupo de Telegram, PWA instalable.
+- **Metricas**: dashboard con MTTR/FRT, tendencia, heatmap de distribucion, rendimiento por agente, reaperturas y cumplimiento SLA.
+- **Monitoreo**: Prometheus + Grafana + Loki con dashboards de overview, infraestructura, aplicacion, DB y logs.
+- **Operacion**: backups automaticos a Google Drive (rclone), systemd auto-restart, cierre auto de tickets resueltos.
+
 ## Estructura del repositorio
 
 ```
 HelpDesk-GMP/
 ├── agent.md                   Especificacion original del sistema
-├── docker-compose.yml        Base del stack (compartido dev/prod)
-├── docker-compose.dev.yml    Override de desarrollo (hot-reload, sin Caddy)
-├── docker-compose.prod.yml   Override de produccion (Caddy + restart always)
-├── .env.example              Variables de entorno (copiar a .env)
-├── caddy/Caddyfile           Reverse proxy TLS para LAN (mDNS)
-├── backend/                  API FastAPI + Poetry + Alembic
-├── frontend/                 Next.js 14 + Tailwind
-├── scheduler/                APScheduler (cierre auto de tickets)
-└── backups/                  Volcado de backups nocturnos (host Linux)
+├── AGENTS.md                  Guia de fases, convenciones y comandos para agentes
+├── Manual.md                  Manual de uso para operadores
+├── MatrizPrioridades.md       Matriz categoria/subcategoria/elemento -> prioridad
+├── docker-compose.yml         Base del stack (compartido dev/prod)
+├── docker-compose.dev.yml     Override de desarrollo (hot-reload, sin Caddy)
+├── docker-compose.prod.yml    Override de produccion (Caddy + monitoreo + restart)
+├── .env.example               Variables de entorno (copiar a .env)
+├── caddy/Caddyfile            Reverse proxy TLS para LAN + bloque HTTP movil
+├── monitoring/                Prometheus, Grafana (dashboards) y Loki
+├── backend/                   API FastAPI + Poetry + Alembic
+├── frontend/                  Next.js 14 + Tailwind (PWA)
+├── scheduler/                 APScheduler (cierre auto de tickets)
+├── scripts/                   backup.sh, seed, sync_sedes_supabase, tests E2E
+├── deploy/                    Unit systemd para auto-restart en boot
+└── backups/                   Volcado de backups nocturnos (host Linux)
 ```
 
 ## Requisitos previos
@@ -90,6 +113,9 @@ docker compose exec backend python -m scripts.seed
 |---|---|---|
 | PC (Windows) | `https://helpdesk.local` | Si (con CA instalado) |
 | Movil (Android/iOS) | `http://192.168.1.9` | No (HTTP en LAN) |
+| Externo (internet) | `https://soporte.tudominio.com` | Si (Cloudflare) |
+
+El acceso externo va por Cloudflare Tunnel (outbound, sin puertos abiertos) con Zero Trust Access (OTP por email). Requiere `CLOUDFLARE_TUNNEL_TOKEN` en `.env` y activar la PWA en movil para recibir Web Push en iOS.
 
 Para que el PC resuelva `helpdesk.local`, agregar al archivo `C:\Windows\System32\drivers\etc\hosts`:
 
@@ -149,9 +175,39 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod u
 
 # Backup Postgres (en el host Linux)
 docker compose exec -T postgres pg_dump -U helpdesk helpdesk > backups/pg_$(date +%F).sql
+
+# Backup completo (Postgres + MinIO + Redis) + subida a Google Drive
+./scripts/backup.sh
+
+# Sincronizar sedes desde Supabase (preview con --dry-run)
+docker compose exec backend python -m scripts.sync_sedes_supabase
 ```
 
-## Roadmap (fases restantes)
+### Monitoreo (solo prod)
+
+```bash
+# Verificar servicios de monitoreo
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod ps | grep -E "prometheus|grafana|loki"
+
+# Grafana (LAN): http://helpdesk.local:3001 - user: admin, pass: ${GRAFANA_PASSWORD}
+# Metricas del backend: docker compose exec backend curl -s localhost:8000/metrics
+```
+
+### Auto-restart en boot (systemd)
+
+```bash
+sudo cp deploy/helpdesk.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now helpdesk.service
+```
+
+### Cron de backup diario (3am, host Linux)
+
+```bash
+mkdir -p ~/backups && chmod +x scripts/backup.sh
+# 0 3 * * * /home/gmp/HelpDesk-GMP/scripts/backup.sh >> /home/gmp/backups/backup.log 2>&1
+```
+
+## Roadmap
 
 - [x] Fase 1  - Infraestructura Docker + esqueletos
 - [x] Fase 2  - Modelos SQLAlchemy + migracion inicial (esquema de agent.md)
@@ -163,3 +219,18 @@ docker compose exec -T postgres pg_dump -U helpdesk helpdesk > backups/pg_$(date
 - [x] Fase 8  - Frontend: paneles por rol, bandeja admin, detalle ticket + alertas urgentes
 - [x] Fase 9  - Scheduler de cierre automatico + tests finales (30 tests)
 - [x] Fase 10 - Deploy en Linux + acceso multiplataforma (PC + movil)
+- [x] Fase 11 - Cloudflare Tunnel + Zero Trust (acceso externo con OTP)
+- [x] Fase 12 - PWA instalable (manifest, service worker, shortcuts)
+- [x] Fase 13/14 - Web Push VAPID multi-dispositivo (sin app nativa)
+- [x] Fase 15 - Adjuntos solo imagenes + proxy auth + lightbox
+- [x] Fase 16 - Notificacion de cambio de estado para clientes
+- [x] Fase 17 - Backup automatizado + systemd auto-restart
+- [x] Fase 18 - Emails transaccionales via Resend
+- [x] Fase 19 - Email urgente desacoplado del toggle del cliente
+- [x] Fase 20 - Notificaciones de Telegram (grupo de ops)
+- [x] Auditoria de seguridad multi-tenant y transaccional (fixes A-G)
+- [x] Optimizacion de performance (pool DB, indices, peso_orden generado, N+1)
+- [x] Matriz de SLA por elemento/ciudad/prioridad + horario laboral
+- [x] Monitoreo Prometheus + Grafana + Loki
+- [x] Estado "en espera" + reportes y filtros mejorados
+- [ ] Mejoras futuras (ver AGENTS.md pendientes: sync Supabase paginado, email en crear_admin)
